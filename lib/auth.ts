@@ -146,15 +146,15 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
  * always pass the raw token, never the hash.
  */
 export async function invalidateSession(rawToken: string): Promise<void> {
-  const tokenHash = hashSessionToken(rawToken);
-  await prisma.session.delete({ where: { id: tokenHash } }).catch((e) => {
-    console.error("Failed to delete session during invalidation:", e);
-  });
   try {
+    const tokenHash = hashSessionToken(rawToken);
+    await prisma.session.delete({ where: { id: tokenHash } }).catch((e) => {
+      console.error("Failed to delete session during invalidation:", e);
+    });
     const cookieStore = await cookies();
     cookieStore.delete(SESSION_COOKIE_NAME);
   } catch (error) {
-    console.error("Error clearing session cookie:", error);
+    console.error("Error invalidating session:", error);
   }
 }
 

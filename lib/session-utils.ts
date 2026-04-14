@@ -25,7 +25,8 @@ function base64urlToUint8Array(base64url: string): ArrayBuffer {
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
   }
-  return bytes.buffer as ArrayBuffer;
+  // .slice(0) returns a proper ArrayBuffer (not ArrayBufferLike)
+  return bytes.buffer.slice(0);
 }
 
 async function getHmacKey(secret: string): Promise<CryptoKey> {
