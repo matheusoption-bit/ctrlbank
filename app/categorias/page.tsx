@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Plus, Tag, ArrowUpRight, ArrowDownLeft, MoreVertical } from "lucide-react";
+import { Plus, ArrowUpRight, ArrowDownLeft, MoreVertical } from "lucide-react";
 
 const containerVariants = {
   hidden: { opacity: 0 },
