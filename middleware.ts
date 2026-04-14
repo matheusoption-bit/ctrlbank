@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateRequest } from "@/lib/auth";
+
+// Keep in sync with SESSION_COOKIE_NAME in lib/auth.ts
+const SESSION_COOKIE_NAME = "ctrlbank_session";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -9,9 +11,8 @@ export async function middleware(request: NextRequest) {
 
   // Check if route is public
   if (publicRoutes.includes(pathname)) {
-    // If already logged in, redirect to dashboard
-    const { session } = await validateRequest();
-    if (session) {
+    // If a session cookie exists, redirect to dashboard
+    if (request.cookies.has(SESSION_COOKIE_NAME)) {
       return NextResponse.redirect(new URL("/", request.url));
     }
     return NextResponse.next();
@@ -35,11 +36,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // For protected routes, validate session
-  const { session } = await validateRequest();
-
-  if (!session) {
-    // Redirect to login if not authenticated
+  // For protected routes, check for session cookie presence.
+  // Full session validation happens in server components and route handlers.
+  if (!request.cookies.has(SESSION_COOKIE_NAME)) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);

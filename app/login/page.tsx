@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LogIn, Mail, Lock, AlertCircle, ArrowRight, Loader, CheckCircle } from "lucide-react";
 import Link from "next/link";
@@ -60,7 +60,7 @@ function LoginForm() {
         router.push(redirectUrl);
         router.refresh();
       }, 1500);
-    } catch (err) {
+    } catch {
       setError("Erro ao conectar ao servidor");
       setLoading(false);
     }

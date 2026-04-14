@@ -11,11 +11,10 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  // Type assertion to ensure proper typing for the client component
   const userData = {
     id: user.id,
-    email: (user as any).email,
-    name: (user as any).name,
+    email: user.email,
+    name: user.name,
   };
 
   return <DashboardClient user={userData} />;

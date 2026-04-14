@@ -72,7 +72,7 @@ export default function RegisterPage() {
         router.push("/");
         router.refresh();
       }, 1500);
-    } catch (err) {
+    } catch {
       setError("Erro ao conectar ao servidor");
       setLoading(false);
     }

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-import { lucia } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { createSession } from "@/lib/auth";
 import { compare } from "bcryptjs";
-
-const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,29 +51,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create session
-    const session = await lucia.createSession(user.id, {});
-    const sessionCookie = lucia.createSessionCookie(session.id);
+    // Create session (sets the session cookie internally)
+    await createSession(user.id);
 
-    const response = NextResponse.json(
-      { 
+    return NextResponse.json(
+      {
         message: "Login realizado com sucesso",
-        user: { 
-          id: user.id, 
+        user: {
+          id: user.id,
           email: user.email,
           name: user.name,
         },
       },
       { status: 200 }
     );
-
-    response.cookies.set(
-      sessionCookie.name,
-      sessionCookie.value,
-      sessionCookie.attributes
-    );
-
-    return response;
   } catch (error) {
     console.error("Login error:", error);
     return NextResponse.json(
