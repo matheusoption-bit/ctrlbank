@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password_hash String
+  sessions      Session[]
+  accounts      Account[]
+  transactions  Transaction[]
+  budgets       Budget[]
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  expiresAt DateTime
+  user      User     @relation(references: [id], fields: [userId], onDelete: Cascade)
+}
+
+model Account {
+  id           String        @id @default(cuid())
+  userId       String
+  name         String
+  balance      Float         @default(0)
+  type         String        // CHECKING, SAVINGS, CREDIT_CARD
+  user         User          @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  userId      String
+  accountId   String
+  categoryId  String?
+  amount      Float
+  description String
+  date        DateTime @default(now())
+  type        String   // INCOME, EXPENSE
+  user        User     @relation(fields: [userId], references: [id])
+  account     Account  @relation(fields: [accountId], references: [id])
+  category    Category? @relation(fields: [categoryId], references: [id])
+}
+
+model Category {
+  id           String        @id @default(cuid())
+  name         String
+  icon         String?
+  transactions Transaction[]
+}
+
+model Budget {
+  id        String @id @default(cuid())
+  userId    String
+  amount    Float
+  month     Int
+  year      Int
+  user      User   @relation(fields: [userId], references: [id])
+}
