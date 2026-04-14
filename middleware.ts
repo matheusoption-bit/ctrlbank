@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateRequest } from "@/lib/auth";
+import { SESSION_COOKIE_NAME } from "@/lib/constants";
+import { verifySignedToken } from "@/lib/session-utils";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -9,10 +10,13 @@ export async function middleware(request: NextRequest) {
 
   // Check if route is public
   if (publicRoutes.includes(pathname)) {
-    // If already logged in, redirect to dashboard
-    const { session } = await validateRequest();
-    if (session) {
-      return NextResponse.redirect(new URL("/", request.url));
+    // If a valid signed session cookie exists, redirect to dashboard
+    const cookieValue = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+    if (cookieValue) {
+      const token = await verifySignedToken(cookieValue);
+      if (token) {
+        return NextResponse.redirect(new URL("/", request.url));
+      }
     }
     return NextResponse.next();
   }
@@ -35,11 +39,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // For protected routes, validate session
-  const { session } = await validateRequest();
+  // For protected routes, verify the HMAC signature of the session cookie.
+  // A cookie without a valid signature is treated as unauthenticated — this
+  // prevents bypass via a manually crafted or tampered cookie.
+  // Full DB validation (expiry, user existence) still happens in server
+  // components and route handlers via validateSession().
+  const cookieValue = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  if (!cookieValue) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
 
-  if (!session) {
-    // Redirect to login if not authenticated
+  const token = await verifySignedToken(cookieValue);
+  if (!token) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
