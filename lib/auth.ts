@@ -159,12 +159,6 @@ export async function validateSession(): Promise<{
   user: SessionUser | null;
   session: Session | null;
 }> {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    return { user: null, session: null };
-  }
-
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -175,6 +169,7 @@ export async function validateSession(): Promise<{
 
     const session = await prisma.session.findUnique({
       where: { id: token },
+      include: { user: true },
     });
 
     if (!session || session.expiresAt < new Date()) {
@@ -186,7 +181,13 @@ export async function validateSession(): Promise<{
     }
 
     return {
-      user,
+      user: session.user
+        ? {
+            id: session.user.id,
+            email: session.user.email,
+            name: session.user.name,
+          }
+        : null,
       session: {
         id: session.id,
         userId: session.userId,
