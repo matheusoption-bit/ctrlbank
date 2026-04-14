@@ -118,7 +118,7 @@ export default function ContasPage() {
 
       {/* Contas Grid */}
       <motion.div className="grid grid-cols-1 md:grid-cols-2 gap-6" variants={itemVariants}>
-        {mockAccounts.map((account, index) => (
+        {mockAccounts.map((account) => (
           <motion.div
             key={account.id}
             className="card-c6 bg-gradient-to-br from-surface to-black group hover:from-surface/80 transition-all duration-200 cursor-pointer relative overflow-hidden"
