@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { lucia } from "@/lib/auth";
-import * as bcrypt from "bcryptjs";
+import { hash } from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -9,6 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     const { email, password, name } = await request.json();
 
+    // Validation
     if (!email || !password) {
       return NextResponse.json(
         { message: "Email e senha são obrigatórios" },
@@ -16,9 +17,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (password.length < 6) {
+    if (typeof email !== "string" || email.length < 3 || email.length > 255) {
       return NextResponse.json(
-        { message: "A senha deve ter pelo menos 6 caracteres" },
+        { message: "Email inválido" },
+        { status: 400 }
+      );
+    }
+
+    if (typeof password !== "string" || password.length < 6 || password.length > 255) {
+      return NextResponse.json(
+        { message: "A senha deve ter entre 6 e 255 caracteres" },
         { status: 400 }
       );
     }
@@ -31,19 +39,19 @@ export async function POST(request: NextRequest) {
     if (existingUser) {
       return NextResponse.json(
         { message: "Este email já está registrado" },
-        { status: 400 }
+        { status: 409 }
       );
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const passwordHash = await hash(password, 10);
 
     // Create user
     const user = await prisma.user.create({
       data: {
         email,
-        password_hash: hashedPassword,
-        name: name || undefined,
+        password_hash: passwordHash,
+        name: name && typeof name === "string" ? name : null,
       },
     });
 
@@ -52,7 +60,14 @@ export async function POST(request: NextRequest) {
     const sessionCookie = lucia.createSessionCookie(session.id);
 
     const response = NextResponse.json(
-      { message: "Conta criada com sucesso", user: { id: user.id, email: user.email } },
+      { 
+        message: "Conta criada com sucesso",
+        user: { 
+          id: user.id, 
+          email: user.email,
+          name: user.name,
+        },
+      },
       { status: 201 }
     );
 
@@ -66,7 +81,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Register error:", error);
     return NextResponse.json(
-      { message: "Erro ao criar conta" },
+      { message: "Erro ao criar conta. Tente novamente." },
       { status: 500 }
     );
   }

@@ -12,8 +12,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Invalidate the session in the database
     await lucia.invalidateSession(session.id);
 
+    // Create blank session cookie to clear it
     const sessionCookie = lucia.createBlankSessionCookie();
 
     const response = NextResponse.json(

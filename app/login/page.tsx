@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
-import { motion } from "framer-motion";
-import { LogIn, Mail, Lock, AlertCircle, ArrowRight, Loader } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { LogIn, Mail, Lock, AlertCircle, ArrowRight, Loader, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -31,11 +31,13 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setLoading(true);
 
     try {
@@ -45,16 +47,19 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
         setError(data.message || "Falha ao fazer login");
         setLoading(false);
         return;
       }
 
-      // Redirect to dashboard or requested page
-      router.push(redirectUrl);
-      router.refresh();
+      setSuccess("Login realizado com sucesso! Redirecionando...");
+      setTimeout(() => {
+        router.push(redirectUrl);
+        router.refresh();
+      }, 1500);
     } catch (err) {
       setError("Erro ao conectar ao servidor");
       setLoading(false);
@@ -95,17 +100,34 @@ export default function LoginPage() {
           </div>
 
           {/* Error Message */}
-          {error && (
-            <motion.div
-              className="bg-danger/10 border border-danger/30 rounded-lg p-4 flex items-gap-3"
-              variants={itemVariants}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-            >
-              <AlertCircle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-danger font-medium">{error}</p>
-            </motion.div>
-          )}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                className="bg-danger/10 border border-danger/30 rounded-lg p-4 flex items-gap-3"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+              >
+                <AlertCircle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-danger font-medium">{error}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Success Message */}
+          <AnimatePresence>
+            {success && (
+              <motion.div
+                className="bg-success/10 border border-success/30 rounded-lg p-4 flex items-gap-3"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+              >
+                <CheckCircle className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-success font-medium">{success}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">

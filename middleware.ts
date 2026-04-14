@@ -9,6 +9,11 @@ export async function middleware(request: NextRequest) {
 
   // Check if route is public
   if (publicRoutes.includes(pathname)) {
+    // If already logged in, redirect to dashboard
+    const { session } = await validateRequest();
+    if (session) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
     return NextResponse.next();
   }
 
@@ -17,6 +22,15 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/auth/login") ||
     pathname.startsWith("/api/auth/register") ||
     pathname.startsWith("/api/auth/logout")
+  ) {
+    return NextResponse.next();
+  }
+
+  // Static files and assets are public
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/public") ||
+    pathname === "/favicon.ico"
   ) {
     return NextResponse.next();
   }
