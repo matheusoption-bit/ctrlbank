@@ -71,3 +71,8 @@ export const validateRequest = cache(async () => {
 
   return result;
 });
+
+export async function getCurrentUser() {
+  const { user, session } = await validateRequest();
+  return { user, session };
+}

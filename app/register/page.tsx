@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { UserPlus, Mail, Lock, User, AlertCircle, CheckCircle, ArrowRight } from "lucide-react";
+import { UserPlus, Mail, Lock, User, AlertCircle, CheckCircle, ArrowRight, Loader } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -61,6 +61,7 @@ export default function RegisterPage() {
       if (!response.ok) {
         const data = await response.json();
         setError(data.message || "Falha ao criar conta");
+        setLoading(false);
         return;
       }
 
@@ -71,7 +72,6 @@ export default function RegisterPage() {
       }, 2000);
     } catch (err) {
       setError("Erro ao conectar ao servidor");
-    } finally {
       setLoading(false);
     }
   };
@@ -220,15 +220,15 @@ export default function RegisterPage() {
             {/* Register Button */}
             <motion.button
               type="submit"
-              className="btn-primary flex items-center justify-center gap-2 mt-8 group"
+              className="btn-primary flex items-center justify-center gap-2 mt-8 group disabled:opacity-50 disabled:cursor-not-allowed"
               variants={itemVariants}
               disabled={loading}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: loading ? 1 : 1.02 }}
+              whileTap={{ scale: loading ? 1 : 0.98 }}
             >
               {loading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                  <Loader className="w-5 h-5 animate-spin" />
                   Criando conta...
                 </>
               ) : (

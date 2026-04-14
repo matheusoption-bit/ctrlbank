@@ -23,6 +23,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 // Mock data for 6 months
 const chartData = [
@@ -104,20 +105,26 @@ const itemVariants = {
 };
 
 export default function Dashboard() {
+  const router = useRouter();
   const [showBalance, setShowBalance] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const totalBalance = 12450.8;
   const monthIncome = 8500.0;
   const monthExpense = 1342.4;
   const netWorth = totalBalance;
 
   const handleLogout = async () => {
+    setIsLoggingOut(true);
     try {
       const response = await fetch("/api/auth/logout", { method: "POST" });
       if (response.ok) {
-        window.location.href = "/login";
+        router.push("/login");
+        router.refresh();
       }
     } catch (error) {
       console.error("Logout failed:", error);
+      setIsLoggingOut(false);
     }
   };
 
@@ -139,12 +146,17 @@ export default function Dashboard() {
         </div>
         <motion.button
           onClick={handleLogout}
-          className="p-3 rounded-full bg-surface border border-border hover:bg-white/5 transition-all duration-200 hover:scale-110 active:scale-95"
+          disabled={isLoggingOut}
+          className="p-3 rounded-full bg-surface border border-border hover:bg-white/5 transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           title="Logout"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          <LogOut className="w-5 h-5 text-secondary hover:text-primary transition-colors" />
+          {isLoggingOut ? (
+            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <LogOut className="w-5 h-5 text-secondary hover:text-primary transition-colors" />
+          )}
         </motion.button>
       </motion.header>
 

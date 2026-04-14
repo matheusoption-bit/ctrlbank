@@ -13,7 +13,11 @@ export async function middleware(request: NextRequest) {
   }
 
   // API routes for auth are public
-  if (pathname.startsWith("/api/auth/login") || pathname.startsWith("/api/auth/register")) {
+  if (
+    pathname.startsWith("/api/auth/login") ||
+    pathname.startsWith("/api/auth/register") ||
+    pathname.startsWith("/api/auth/logout")
+  ) {
     return NextResponse.next();
   }
 
@@ -22,7 +26,9 @@ export async function middleware(request: NextRequest) {
 
   if (!session) {
     // Redirect to login if not authenticated
-    return NextResponse.redirect(new URL("/login", request.url));
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();

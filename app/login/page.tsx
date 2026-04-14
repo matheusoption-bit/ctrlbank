@@ -2,9 +2,9 @@
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { LogIn, Mail, Lock, AlertCircle, ArrowRight } from "lucide-react";
+import { LogIn, Mail, Lock, AlertCircle, ArrowRight, Loader } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -25,6 +25,9 @@ const itemVariants = {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect") || "/";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -45,14 +48,15 @@ export default function LoginPage() {
       if (!response.ok) {
         const data = await response.json();
         setError(data.message || "Falha ao fazer login");
+        setLoading(false);
         return;
       }
 
-      router.push("/");
+      // Redirect to dashboard or requested page
+      router.push(redirectUrl);
       router.refresh();
     } catch (err) {
       setError("Erro ao conectar ao servidor");
-    } finally {
       setLoading(false);
     }
   };
@@ -148,15 +152,15 @@ export default function LoginPage() {
             {/* Login Button */}
             <motion.button
               type="submit"
-              className="btn-primary flex items-center justify-center gap-2 mt-8 group"
+              className="btn-primary flex items-center justify-center gap-2 mt-8 group disabled:opacity-50 disabled:cursor-not-allowed"
               variants={itemVariants}
               disabled={loading}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: loading ? 1 : 1.02 }}
+              whileTap={{ scale: loading ? 1 : 0.98 }}
             >
               {loading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                  <Loader className="w-5 h-5 animate-spin" />
                   Conectando...
                 </>
               ) : (
