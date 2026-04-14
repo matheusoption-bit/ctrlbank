@@ -2,8 +2,7 @@
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, CreditCard, Wallet, Landmark, TrendingUp, MoreVertical } from "lucide-react";
-import Link from "next/link";
+import { Plus, Wallet, MoreVertical } from "lucide-react";
 
 const containerVariants = {
   hidden: { opacity: 0 },
