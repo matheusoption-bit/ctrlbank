@@ -227,14 +227,39 @@ export async function validateRequest() {
   return validateSession();
 }
 
+async function createLuciaSession(userId: string, _attributes?: Record<string, unknown>) {
+  const sessionId = await createSession(userId);
+
+  return {
+    id: sessionId,
+  };
+}
+
+async function invalidateLuciaSession(sessionId: string): Promise<void> {
+  try {
+    await prisma.session.delete({ where: { id: sessionId } }).catch(() => {
+      // Session might already be deleted
+    });
+
+    const cookieStore = await cookies();
+    const currentToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+
+    if (currentToken === sessionId) {
+      cookieStore.delete(SESSION_COOKIE_NAME);
+    }
+  } catch (error) {
+    console.error("Error invalidating session:", error);
+  }
+}
+
 /**
  * Minimal Lucia-compatible surface for existing callers
  * This preserves the old exports while delegating to the new session API
  */
 export const lucia = {
   sessionCookieName: () => SESSION_COOKIE_NAME,
-  createSession: createSession,
-  invalidateSession: logout,
+  createSession: createLuciaSession,
+  invalidateSession: invalidateLuciaSession,
   createSessionCookie: (sessionId: string) => ({
     name: SESSION_COOKIE_NAME,
     value: sessionId,
