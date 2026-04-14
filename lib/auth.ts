@@ -1,80 +1,175 @@
-import { Lucia } from "lucia";
-import { PrismaAdapter } from "@lucia-auth/adapter-prisma";
-import { PrismaClient } from "@prisma/client";
 import { cookies } from "next/headers";
 import { cache } from "react";
+import { prisma } from "./prisma";
+import * as bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
 
-const client = new PrismaClient();
-const adapter = new PrismaAdapter(client.session, client.user);
+const SESSION_COOKIE_NAME = "ctrlbank_session";
+const SESSION_EXPIRY_DAYS = 30;
 
-export const lucia = new Lucia(adapter, {
-  sessionCookie: {
-    attributes: {
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-    },
-  },
-  getUserAttributes: (attributes) => {
-    return {
-      id: attributes.id,
-      email: attributes.email,
-      name: attributes.name,
-    };
-  },
-});
-
-declare module "lucia" {
-  interface Register {
-    Lucia: typeof lucia;
-    DatabaseUserAttributes: {
-      id: string;
-      email: string;
-      name: string | null;
-    };
-  }
+export interface SessionUser {
+  id: string;
+  email: string;
+  name: string | null;
 }
 
-export const validateRequest = cache(async () => {
+export interface Session {
+  id: string;
+  userId: string;
+  expiresAt: Date;
+}
+
+/**
+ * Hash a password using bcryptjs
+ */
+export async function hashPassword(password: string): Promise<string> {
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(password, salt);
+}
+
+/**
+ * Verify a password against a hash
+ */
+export async function verifyPassword(
+  password: string,
+  hash: string
+): Promise<boolean> {
+  return bcrypt.compare(password, hash);
+}
+
+/**
+ * Generate a random session token
+ */
+function generateSessionToken(): string {
+  return randomBytes(32).toString("hex");
+}
+
+/**
+ * Create a new session for a user
+ */
+export async function createSession(userId: string): Promise<string> {
+  const token = generateSessionToken();
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + SESSION_EXPIRY_DAYS);
+
+  await prisma.session.create({
+    data: {
+      id: token,
+      userId,
+      expiresAt,
+    },
+  });
+
   const cookieStore = await cookies();
-  const sessionId = cookieStore.get(lucia.sessionCookieName())?.value ?? null;
+  cookieStore.set(SESSION_COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: SESSION_EXPIRY_DAYS * 24 * 60 * 60,
+    path: "/",
+  });
 
-  if (!sessionId) {
-    return {
-      user: null,
-      session: null,
-    };
-  }
+  return token;
+}
 
-  const result = await lucia.validateSession(sessionId);
-
+/**
+ * Get the current user from the session
+ */
+export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   try {
-    if (result.session && result.session.fresh) {
-      const sessionCookie = lucia.createSessionCookie(result.session.id);
-      cookieStore.set(
-        sessionCookie.name,
-        sessionCookie.value,
-        sessionCookie.attributes
-      );
-    }
-    if (!result.session) {
-      const sessionCookie = lucia.createBlankSessionCookie();
-      cookieStore.set(
-        sessionCookie.name,
-        sessionCookie.value,
-        sessionCookie.attributes
-      );
-    }
-  } catch {
-    // Next.js throws error when trying to set cookies in some cases
-  }
+    const cookieStore = await cookies();
+    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
-  return result;
+    if (!token) {
+      return null;
+    }
+
+    const session = await prisma.session.findUnique({
+      where: { id: token },
+      include: { user: true },
+    });
+
+    if (!session || session.expiresAt < new Date()) {
+      if (session) {
+        await prisma.session.delete({ where: { id: token } });
+      }
+      cookieStore.delete(SESSION_COOKIE_NAME);
+      return null;
+    }
+
+    return {
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name,
+    };
+  } catch (error) {
+    console.error("Error getting current user:", error);
+    return null;
+  }
 });
 
-export async function getCurrentUser() {
-  const { user, session } = await validateRequest();
-  return { user, session };
+/**
+ * Validate the current session
+ */
+export const validateSession = cache(
+  async (): Promise<{ user: SessionUser | null; session: Session | null }> => {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return { user: null, session: null };
+    }
+
+    try {
+      const cookieStore = await cookies();
+      const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+
+      if (!token) {
+        return { user: null, session: null };
+      }
+
+      const session = await prisma.session.findUnique({
+        where: { id: token },
+      });
+
+      if (!session || session.expiresAt < new Date()) {
+        if (session) {
+          await prisma.session.delete({ where: { id: token } });
+        }
+        cookieStore.delete(SESSION_COOKIE_NAME);
+        return { user: null, session: null };
+      }
+
+      return {
+        user,
+        session: {
+          id: session.id,
+          userId: session.userId,
+          expiresAt: session.expiresAt,
+        },
+      };
+    } catch (error) {
+      console.error("Error validating session:", error);
+      return { user: null, session: null };
+    }
+  }
+);
+
+/**
+ * Logout the current user
+ */
+export async function logout(): Promise<void> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+
+    if (token) {
+      await prisma.session.delete({ where: { id: token } }).catch(() => {
+        // Session might already be deleted
+      });
+    }
+
+    cookieStore.delete(SESSION_COOKIE_NAME);
+  } catch (error) {
+    console.error("Error logging out:", error);
+  }
 }

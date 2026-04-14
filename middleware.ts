@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateRequest } from "@/lib/auth";
+import { validateSession } from "@/lib/auth";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -10,8 +10,8 @@ export async function middleware(request: NextRequest) {
   // Check if route is public
   if (publicRoutes.includes(pathname)) {
     // If already logged in, redirect to dashboard
-    const { session } = await validateRequest();
-    if (session) {
+    const { user } = await validateSession();
+    if (user) {
       return NextResponse.redirect(new URL("/", request.url));
     }
     return NextResponse.next();
@@ -36,9 +36,9 @@ export async function middleware(request: NextRequest) {
   }
 
   // For protected routes, validate session
-  const { session } = await validateRequest();
+  const { user } = await validateSession();
 
-  if (!session) {
+  if (!user) {
     // Redirect to login if not authenticated
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
