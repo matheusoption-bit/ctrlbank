@@ -7,17 +7,35 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Household {
+  id           String        @id @default(cuid())
+  name         String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  users        User[]
+  bankAccounts BankAccount[]
+  categories   Category[]
+  transactions Transaction[]
+}
+
 model User {
   id            String        @id @default(cuid())
   email         String        @unique
   password_hash String
   name          String?
+  householdId   String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+
+  household     Household?    @relation(fields: [householdId], references: [id], onDelete: SetNull)
   sessions      Session[]
+  
   bankAccounts  BankAccount[]
   transactions  Transaction[]
   categories    Category[]
+
+  @@index([householdId])
 }
 
 model Session {
@@ -37,28 +55,45 @@ enum BankAccountType {
 }
 
 model BankAccount {
-  id           String          @id @default(cuid())
-  userId       String
-  name         String
-  type         BankAccountType @default(CHECKING)
-  balance      Decimal         @default(0)
-  color        String?
-  icon         String?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
+  id                String          @id @default(cuid())
+  householdId       String?
+  userId            String          
+  name              String
+  type              BankAccountType @default(CHECKING)
+  balance           Decimal         @default(0)
+  color             String?
+  icon              String?
+  
+  // Campos específicos de cartão de crédito
+  creditLimit       Decimal?
+  invoiceClosingDay Int?
+  invoiceDueDay     Int?
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  household         Household?      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions      Transaction[]
 
   @@index([userId])
+  @@index([householdId])
 }
 
 enum TransactionType {
   INCOME
   EXPENSE
+  TRANSFER
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
 }
 
 model Category {
   id           String          @id @default(cuid())
+  householdId  String?
   userId       String
   name         String
   type         TransactionType
@@ -66,28 +101,44 @@ model Category {
   color        String?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
+
+  household    Household?      @relation(fields: [householdId], references: [id], onDelete: Cascade)
   user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
 
   @@index([userId])
+  @@index([householdId])
 }
 
 model Transaction {
-  id            String          @id @default(cuid())
-  userId        String
-  bankAccountId String
-  categoryId    String?
-  type          TransactionType
-  amount        Decimal
-  description   String?
-  date          DateTime        @default(now())
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bankAccount   BankAccount     @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
-  category      Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  id                String            @id @default(cuid())
+  householdId       String?
+  userId            String            
+  bankAccountId     String
+  categoryId        String?
+  type              TransactionType
+  status            TransactionStatus @default(COMPLETED)
+  amount            Decimal
+  description       String?
+  date              DateTime          @default(now())
+  
+  // Campos para parcelamento
+  installmentNumber Int?
+  totalInstallments Int?
+  
+  // Ignorar no dashboard
+  ignoreInTotals    Boolean           @default(false)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  household         Household?        @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankAccount       BankAccount       @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  category          Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([householdId])
   @@index([bankAccountId])
   @@index([categoryId])
 }
