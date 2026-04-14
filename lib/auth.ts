@@ -19,6 +19,51 @@ export interface Session {
 }
 
 /**
+ * Backwards-compatible wrapper for callers that still import the old API.
+ * This can be removed once all usages have been migrated to `validateSession`.
+ */
+export const validateRequest = cache(async () => {
+  return validateSession();
+});
+
+/**
+ * Minimal Lucia-compatible surface for existing callers.
+ * This preserves the old exports while delegating to the new session API.
+ */
+export const lucia = {
+  createSession: async (...args: unknown[]) => {
+    return (createSession as (...args: unknown[]) => unknown)(...args);
+  },
+  invalidateSession: async (...args: unknown[]) => {
+    return (logout as (...args: unknown[]) => unknown)(...args);
+  },
+  createSessionCookie: (sessionId: string) => ({
+    name: SESSION_COOKIE_NAME,
+    value: sessionId,
+    attributes: {
+      httpOnly: true,
+      sameSite: "lax" as const,
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      expires: new Date(
+        Date.now() + SESSION_EXPIRY_DAYS * 24 * 60 * 60 * 1000
+      ),
+    },
+  }),
+  createBlankSessionCookie: () => ({
+    name: SESSION_COOKIE_NAME,
+    value: "",
+    attributes: {
+      httpOnly: true,
+      sameSite: "lax" as const,
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 0,
+    },
+  }),
+} as const;
+
+/**
  * Hash a password using bcryptjs
  */
 export async function hashPassword(password: string): Promise<string> {
