@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Send, Calendar, DollarSign, Trash2, Edit2 } from "lucide-react";
 
@@ -95,12 +95,26 @@ export default function TransacoesPage() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+
+    if (submitTimeoutRef.current) {
+      clearTimeout(submitTimeoutRef.current);
+    }
+
     // Simulate API call
-    setTimeout(() => {
+    submitTimeoutRef.current = setTimeout(() => {
       setIsSubmitting(false);
       setFormData({
         type: "EXPENSE",
@@ -110,6 +124,7 @@ export default function TransacoesPage() {
         date: getLocalDateString(),
         description: "",
       });
+      submitTimeoutRef.current = null;
     }, 1000);
   };
 
