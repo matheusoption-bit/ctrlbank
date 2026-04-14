@@ -36,6 +36,7 @@ const config: Config = {
         success: "#10B981",
         danger: "#EF4444",
         warning: "#F59E0B",
+        info: "#3B82F6",
       },
       borderRadius: {
         "20px": "20px",
@@ -53,6 +54,9 @@ const config: Config = {
       },
       fontSize: {
         "2xs": ["0.625rem", { lineHeight: "0.75rem" }],
+      },
+      fontFamily: {
+        inter: ["var(--font-inter)", "system-ui", "-apple-system", "sans-serif"],
       },
     },
   },

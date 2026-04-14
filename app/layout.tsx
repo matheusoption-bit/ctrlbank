@@ -2,21 +2,28 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ 
+const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-inter",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
   title: "CtrlBank | Premium Banking Experience",
   description: "Clean, premium, minimalist finance management. C6 Bank inspired design.",
-  keywords: ["banking", "finance", "money", "management", "control"],
+  keywords: ["banking", "finance", "money", "management", "control", "ctrlbank"],
   authors: [{ name: "CtrlBank Team" }],
+  creator: "CtrlBank",
   openGraph: {
     title: "CtrlBank",
     description: "Premium Banking Experience",
     type: "website",
+    locale: "pt_BR",
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 
@@ -25,6 +32,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
+  themeColor: "#0A0A0A",
 };
 
 export default function RootLayout({
@@ -39,8 +47,9 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="CtrlBank" />
       </head>
-      <body 
+      <body
         className={`${inter.variable} bg-background text-foreground antialiased overflow-x-hidden`}
         style={{ fontFamily: "var(--font-inter), system-ui" }}
       >

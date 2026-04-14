@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Wallet,
   ArrowUpRight,
@@ -11,20 +11,19 @@ import {
   TrendingUp,
   Eye,
   EyeOff,
+  LogOut,
 } from "lucide-react";
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Area,
-  AreaChart,
 } from "recharts";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import Link from "next/link";
 
 // Mock data for 6 months
 const chartData = [
@@ -85,7 +84,7 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
+      staggerChildren: 0.08,
       delayChildren: 0.1,
     },
   },
@@ -107,6 +106,17 @@ export default function Dashboard() {
   const monthExpense = 1342.4;
   const netWorth = totalBalance;
 
+  const handleLogout = async () => {
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (response.ok) {
+        window.location.href = "/login";
+      }
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
   return (
     <motion.div
       className="space-y-8 pb-32"
@@ -122,8 +132,12 @@ export default function Dashboard() {
           </h1>
           <p className="text-secondary text-sm mt-1">Bem-vindo de volta</p>
         </div>
-        <button className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center hover:bg-white/5 transition-colors">
-          <MoreVertical className="w-5 h-5 text-secondary" />
+        <button
+          onClick={handleLogout}
+          className="p-2.5 rounded-full bg-surface border border-border hover:bg-white/5 transition-colors"
+          title="Logout"
+        >
+          <LogOut className="w-5 h-5 text-secondary hover:text-white transition-colors" />
         </button>
       </motion.header>
 
