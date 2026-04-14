@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { BankAccountFormValues, bankAccountSchema } from "@/lib/validations/account.schema";
@@ -52,7 +53,9 @@ export function BankAccountForm({
       
       if (!res.success) {
         setError(res.error || "Ocorreu um erro ao salvar a conta.");
+        toast.error("Erro ao salvar", { description: res.error || "Verifique os dados e tente novamente." });
       } else {
+        toast.success("Sucesso!", { description: "Conta salva com sucesso." });
         if (onSuccess) onSuccess();
       }
     });
@@ -63,9 +66,14 @@ export function BankAccountForm({
     if (!confirm("Tem certeza que deseja excluir esta conta?")) return;
     
     startTransition(async () => {
-      const res = await deleteBankAccount(initialData.id);
-      if (!res.success) setError(res.error || "Erro ao excluir.");
-      else if (onSuccess) onSuccess();
+      const res = await deleteBankAccount(initialData.id!);
+      if (!res.success) {
+        setError(res.error || "Erro ao excluir.");
+        toast.error("Erro ao excluir", { description: res.error || "Não foi possível excluir a conta." });
+      } else {
+        toast.success("Conta excluída", { description: "A conta foi removida com sucesso." });
+        if (onSuccess) onSuccess();
+      }
     });
   }
 
@@ -178,8 +186,18 @@ export function BankAccountForm({
               <FormLabel className="text-secondary">Cor (Hexadecimal - Opcional)</FormLabel>
               <FormControl>
                 <div className="flex gap-2">
-                  <Input type="color" className="w-16 h-12 p-1 rounded-xl bg-surface border-white/10" {...field} />
-                  <Input placeholder="#171717" className="flex-1 bg-surface border-white/10 h-12 rounded-xl focus-visible:ring-primary" {...field} />
+                  <Input 
+                    type="color" 
+                    className="w-16 h-12 p-1 rounded-xl bg-surface border-white/10" 
+                    value={field.value || "#171717"}
+                    onChange={(e) => field.onChange(e.target.value)}
+                  />
+                  <Input 
+                    placeholder="#171717" 
+                    className="flex-1 bg-surface border-white/10 h-12 rounded-xl focus-visible:ring-primary" 
+                    {...field} 
+                    value={field.value || ""}
+                  />
                 </div>
               </FormControl>
               <FormMessage />

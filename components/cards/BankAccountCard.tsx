@@ -42,12 +42,13 @@ export function BankAccountCard({ account, onClick }: BankAccountCardProps) {
     : null;
 
   return (
-    <motion.div
+    <motion.button
+      type="button"
       whileHover={{ scale: onClick ? 1.02 : 1, y: onClick ? -2 : 0 }}
       whileTap={{ scale: onClick ? 0.98 : 1 }}
       onClick={onClick}
       className={cn(
-        "relative overflow-hidden rounded-[20px] p-6 text-white cursor-pointer shadow-soft transition-shadow hover:shadow-soft-lg",
+        "relative overflow-hidden rounded-[20px] p-6 text-left cursor-pointer shadow-soft transition-shadow hover:shadow-soft-lg w-full text-white appearance-none focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background",
         // Fallback default style for cards if color is not provided
         !account.color && "bg-gradient-to-br from-surface to-[#2A2A2A] border border-white/10"
       )}
@@ -81,6 +82,6 @@ export function BankAccountCard({ account, onClick }: BankAccountCardProps) {
           </div>
         )}
       </div>
-    </motion.div>
+    </motion.button>
   );
 }

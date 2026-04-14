@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { BankAccountCard, SafeBankAccount } from "@/components/cards/BankAccountCard";
 import { BankAccountForm } from "@/components/forms/BankAccountForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export function AccountsClient({ accounts }: { accounts: SafeBankAccount[] }) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<SafeBankAccount | undefined>();
 
@@ -22,6 +24,7 @@ export function AccountsClient({ accounts }: { accounts: SafeBankAccount[] }) {
 
   const handleSuccess = () => {
     setIsOpen(false);
+    router.refresh();
   };
 
   return (
