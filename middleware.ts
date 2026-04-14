@@ -4,11 +4,16 @@ import { validateRequest } from "@/lib/auth";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Public routes
-  const publicRoutes = ["/login", "/register", "/api/auth/login", "/api/auth/register"];
+  // Public routes that don't require authentication
+  const publicRoutes = ["/login", "/register"];
 
   // Check if route is public
-  if (publicRoutes.some(route => pathname.startsWith(route))) {
+  if (publicRoutes.includes(pathname)) {
+    return NextResponse.next();
+  }
+
+  // API routes for auth are public
+  if (pathname.startsWith("/api/auth/login") || pathname.startsWith("/api/auth/register")) {
     return NextResponse.next();
   }
 
@@ -30,7 +35,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - public files
      */
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    "/((?!_next/static|_next/image|favicon.ico|public).*)",
   ],
 };
