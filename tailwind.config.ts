@@ -20,12 +20,39 @@ const config: Config = {
         },
         surface: "#1C1C1E",
         "surface-elevated": "#242426",
-        secondary: "#A1A1AA",
+        secondary: {
+          DEFAULT: "#A1A1AA",
+          foreground: "#FFFFFF",
+        },
         border: "#2A2A2E",
         success: "#00C853",
         danger: "#FF3B5C",
         warning: "#FF9500",
         info: "#5AC8FA",
+
+        // shadcn compatibility tokens (mapped to C6 palette)
+        card: {
+          DEFAULT: "#1C1C1E",
+          foreground: "#FFFFFF",
+        },
+        popover: {
+          DEFAULT: "#1C1C1E",
+          foreground: "#FFFFFF",
+        },
+        muted: {
+          DEFAULT: "#242426",
+          foreground: "#A1A1AA",
+        },
+        accent: {
+          DEFAULT: "#242426",
+          foreground: "#FFFFFF",
+        },
+        destructive: {
+          DEFAULT: "#FF3B5C",
+          foreground: "#FFFFFF",
+        },
+        input: "#2A2A2E",
+        ring: "#FF2D55",
       },
       borderRadius: {
         "2xl": "16px",

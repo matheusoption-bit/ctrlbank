@@ -10,16 +10,16 @@ const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.08, delayChildren: 0.2 },
+    transition: { staggerChildren: 0.06, delayChildren: 0.15 },
   },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 10 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, ease: "easeOut" },
+    transition: { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] },
   },
 };
 
@@ -79,34 +79,30 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-background flex items-center justify-center px-5 py-8">
       <motion.div
-        className="w-full max-w-md"
+        className="w-full max-w-sm"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
-        {/* Decorative elements */}
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-
         {/* Logo */}
-        <motion.div className="text-center mb-12 relative z-10" variants={itemVariants}>
-          <h1 className="text-5xl font-black tracking-tighter">
+        <motion.div className="text-center mb-10" variants={itemVariants}>
+          <h1 className="text-4xl font-bold tracking-tight">
             <span className="text-primary">Ctrl</span>
             <span className="text-foreground">Bank</span>
           </h1>
-          <p className="text-secondary text-sm mt-3 font-medium">Premium Banking Experience</p>
+          <p className="text-secondary text-sm mt-2">Premium Banking Experience</p>
         </motion.div>
 
         {/* Card */}
         <motion.div
-          className="card-c6 space-y-6 relative z-10 bg-gradient-to-br from-surface to-black"
+          className="card-premium space-y-6"
           variants={itemVariants}
         >
-          <div className="space-y-2">
-            <h2 className="text-3xl font-black">Criar conta</h2>
-            <p className="text-secondary text-sm font-medium">
+          <div className="space-y-1">
+            <h2 className="text-2xl font-semibold tracking-tight">Criar conta</h2>
+            <p className="text-secondary text-sm">
               Junte-se ao CtrlBank e comece a gerenciar suas finanças
             </p>
           </div>
@@ -115,13 +111,13 @@ export default function RegisterPage() {
           <AnimatePresence>
             {error && (
               <motion.div
-                className="bg-danger/10 border border-danger/30 rounded-lg p-4 flex items-gap-3"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-danger/10 border border-danger/30 rounded-xl p-3.5 flex items-center gap-3"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
               >
-                <AlertCircle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-danger font-medium">{error}</p>
+                <AlertCircle className="w-4 h-4 text-danger flex-shrink-0" />
+                <p className="text-sm text-danger">{error}</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -130,32 +126,30 @@ export default function RegisterPage() {
           <AnimatePresence>
             {success && (
               <motion.div
-                className="bg-success/10 border border-success/30 rounded-lg p-4 flex items-gap-3"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-success/10 border border-success/30 rounded-xl p-3.5 flex items-center gap-3"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
               >
-                <CheckCircle className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-success font-medium">{success}</p>
+                <CheckCircle className="w-4 h-4 text-success flex-shrink-0" />
+                <p className="text-sm text-success">{success}</p>
               </motion.div>
             )}
           </AnimatePresence>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Name */}
             <motion.div className="space-y-2" variants={itemVariants}>
-              <label className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                Nome Completo
-              </label>
+              <label className="section-label">Nome Completo</label>
               <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary pointer-events-none" />
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-secondary pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Seu nome"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="input-c6 pl-12 font-medium"
+                  className="input-premium pl-12"
                   required
                   disabled={loading}
                   autoComplete="name"
@@ -165,17 +159,15 @@ export default function RegisterPage() {
 
             {/* Email */}
             <motion.div className="space-y-2" variants={itemVariants}>
-              <label className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                Email
-              </label>
+              <label className="section-label">Email</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary pointer-events-none" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-secondary pointer-events-none" />
                 <input
                   type="email"
                   placeholder="seu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="input-c6 pl-12 font-medium"
+                  className="input-premium pl-12"
                   required
                   disabled={loading}
                   autoComplete="email"
@@ -185,17 +177,15 @@ export default function RegisterPage() {
 
             {/* Password */}
             <motion.div className="space-y-2" variants={itemVariants}>
-              <label className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                Senha
-              </label>
+              <label className="section-label">Senha</label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary pointer-events-none" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-secondary pointer-events-none" />
                 <input
                   type="password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="input-c6 pl-12 font-medium"
+                  className="input-premium pl-12"
                   required
                   disabled={loading}
                   autoComplete="new-password"
@@ -205,17 +195,15 @@ export default function RegisterPage() {
 
             {/* Confirm Password */}
             <motion.div className="space-y-2" variants={itemVariants}>
-              <label className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                Confirmar Senha
-              </label>
+              <label className="section-label">Confirmar Senha</label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary pointer-events-none" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-secondary pointer-events-none" />
                 <input
                   type="password"
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="input-c6 pl-12 font-medium"
+                  className="input-premium pl-12"
                   required
                   disabled={loading}
                   autoComplete="new-password"
@@ -226,20 +214,19 @@ export default function RegisterPage() {
             {/* Register Button */}
             <motion.button
               type="submit"
-              className="btn-primary flex items-center justify-center gap-2 mt-8 group disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary flex items-center justify-center gap-2 mt-2"
               variants={itemVariants}
               disabled={loading}
-              whileHover={{ scale: loading ? 1 : 1.02 }}
               whileTap={{ scale: loading ? 1 : 0.98 }}
             >
               {loading ? (
                 <>
-                  <Loader className="w-5 h-5 animate-spin" />
+                  <Loader className="w-4.5 h-4.5 animate-spin" />
                   Criando conta...
                 </>
               ) : (
                 <>
-                  <UserPlus className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  <UserPlus className="w-4.5 h-4.5" />
                   Criar Conta
                 </>
               )}
@@ -247,12 +234,12 @@ export default function RegisterPage() {
           </form>
 
           {/* Divider */}
-          <div className="relative my-6">
+          <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-border" />
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-surface text-secondary font-medium">ou</span>
+            <div className="relative flex justify-center text-xs">
+              <span className="px-3 bg-surface text-secondary">ou</span>
             </div>
           </div>
 
@@ -262,10 +249,10 @@ export default function RegisterPage() {
               Já tem uma conta?{" "}
               <Link
                 href="/login"
-                className="text-primary font-bold hover:opacity-80 transition-opacity inline-flex items-center gap-1"
+                className="text-primary font-semibold hover:opacity-80 transition-opacity inline-flex items-center gap-1"
               >
                 Fazer login
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </p>
           </motion.div>
@@ -273,7 +260,7 @@ export default function RegisterPage() {
 
         {/* Footer */}
         <motion.p
-          className="text-center text-secondary text-xs mt-8 relative z-10"
+          className="text-center text-secondary/60 text-xs mt-8"
           variants={itemVariants}
         >
           © 2024 CtrlBank. Todos os direitos reservados.
