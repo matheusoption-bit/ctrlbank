@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { BankAccountFormValues, bankAccountSchema } from "@/lib/validations/account.schema";
@@ -18,12 +19,12 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SafeBankAccount } from "../cards/BankAccountCard";
 
-export function BankAccountForm({ 
-  initialData, 
-  onSuccess 
-}: { 
-  initialData?: SafeBankAccount, 
-  onSuccess?: () => void 
+export function BankAccountForm({
+  initialData,
+  onSuccess
+}: {
+  initialData?: SafeBankAccount,
+  onSuccess?: () => void
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +36,7 @@ export function BankAccountForm({
       name: initialData?.name || "",
       type: initialData?.type || "CHECKING",
       balance: initialData?.balance || 0,
-      color: initialData?.color || "#171717",
+      color: initialData?.color || "#1C1C1E",
       creditLimit: initialData?.creditLimit || 0,
       invoiceClosingDay: initialData?.invoiceClosingDay || 1,
       invoiceDueDay: initialData?.invoiceDueDay || 5,
@@ -49,10 +50,12 @@ export function BankAccountForm({
     startTransition(async () => {
       const action = initialData ? updateBankAccount : createBankAccount;
       const res = await action(values);
-      
+
       if (!res.success) {
         setError(res.error || "Ocorreu um erro ao salvar a conta.");
+        toast.error("Erro ao salvar", { description: res.error || "Verifique os dados e tente novamente." });
       } else {
+        toast.success("Sucesso!", { description: "Conta salva com sucesso." });
         if (onSuccess) onSuccess();
       }
     });
@@ -61,32 +64,37 @@ export function BankAccountForm({
   async function handleDelete() {
     if (!initialData?.id) return;
     if (!confirm("Tem certeza que deseja excluir esta conta?")) return;
-    
+
     startTransition(async () => {
-      const res = await deleteBankAccount(initialData.id);
-      if (!res.success) setError(res.error || "Erro ao excluir.");
-      else if (onSuccess) onSuccess();
+      const res = await deleteBankAccount(initialData.id!);
+      if (!res.success) {
+        setError(res.error || "Erro ao excluir.");
+        toast.error("Erro ao excluir", { description: res.error || "Não foi possível excluir a conta." });
+      } else {
+        toast.success("Conta excluída", { description: "A conta foi removida com sucesso." });
+        if (onSuccess) onSuccess();
+      }
     });
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
         {error && <div className="p-3 text-sm text-danger bg-danger/10 rounded-xl">{error}</div>}
-        
+
         <FormField
           control={form.control}
           name="type"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-secondary">Tipo da Conta</FormLabel>
+              <FormLabel className="section-label">Tipo da Conta</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
-                  <SelectTrigger className="bg-surface border-white/10 h-12 rounded-xl focus:ring-primary">
+                  <SelectTrigger className="bg-surface border-border h-12 rounded-xl">
                     <SelectValue placeholder="Selecione o tipo..." />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent className="bg-surface border-white/10">
+                <SelectContent className="bg-surface border-border">
                   <SelectItem value="CHECKING">Conta Corrente</SelectItem>
                   <SelectItem value="SAVINGS">Poupança</SelectItem>
                   <SelectItem value="CREDIT">Cartão de Crédito</SelectItem>
@@ -103,9 +111,9 @@ export function BankAccountForm({
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-secondary">Nome da Conta/Cartão</FormLabel>
+              <FormLabel className="section-label">Nome da Conta/Cartão</FormLabel>
               <FormControl>
-                <Input placeholder="Ex: Nubank, Itaú..." className="bg-surface border-white/10 h-12 rounded-xl focus-visible:ring-primary" {...field} />
+                <Input placeholder="Ex: Nubank, Itaú..." className="bg-surface border-border h-12 rounded-xl" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -117,9 +125,9 @@ export function BankAccountForm({
           name="balance"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-secondary">{accountType === "CREDIT" ? "Fatura Atual" : "Saldo Atual"}</FormLabel>
+              <FormLabel className="section-label">{accountType === "CREDIT" ? "Fatura Atual" : "Saldo Atual"}</FormLabel>
               <FormControl>
-                <Input type="number" step="0.01" className="bg-surface border-white/10 h-12 rounded-xl focus-visible:ring-primary" {...field} />
+                <Input type="number" step="0.01" className="bg-surface border-border h-12 rounded-xl text-lg font-semibold" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -133,9 +141,9 @@ export function BankAccountForm({
               name="creditLimit"
               render={({ field }) => (
                 <FormItem className="col-span-2">
-                  <FormLabel className="text-secondary">Limite de Crédito</FormLabel>
+                  <FormLabel className="section-label">Limite de Crédito</FormLabel>
                   <FormControl>
-                    <Input type="number" step="0.01" className="bg-surface border-white/10 h-12 rounded-xl focus-visible:ring-primary" {...field} value={field.value || ""} />
+                    <Input type="number" step="0.01" className="bg-surface border-border h-12 rounded-xl" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -146,9 +154,9 @@ export function BankAccountForm({
               name="invoiceClosingDay"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-secondary">Dia do Corte</FormLabel>
+                  <FormLabel className="section-label">Dia do Corte</FormLabel>
                   <FormControl>
-                    <Input type="number" min="1" max="31" className="bg-surface border-white/10 h-12 rounded-xl focus-visible:ring-primary" {...field} value={field.value || ""} />
+                    <Input type="number" min="1" max="31" className="bg-surface border-border h-12 rounded-xl" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -159,9 +167,9 @@ export function BankAccountForm({
               name="invoiceDueDay"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-secondary">Vencimento</FormLabel>
+                  <FormLabel className="section-label">Vencimento</FormLabel>
                   <FormControl>
-                    <Input type="number" min="1" max="31" className="bg-surface border-white/10 h-12 rounded-xl focus-visible:ring-primary" {...field} value={field.value || ""} />
+                    <Input type="number" min="1" max="31" className="bg-surface border-border h-12 rounded-xl" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -175,11 +183,21 @@ export function BankAccountForm({
           name="color"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-secondary">Cor (Hexadecimal - Opcional)</FormLabel>
+              <FormLabel className="section-label">Cor do Cartão</FormLabel>
               <FormControl>
                 <div className="flex gap-2">
-                  <Input type="color" className="w-16 h-12 p-1 rounded-xl bg-surface border-white/10" {...field} />
-                  <Input placeholder="#171717" className="flex-1 bg-surface border-white/10 h-12 rounded-xl focus-visible:ring-primary" {...field} />
+                  <Input
+                    type="color"
+                    className="w-16 h-12 p-1 rounded-xl bg-surface border-border"
+                    value={field.value || "#1C1C1E"}
+                    onChange={(e) => field.onChange(e.target.value)}
+                  />
+                  <Input
+                    placeholder="#1C1C1E"
+                    className="flex-1 bg-surface border-border h-12 rounded-xl"
+                    {...field}
+                    value={field.value || ""}
+                  />
                 </div>
               </FormControl>
               <FormMessage />
@@ -187,13 +205,13 @@ export function BankAccountForm({
           )}
         />
 
-        <div className="pt-4 flex gap-4">
+        <div className="pt-2 flex gap-3">
           <Button type="submit" className="flex-1 btn-primary" disabled={isPending}>
             {isPending ? "Salvando..." : initialData ? "Salvar Alterações" : "Adicionar Conta"}
           </Button>
 
           {initialData && (
-            <Button type="button" variant="destructive" className="px-6 rounded-full" onClick={handleDelete} disabled={isPending}>
+            <Button type="button" variant="destructive" className="px-6 rounded-xl" onClick={handleDelete} disabled={isPending}>
               Excluir
             </Button>
           )}

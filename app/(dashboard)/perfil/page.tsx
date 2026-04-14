@@ -1,81 +1,78 @@
-"use client";
-
-import { motion } from "framer-motion";
-import { UserCircle, Mail, Shield, LogOut } from "lucide-react";
+import { validateSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { UserCircle, Mail, Shield, LogOut, Home } from "lucide-react";
 import { handleLogout } from "@/lib/actions/auth.actions";
+import { PremiumCard } from "@/components/ui/premium-card";
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.1 } },
-};
+export default async function PerfilPage() {
+  const { user } = await validateSession();
+  if (!user) redirect("/login");
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
-};
+  const firstName = user.name?.split(" ")[0] || user.email.split("@")[0];
+  const initials = user.name
+    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : user.email[0].toUpperCase();
 
-export default function PerfilPage() {
   return (
-    <motion.div
-      className="space-y-6 pb-8"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
-      <motion.div variants={itemVariants}>
-        <h1 className="text-3xl font-black tracking-tighter">Meu Perfil</h1>
-        <p className="text-secondary mt-1 text-sm">Gerencie sua conta e preferências</p>
-      </motion.div>
+    <div className="space-y-6 pb-8 animate-fade-in">
+      {/* Header */}
+      <div className="pt-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Meu Perfil</h1>
+        <p className="text-secondary text-sm mt-1">Gerencie sua conta</p>
+      </div>
 
       {/* Avatar */}
-      <motion.div
-        variants={itemVariants}
-        className="card-c6 flex flex-col items-center text-center space-y-4"
-      >
-        <div className="w-24 h-24 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center">
-          <UserCircle className="w-14 h-14 text-primary" />
+      <PremiumCard className="flex flex-col items-center text-center py-8">
+        <div className="w-20 h-20 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
+          <span className="text-2xl font-bold text-primary">{initials}</span>
         </div>
-        <div>
-          <p className="text-xl font-bold">Usuário</p>
-          <p className="text-secondary text-sm">Membro desde 2024</p>
-        </div>
-      </motion.div>
+        <p className="text-lg font-semibold">{user.name || firstName}</p>
+        <p className="text-sm text-secondary mt-0.5">{user.email}</p>
+      </PremiumCard>
 
       {/* Info Cards */}
-      <motion.div variants={itemVariants} className="space-y-3">
-        <div className="card-c6-sm flex items-center gap-4">
-          <div className="p-2 bg-primary/10 rounded-xl">
-            <Mail className="w-5 h-5 text-primary" />
+      <div className="space-y-2">
+        <PremiumCard className="flex items-center gap-4">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <Mail className="w-5 h-5 text-primary" strokeWidth={1.5} />
           </div>
           <div>
-            <p className="text-xs text-secondary font-medium uppercase tracking-wide">Email</p>
-            <p className="font-semibold text-sm">—</p>
+            <p className="section-label">Email</p>
+            <p className="text-sm font-medium mt-0.5">{user.email}</p>
           </div>
-        </div>
+        </PremiumCard>
 
-        <div className="card-c6-sm flex items-center gap-4">
-          <div className="p-2 bg-success/10 rounded-xl">
-            <Shield className="w-5 h-5 text-success" />
+        <PremiumCard className="flex items-center gap-4">
+          <div className="p-2 bg-success/10 rounded-lg">
+            <Shield className="w-5 h-5 text-success" strokeWidth={1.5} />
           </div>
           <div>
-            <p className="text-xs text-secondary font-medium uppercase tracking-wide">Segurança</p>
-            <p className="font-semibold text-sm">Conta protegida</p>
+            <p className="section-label">Segurança</p>
+            <p className="text-sm font-medium mt-0.5">Conta protegida</p>
           </div>
-        </div>
-      </motion.div>
+        </PremiumCard>
+
+        <PremiumCard className="flex items-center gap-4">
+          <div className="p-2 bg-info/10 rounded-lg">
+            <Home className="w-5 h-5 text-info" strokeWidth={1.5} />
+          </div>
+          <div>
+            <p className="section-label">Household</p>
+            <p className="text-sm font-medium mt-0.5">Família {firstName}</p>
+          </div>
+        </PremiumCard>
+      </div>
 
       {/* Logout */}
-      <motion.div variants={itemVariants}>
-        <form action={handleLogout}>
-          <button
-            type="submit"
-            className="w-full flex items-center justify-center gap-3 btn-outline text-danger border-danger/30 hover:bg-danger/10 hover:border-danger"
-          >
-            <LogOut className="w-5 h-5" />
-            Sair da Conta
-          </button>
-        </form>
-      </motion.div>
-    </motion.div>
+      <form action={handleLogout}>
+        <button
+          type="submit"
+          className="w-full flex items-center justify-center gap-3 btn-outline text-danger border-danger/30 hover:bg-danger/10 hover:border-danger"
+        >
+          <LogOut className="w-5 h-5" />
+          Sair da Conta
+        </button>
+      </form>
+    </div>
   );
 }

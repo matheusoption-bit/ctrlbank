@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const inter = Inter({
@@ -45,6 +46,19 @@ export default function RootLayout({
       </head>
       <body className="bg-background text-foreground antialiased overflow-x-hidden font-inter">
         {children}
+        <Toaster
+          theme="dark"
+          position="top-center"
+          richColors
+          toastOptions={{
+            style: {
+              background: "#1C1C1E",
+              border: "1px solid #2A2A2E",
+              borderRadius: "12px",
+              fontSize: "14px",
+            },
+          }}
+        />
       </body>
     </html>
   );

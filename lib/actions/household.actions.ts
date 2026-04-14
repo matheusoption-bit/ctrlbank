@@ -28,10 +28,24 @@ export async function initializeHousehold() {
     return { success: true, householdId: dbUser.householdId };
   }
 
-  // User has no household, create one
-  const householdName = `Família ${dbUser.name || dbUser.email.split("@")[0]}`;
-  
   try {
+    const existingHousehold = await prisma.household.findFirst({
+      where: { users: { some: { id: dbUser.id } } }
+    });
+
+    if (existingHousehold) {
+      if (!dbUser.householdId) {
+        await prisma.user.update({
+          where: { id: dbUser.id },
+          data: { householdId: existingHousehold.id }
+        });
+      }
+      return { success: true, householdId: existingHousehold.id };
+    }
+
+    // User has no household, create one
+    const householdName = `Família ${dbUser.name || dbUser.email.split("@")[0]}`;
+    
     const newHousehold = await prisma.household.create({
       data: {
         name: householdName,

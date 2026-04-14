@@ -5,14 +5,15 @@
 :root {
   --background: #0A0A0A;
   --foreground: #FFFFFF;
-  --primary: #FFCC00;
-  --surface: #171717;
-  --secondary: #A3A3A3;
-  --border: #262626;
-  --success: #10B981;
-  --danger: #EF4444;
-  --warning: #F59E0B;
-  --info: #3B82F6;
+  --primary: #FF2D55;
+  --surface: #1C1C1E;
+  --surface-elevated: #242426;
+  --secondary: #A1A1AA;
+  --border: #2A2A2E;
+  --success: #00C853;
+  --danger: #FF3B5C;
+  --warning: #FF9500;
+  --info: #5AC8FA;
 }
 
 * {
@@ -33,39 +34,85 @@ body {
   overflow-x: hidden;
 }
 
+/* ========================================
+   C6 BANK PREMIUM DESIGN SYSTEM
+   ======================================== */
+
 @layer components {
-  .card-c6 {
-    @apply bg-surface border border-border rounded-[20px] shadow-soft p-6 transition-all duration-200 hover:shadow-soft-lg;
+  /* ---- Cards ---- */
+  .card-premium {
+    @apply bg-surface border border-border rounded-3xl p-6 transition-all duration-200;
   }
 
-  .card-c6-sm {
-    @apply bg-surface border border-border rounded-[16px] shadow-soft p-4 transition-all duration-200;
+  .card-premium:hover {
+    border-color: rgba(255, 255, 255, 0.08);
   }
 
+  .card-premium-sm {
+    @apply bg-surface border border-border rounded-2xl p-4 transition-all duration-200;
+  }
+
+  .card-premium-sm:hover {
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  /* Card de conta bancária estilo cartão físico */
+  .card-bank {
+    @apply bg-surface border border-border rounded-3xl p-6 relative overflow-hidden transition-all duration-300;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  }
+
+  .card-bank:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+
+  /* Brilho sutil na borda superior do card (estilo cartão premium) */
+  .card-bank::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20%;
+    right: 20%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+    pointer-events: none;
+  }
+
+  /* ---- Buttons ---- */
   .btn-primary {
-    @apply bg-primary text-black font-semibold py-3 px-6 rounded-full transition-all duration-200 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full;
+    @apply bg-primary text-white font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed w-full;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    @apply brightness-110;
   }
 
   .btn-secondary {
-    @apply bg-white/10 text-white font-semibold py-3 px-6 rounded-full transition-all duration-200 hover:bg-white/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full;
+    @apply bg-surface-elevated text-white font-semibold py-3.5 px-6 rounded-xl border border-border transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed w-full;
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    @apply bg-[#2C2C2E];
   }
 
   .btn-ghost {
-    @apply text-white font-medium py-2 px-4 rounded-full transition-all duration-200 hover:bg-white/5 active:scale-95;
+    @apply text-white font-medium py-2.5 px-4 rounded-xl transition-all duration-200 active:scale-[0.98];
+  }
+
+  .btn-ghost:hover {
+    @apply bg-white/5;
   }
 
   .btn-outline {
-    @apply border border-border bg-transparent text-white font-semibold py-3 px-6 rounded-full transition-all duration-200 hover:bg-white/5 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full;
+    @apply border border-border bg-transparent text-white font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed w-full;
   }
 
-  .text-primary-accent {
-    @apply text-primary font-bold;
+  .btn-outline:hover:not(:disabled) {
+    @apply bg-white/5 border-white/15;
   }
 
-  .text-secondary-muted {
-    @apply text-secondary text-sm;
-  }
-
+  /* ---- Badges ---- */
   .badge-success {
     @apply inline-flex items-center gap-1 px-3 py-1 bg-success/10 text-success text-xs font-medium rounded-full;
   }
@@ -74,19 +121,36 @@ body {
     @apply inline-flex items-center gap-1 px-3 py-1 bg-danger/10 text-danger text-xs font-medium rounded-full;
   }
 
-  .input-c6 {
-    @apply w-full bg-surface border border-border rounded-[12px] px-4 py-3 text-white placeholder-secondary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all;
+  /* ---- Inputs ---- */
+  .input-premium {
+    @apply w-full bg-surface border border-border rounded-xl px-4 py-3.5 text-white placeholder-secondary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition-all duration-200;
   }
 
-  .input-c6:disabled {
+  .input-premium:disabled {
     @apply opacity-50 cursor-not-allowed;
+  }
+
+  /* ---- Section Labels ---- */
+  .section-label {
+    @apply text-xs font-semibold uppercase tracking-widest text-secondary;
+  }
+
+  /* ---- Skeleton Loading ---- */
+  .skeleton {
+    @apply bg-surface rounded-xl relative overflow-hidden;
+    background: linear-gradient(90deg, #1C1C1E 25%, #2A2A2E 50%, #1C1C1E 75%);
+    background-size: 200% 100%;
+    animation: shimmer 2s ease-in-out infinite;
   }
 }
 
-/* Scrollbar Styling */
+/* ========================================
+   SCROLLBAR
+   ======================================== */
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -95,38 +159,28 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--secondary);
 }
 
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+/* Hide scrollbar for horizontal scroll areas */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
-}
+/* ========================================
+   UTILITY ANIMATIONS
+   ======================================== */
 
-.animate-slide-up {
-  animation: slideUp 0.3s ease-out;
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
