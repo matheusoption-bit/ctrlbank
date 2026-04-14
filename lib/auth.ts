@@ -145,9 +145,9 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
  * The token is hashed internally before the database lookup so callers should
  * always pass the raw token, never the hash.
  */
-export async function invalidateSession(rawToken: string): Promise<void> {
+export async function invalidateSession(token: string): Promise<void> {
   try {
-    const tokenHash = hashSessionToken(rawToken);
+    const tokenHash = hashSessionToken(token);
     await prisma.session.delete({ where: { id: tokenHash } }).catch((e) => {
       console.error("Failed to delete session during invalidation:", e);
     });
