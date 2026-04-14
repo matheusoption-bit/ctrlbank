@@ -21,7 +21,7 @@ const itemVariants = {
   },
 };
 
-// Mock data
+// TODO: Replace mock data with real API call to GET /api/accounts
 const mockAccounts = [
   {
     id: "1",

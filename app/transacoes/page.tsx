@@ -27,6 +27,7 @@ const itemVariants = {
   },
 };
 
+// TODO: Replace mock data with real API call to GET /api/transactions
 // Mock data
 const mockTransactions = [
   {

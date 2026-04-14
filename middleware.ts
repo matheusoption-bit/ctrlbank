@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-
-// Keep in sync with SESSION_COOKIE_NAME in lib/auth.ts
-const SESSION_COOKIE_NAME = "ctrlbank_session";
+import { SESSION_COOKIE_NAME } from "@/lib/constants";
+import { verifySignedToken } from "@/lib/session-utils";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -11,9 +10,13 @@ export async function middleware(request: NextRequest) {
 
   // Check if route is public
   if (publicRoutes.includes(pathname)) {
-    // If a session cookie exists, redirect to dashboard
-    if (request.cookies.has(SESSION_COOKIE_NAME)) {
-      return NextResponse.redirect(new URL("/", request.url));
+    // If a valid signed session cookie exists, redirect to dashboard
+    const cookieValue = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+    if (cookieValue) {
+      const token = await verifySignedToken(cookieValue);
+      if (token) {
+        return NextResponse.redirect(new URL("/", request.url));
+      }
     }
     return NextResponse.next();
   }
@@ -36,9 +39,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // For protected routes, check for session cookie presence.
-  // Full session validation happens in server components and route handlers.
-  if (!request.cookies.has(SESSION_COOKIE_NAME)) {
+  // For protected routes, verify the HMAC signature of the session cookie.
+  // A cookie without a valid signature is treated as unauthenticated — this
+  // prevents bypass via a manually crafted or tampered cookie.
+  // Full DB validation (expiry, user existence) still happens in server
+  // components and route handlers via validateSession().
+  const cookieValue = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  if (!cookieValue) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  const token = await verifySignedToken(cookieValue);
+  if (!token) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);

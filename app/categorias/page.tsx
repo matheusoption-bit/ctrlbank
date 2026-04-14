@@ -21,7 +21,7 @@ const itemVariants = {
   },
 };
 
-// Mock data
+// TODO: Replace mock data with real API call to GET /api/categories
 const mockCategories = {
   INCOME: [
     { id: "1", name: "Salário", icon: "💰", color: "#00FF88" },
