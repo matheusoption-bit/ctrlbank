@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { validateRequest, lucia } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import { validateSession, logout } from "@/lib/auth";
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
-    const { session } = await validateRequest();
+    const { session } = await validateSession();
 
     if (!session) {
       return NextResponse.json(
@@ -12,24 +12,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Invalidate the session in the database
-    await lucia.invalidateSession(session.id);
+    await logout();
 
-    // Create blank session cookie to clear it
-    const sessionCookie = lucia.createBlankSessionCookie();
-
-    const response = NextResponse.json(
+    return NextResponse.json(
       { message: "Logout realizado com sucesso" },
       { status: 200 }
     );
-
-    response.cookies.set(
-      sessionCookie.name,
-      sessionCookie.value,
-      sessionCookie.attributes
-    );
-
-    return response;
   } catch (error) {
     console.error("Logout error:", error);
     return NextResponse.json(

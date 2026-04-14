@@ -1,8 +1,14 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Send, Calendar, DollarSign, Trash2, Edit2 } from "lucide-react";
+import {
+  Send,
+  Calendar,
+  DollarSign,
+  Trash2,
+  Edit2,
+} from "lucide-react";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -21,6 +27,7 @@ const itemVariants = {
   },
 };
 
+// TODO: Replace mock data with real API call to GET /api/transactions
 // Mock data
 const mockTransactions = [
   {
@@ -75,32 +82,32 @@ const mockTransactions = [
   },
 ];
 
-const getLocalDateString = () => {
+function getLocalDateString(): string {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
-
   return `${year}-${month}-${day}`;
-};
+}
+
+const initialFormData = () => ({
+  type: "EXPENSE" as "INCOME" | "EXPENSE",
+  account: "",
+  category: "",
+  amount: "",
+  date: getLocalDateString(),
+  description: "",
+});
 
 export default function TransacoesPage() {
-  const [formData, setFormData] = useState({
-    type: "EXPENSE",
-    account: "",
-    category: "",
-    amount: "",
-    date: getLocalDateString(),
-    description: "",
-  });
-
+  const [formData, setFormData] = useState(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const submitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const submitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
-      if (submitTimeoutRef.current) {
-        clearTimeout(submitTimeoutRef.current);
+      if (submitTimerRef.current) {
+        clearTimeout(submitTimerRef.current);
       }
     };
   }, []);
@@ -108,23 +115,10 @@ export default function TransacoesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-
-    if (submitTimeoutRef.current) {
-      clearTimeout(submitTimeoutRef.current);
-    }
-
-    // Simulate API call
-    submitTimeoutRef.current = setTimeout(() => {
+    // TODO: Replace with real API call
+    submitTimerRef.current = setTimeout(() => {
       setIsSubmitting(false);
-      setFormData({
-        type: "EXPENSE",
-        account: "",
-        category: "",
-        amount: "",
-        date: getLocalDateString(),
-        description: "",
-      });
-      submitTimeoutRef.current = null;
+      setFormData(initialFormData());
     }, 1000);
   };
 
@@ -157,11 +151,11 @@ export default function TransacoesPage() {
             <div className="space-y-2">
               <label className="text-sm font-semibold uppercase tracking-wide">Tipo</label>
               <div className="flex gap-2">
-                {["INCOME", "EXPENSE"].map((type) => (
+                {(["INCOME", "EXPENSE"] as const).map((type) => (
                   <motion.button
                     key={type}
                     type="button"
-                    onClick={() => setFormData({ ...formData, type: type as "INCOME" | "EXPENSE" })}
+                    onClick={() => setFormData({ ...formData, type })}
                     className={`flex-1 py-2 px-3 rounded-lg font-semibold text-sm transition-all ${
                       formData.type === type
                         ? type === "INCOME"
@@ -315,12 +309,16 @@ export default function TransacoesPage() {
                     </p>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <motion.button
+                        type="button"
+                        aria-label={`Editar transação ${transaction.description}`}
                         className="p-1 hover:bg-white/10 rounded transition-colors"
                         whileHover={{ scale: 1.1 }}
                       >
                         <Edit2 className="w-4 h-4 text-secondary" />
                       </motion.button>
                       <motion.button
+                        type="button"
+                        aria-label={`Excluir transação ${transaction.description}`}
                         className="p-1 hover:bg-danger/10 rounded transition-colors"
                         whileHover={{ scale: 1.1 }}
                       >

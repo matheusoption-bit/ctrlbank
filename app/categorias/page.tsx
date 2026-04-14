@@ -21,7 +21,7 @@ const itemVariants = {
   },
 };
 
-// Mock data
+// TODO: Replace mock data with real API call to GET /api/categories
 const mockCategories = {
   INCOME: [
     { id: "1", name: "Salário", icon: "💰", color: "#00FF88" },
@@ -60,6 +60,7 @@ export default function CategoriasPage() {
           </p>
         </div>
         <motion.button
+          type="button"
           className="btn-primary flex items-center gap-2 group"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -101,6 +102,8 @@ export default function CategoriasPage() {
                     {category.icon}
                   </div>
                   <motion.button
+                    type="button"
+                    aria-label={`Opções para ${category.name}`}
                     className="p-1 hover:bg-white/5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                     whileHover={{ scale: 1.1 }}
                   >
@@ -146,6 +149,8 @@ export default function CategoriasPage() {
                     {category.icon}
                   </div>
                   <motion.button
+                    type="button"
+                    aria-label={`Opções para ${category.name}`}
                     className="p-1 hover:bg-white/5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                     whileHover={{ scale: 1.1 }}
                   >

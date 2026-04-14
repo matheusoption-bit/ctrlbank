@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { motion } from "framer-motion";
 import { Plus, Wallet, MoreVertical } from "lucide-react";
 
@@ -21,7 +21,7 @@ const itemVariants = {
   },
 };
 
-// Mock data
+// TODO: Replace mock data with real API call to GET /api/accounts
 const mockAccounts = [
   {
     id: "1",
@@ -58,8 +58,6 @@ const mockAccounts = [
 ];
 
 export default function ContasPage() {
-  const [isCreating, setIsCreating] = useState(false);
-
   const totalBalance = mockAccounts.reduce((sum, acc) => sum + acc.balance, 0);
 
   return (
@@ -82,7 +80,7 @@ export default function ContasPage() {
           </p>
         </div>
         <motion.button
-          onClick={() => setIsCreating(!isCreating)}
+          type="button"
           className="btn-primary flex items-center gap-2 group"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -146,6 +144,8 @@ export default function ContasPage() {
                   </div>
                 </div>
                 <motion.button
+                  type="button"
+                  aria-label={`Opções para ${account.name}`}
                   className="p-2 hover:bg-white/5 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                   whileHover={{ scale: 1.1 }}
                 >
@@ -167,6 +167,7 @@ export default function ContasPage() {
               {/* Actions */}
               <div className="flex gap-3 pt-4">
                 <motion.button
+                  type="button"
                   className="flex-1 px-4 py-2 bg-white/5 hover:bg-white/10 border border-border rounded-lg text-sm font-semibold transition-colors"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -174,6 +175,7 @@ export default function ContasPage() {
                   Detalhes
                 </motion.button>
                 <motion.button
+                  type="button"
                   className="flex-1 px-4 py-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-lg text-sm font-semibold text-primary transition-colors"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -200,6 +202,7 @@ export default function ContasPage() {
             </p>
           </div>
           <motion.button
+            type="button"
             className="btn-primary mx-auto"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}

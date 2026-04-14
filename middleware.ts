@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { SESSION_COOKIE_NAME } from "@/lib/constants";
+import { verifySignedToken } from "@/lib/session-utils";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -6,9 +8,16 @@ export async function middleware(request: NextRequest) {
   // Public routes that don't require authentication
   const publicRoutes = ["/login", "/register"];
 
-  // Public routes are always allowed here. Authentication checks must run
-  // in server components / route handlers, not Edge middleware.
+  // Check if route is public
   if (publicRoutes.includes(pathname)) {
+    // If a valid signed session cookie exists, redirect to dashboard
+    const cookieValue = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+    if (cookieValue) {
+      const token = await verifySignedToken(cookieValue);
+      if (token) {
+        return NextResponse.redirect(new URL("/", request.url));
+      }
+    }
     return NextResponse.next();
   }
 
@@ -30,8 +39,25 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Do not perform session validation in middleware because this file runs
-  // in the Edge runtime and must avoid Node/Prisma-based auth helpers.
+  // For protected routes, verify the HMAC signature of the session cookie.
+  // A cookie without a valid signature is treated as unauthenticated — this
+  // prevents bypass via a manually crafted or tampered cookie.
+  // Full DB validation (expiry, user existence) still happens in server
+  // components and route handlers via validateSession().
+  const cookieValue = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  if (!cookieValue) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  const token = await verifySignedToken(cookieValue);
+  if (!token) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
   return NextResponse.next();
 }
 

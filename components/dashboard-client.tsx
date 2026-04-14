@@ -391,7 +391,7 @@ export default function DashboardClient({ user }: { user: User }) {
           </motion.button>
         </div>
         <div className="space-y-3">
-          {mockTransactions.map((transaction, index) => (
+          {mockTransactions.map((transaction) => (
             <motion.div
               key={transaction.id}
               variants={itemVariants}

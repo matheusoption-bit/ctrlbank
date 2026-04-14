@@ -1,10 +1,12 @@
 import { cookies } from "next/headers";
+import { createHash, randomBytes } from "crypto";
 import { prisma } from "./prisma";
-import * as bcrypt from "bcryptjs";
-import { randomBytes } from "crypto";
+import { SESSION_COOKIE_NAME } from "./constants";
+import { signToken, verifySignedToken } from "./session-utils";
 
-const SESSION_COOKIE_NAME = "ctrlbank_session";
 const SESSION_EXPIRY_DAYS = 30;
+
+export { SESSION_COOKIE_NAME };
 
 export interface SessionUser {
   id: string;
@@ -18,97 +20,45 @@ export interface Session {
   expiresAt: Date;
 }
 
-/**
- * Backwards-compatible wrapper for callers that still import the old API.
- * This can be removed once all usages have been migrated to `validateSession`.
- */
-export const validateRequest = cache(async () => {
-  return validateSession();
-});
-
-/**
- * Minimal Lucia-compatible surface for existing callers.
- * This preserves the old exports while delegating to the new session API.
- */
-export const lucia = {
-  createSession: async (...args: unknown[]) => {
-    return (createSession as (...args: unknown[]) => unknown)(...args);
-  },
-  invalidateSession: async (...args: unknown[]) => {
-    return (logout as (...args: unknown[]) => unknown)(...args);
-  },
-  createSessionCookie: (sessionId: string) => ({
-    name: SESSION_COOKIE_NAME,
-    value: sessionId,
-    attributes: {
-      httpOnly: true,
-      sameSite: "lax" as const,
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      expires: new Date(
-        Date.now() + SESSION_EXPIRY_DAYS * 24 * 60 * 60 * 1000
-      ),
-    },
-  }),
-  createBlankSessionCookie: () => ({
-    name: SESSION_COOKIE_NAME,
-    value: "",
-    attributes: {
-      httpOnly: true,
-      sameSite: "lax" as const,
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 0,
-    },
-  }),
-} as const;
-
-/**
- * Hash a password using bcryptjs
- */
-export async function hashPassword(password: string): Promise<string> {
-  const salt = await bcrypt.genSalt(10);
-  return bcrypt.hash(password, salt);
-}
-
-/**
- * Verify a password against a hash
- */
-export async function verifyPassword(
-  password: string,
-  hash: string
-): Promise<boolean> {
-  return bcrypt.compare(password, hash);
-}
-
-/**
- * Generate a random session token
- */
 function generateSessionToken(): string {
   return randomBytes(32).toString("hex");
 }
 
+function hashSessionToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
 /**
- * Create a new session for a user
+ * Create a new session for a user and set the session cookie.
+ *
+ * Security notes:
+ * - The raw token is HMAC-SHA256 signed with SESSION_SECRET before being
+ *   stored in the cookie, preventing cookie forgery at the middleware layer.
+ * - Only the SHA-256 hash of the raw token is stored in the database, so a
+ *   database leak cannot be used to replay sessions directly.
  */
 export async function createSession(userId: string): Promise<string> {
   const token = generateSessionToken();
+  const tokenHash = hashSessionToken(token);
+  const signedCookieValue = await signToken(token);
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + SESSION_EXPIRY_DAYS);
 
   await prisma.session.create({
     data: {
-      id: token,
+      id: tokenHash,
       userId,
       expiresAt,
     },
   });
 
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, token, {
+  cookieStore.set(SESSION_COOKIE_NAME, signedCookieValue, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    // "strict" prevents the cookie from being sent on any cross-site request,
+    // which is appropriate for a financial application.
+    sameSite: "strict",
     maxAge: SESSION_EXPIRY_DAYS * 24 * 60 * 60,
     path: "/",
   });
@@ -117,43 +67,15 @@ export async function createSession(userId: string): Promise<string> {
 }
 
 /**
- * Get the current user from the session
- */
-export async function getCurrentUser(): Promise<SessionUser | null> {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-
-    if (!token) {
-      return null;
-    }
-
-    const session = await prisma.session.findUnique({
-      where: { id: token },
-      include: { user: true },
-    });
-
-    if (!session || session.expiresAt < new Date()) {
-      if (session) {
-        await prisma.session.delete({ where: { id: token } });
-      }
-      cookieStore.delete(SESSION_COOKIE_NAME);
-      return null;
-    }
-
-    return {
-      id: session.user.id,
-      email: session.user.email,
-      name: session.user.name,
-    };
-  } catch (error) {
-    console.error("Error getting current user:", error);
-    return null;
-  }
-}
-
-/**
- * Validate the current session
+ * Validate the current session by reading the cookie, verifying its HMAC
+ * signature, hashing the raw token, and performing a single database query
+ * that includes the associated user.
+ *
+ * Returns both the session and user, or nulls if not authenticated.
+ *
+ * Note: if the database is unavailable this function returns
+ * { user: null, session: null } (fail-open for read operations). Callers
+ * protecting write operations should surface a 503 response in that case.
  */
 export async function validateSession(): Promise<{
   user: SessionUser | null;
@@ -161,37 +83,45 @@ export async function validateSession(): Promise<{
 }> {
   try {
     const cookieStore = await cookies();
-    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    const cookieValue = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
-    if (!token) {
+    if (!cookieValue) {
       return { user: null, session: null };
     }
 
-    const session = await prisma.session.findUnique({
-      where: { id: token },
+    // Verify HMAC signature before hitting the database
+    const token = await verifySignedToken(cookieValue);
+    if (!token) {
+      cookieStore.delete(SESSION_COOKIE_NAME);
+      return { user: null, session: null };
+    }
+
+    const tokenHash = hashSessionToken(token);
+    const sessionRecord = await prisma.session.findUnique({
+      where: { id: tokenHash },
       include: { user: true },
     });
 
-    if (!session || session.expiresAt < new Date()) {
-      if (session) {
-        await prisma.session.delete({ where: { id: token } });
+    if (!sessionRecord || sessionRecord.expiresAt < new Date()) {
+      if (sessionRecord) {
+        await prisma.session.delete({ where: { id: tokenHash } }).catch((e) => {
+          console.error("Failed to delete expired session:", e);
+        });
       }
       cookieStore.delete(SESSION_COOKIE_NAME);
       return { user: null, session: null };
     }
 
     return {
-      user: session.user
-        ? {
-            id: session.user.id,
-            email: session.user.email,
-            name: session.user.name,
-          }
-        : null,
+      user: {
+        id: sessionRecord.user.id,
+        email: sessionRecord.user.email,
+        name: sessionRecord.user.name,
+      },
       session: {
-        id: session.id,
-        userId: session.userId,
-        expiresAt: session.expiresAt,
+        id: sessionRecord.id,
+        userId: sessionRecord.userId,
+        expiresAt: sessionRecord.expiresAt,
       },
     };
   } catch (error) {
@@ -201,19 +131,51 @@ export async function validateSession(): Promise<{
 }
 
 /**
- * Logout the current user
+ * Get the current authenticated user.
+ */
+export async function getCurrentUser(): Promise<SessionUser | null> {
+  const { user } = await validateSession();
+  return user;
+}
+
+/**
+ * Invalidate a specific session by its raw (unhashed) token and clear the
+ * session cookie.
+ *
+ * The token is hashed internally before the database lookup so callers should
+ * always pass the raw token, never the hash.
+ */
+export async function invalidateSession(token: string): Promise<void> {
+  try {
+    const tokenHash = hashSessionToken(token);
+    await prisma.session.delete({ where: { id: tokenHash } }).catch((e) => {
+      console.error("Failed to delete session during invalidation:", e);
+    });
+    const cookieStore = await cookies();
+    cookieStore.delete(SESSION_COOKIE_NAME);
+  } catch (error) {
+    console.error("Error invalidating session:", error);
+  }
+}
+
+/**
+ * Logout the current user by invalidating the session associated with the
+ * current request cookie.
  */
 export async function logout(): Promise<void> {
   try {
     const cookieStore = await cookies();
-    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-
-    if (token) {
-      await prisma.session.delete({ where: { id: token } }).catch(() => {
-        // Session might already be deleted
-      });
+    const cookieValue = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    if (cookieValue) {
+      // Extract raw token from signed cookie value before hashing
+      const token = await verifySignedToken(cookieValue);
+      if (token) {
+        const tokenHash = hashSessionToken(token);
+        await prisma.session.delete({ where: { id: tokenHash } }).catch((e) => {
+          console.error("Failed to delete session during logout:", e);
+        });
+      }
     }
-
     cookieStore.delete(SESSION_COOKIE_NAME);
   } catch (error) {
     console.error("Error logging out:", error);
@@ -221,66 +183,9 @@ export async function logout(): Promise<void> {
 }
 
 /**
- * Backwards-compatible wrapper for validateRequest (old Lucia API)
- * This can be removed once all usages have been migrated to validateSession
+ * Backwards-compatible alias for validateSession.
+ * Prefer using validateSession directly in new code.
  */
 export async function validateRequest() {
   return validateSession();
 }
-
-async function createLuciaSession(userId: string, _attributes?: Record<string, unknown>) {
-  const sessionId = await createSession(userId);
-
-  return {
-    id: sessionId,
-  };
-}
-
-async function invalidateLuciaSession(sessionId: string): Promise<void> {
-  try {
-    await prisma.session.delete({ where: { id: sessionId } }).catch(() => {
-      // Session might already be deleted
-    });
-
-    const cookieStore = await cookies();
-    const currentToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-
-    if (currentToken === sessionId) {
-      cookieStore.delete(SESSION_COOKIE_NAME);
-    }
-  } catch (error) {
-    console.error("Error invalidating session:", error);
-  }
-}
-
-/**
- * Minimal Lucia-compatible surface for existing callers
- * This preserves the old exports while delegating to the new session API
- */
-export const lucia = {
-  sessionCookieName: () => SESSION_COOKIE_NAME,
-  createSession: createLuciaSession,
-  invalidateSession: invalidateLuciaSession,
-  createSessionCookie: (sessionId: string) => ({
-    name: SESSION_COOKIE_NAME,
-    value: sessionId,
-    attributes: {
-      httpOnly: true,
-      sameSite: "lax" as const,
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      expires: new Date(Date.now() + SESSION_EXPIRY_DAYS * 24 * 60 * 60 * 1000),
-    },
-  }),
-  createBlankSessionCookie: () => ({
-    name: SESSION_COOKIE_NAME,
-    value: "",
-    attributes: {
-      httpOnly: true,
-      sameSite: "lax" as const,
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 0,
-    },
-  }),
-} as const;

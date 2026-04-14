@@ -11,5 +11,11 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  return <DashboardClient user={user} />;
+  const userData = {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+  };
+
+  return <DashboardClient user={userData} />;
 }
