@@ -35,6 +35,7 @@ model Account {
   updatedAt    DateTime      @updatedAt
   user         User          @relation(fields: [userId], references: [id])
   transactions Transaction[]
+  bankAccounts BankAccount[]
 }
 
 model Transaction {
@@ -79,4 +80,13 @@ model Budget {
   category  Category? @relation(fields: [categoryId], references: [id])
 }
 
-// BankAccount is not explicitly requested but implied by the 
+model BankAccount {
+  id        String   @id @default(cuid())
+  accountId String
+  bankName  String
+  agency    String
+  accountNumber String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  account   Account  @relation(fields: [accountId], references: [id])
+}
