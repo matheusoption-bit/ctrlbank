@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { motion } from "framer-motion";
 import { Plus, Tag, ArrowUpRight, ArrowDownLeft, MoreVertical } from "lucide-react";
 
@@ -40,8 +40,6 @@ const mockCategories = {
 };
 
 export default function CategoriasPage() {
-  const [isCreating, setIsCreating] = useState(false);
-
   return (
     <motion.div
       className="space-y-8 pb-40"
@@ -62,7 +60,6 @@ export default function CategoriasPage() {
           </p>
         </div>
         <motion.button
-          onClick={() => setIsCreating(!isCreating)}
           className="btn-primary flex items-center gap-2 group"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
