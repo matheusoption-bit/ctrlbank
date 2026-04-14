@@ -2,18 +2,7 @@
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import {
-  Plus,
-  Send,
-  ArrowUpRight,
-  ArrowDownLeft,
-  Calendar,
-  DollarSign,
-  Tag,
-  CreditCard,
-  Trash2,
-  Edit2,
-} from "lucide-react";
+import { Send, Calendar, DollarSign, Trash2, Edit2 } from "lucide-react";
 
 const containerVariants = {
   hidden: { opacity: 0 },
