@@ -1,13 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-inter",
-  weight: ["400", "500", "600", "700"],
-});
 
 export const metadata: Metadata = {
   title: "CtrlBank | Premium Banking Experience",
@@ -50,8 +42,8 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="CtrlBank" />
       </head>
       <body
-        className={`${inter.variable} bg-background text-foreground antialiased overflow-x-hidden`}
-        style={{ fontFamily: "var(--font-inter), system-ui" }}
+        className="bg-background text-foreground antialiased overflow-x-hidden"
+        style={{ fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif" }}
       >
         <div className="min-h-screen">
           <main className="w-full max-w-2xl mx-auto px-4 py-6 md:py-8 md:px-6">
