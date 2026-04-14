@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateSession } from "@/lib/auth";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -7,13 +6,9 @@ export async function middleware(request: NextRequest) {
   // Public routes that don't require authentication
   const publicRoutes = ["/login", "/register"];
 
-  // Check if route is public
+  // Public routes are always allowed here. Authentication checks must run
+  // in server components / route handlers, not Edge middleware.
   if (publicRoutes.includes(pathname)) {
-    // If already logged in, redirect to dashboard
-    const { user } = await validateSession();
-    if (user) {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
     return NextResponse.next();
   }
 
@@ -35,16 +30,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // For protected routes, validate session
-  const { user } = await validateSession();
-
-  if (!user) {
-    // Redirect to login if not authenticated
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
+  // Do not perform session validation in middleware because this file runs
+  // in the Edge runtime and must avoid Node/Prisma-based auth helpers.
   return NextResponse.next();
 }
 
