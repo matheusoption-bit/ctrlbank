@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSession } from "@/lib/auth";
 import { compare } from "bcryptjs";
+import { Prisma } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,6 +67,17 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError ||
+      error instanceof Prisma.PrismaClientUnknownRequestError ||
+      error instanceof Prisma.PrismaClientInitializationError
+    ) {
+      console.error("Database error during login:", error);
+      return NextResponse.json(
+        { message: "Serviço temporariamente indisponível. Tente novamente." },
+        { status: 503 }
+      );
+    }
     console.error("Login error:", error);
     return NextResponse.json(
       { message: "Erro ao fazer login. Tente novamente." },

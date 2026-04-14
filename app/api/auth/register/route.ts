@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSession } from "@/lib/auth";
 import { hash } from "bcryptjs";
+import { Prisma } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
@@ -68,6 +69,17 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError ||
+      error instanceof Prisma.PrismaClientUnknownRequestError ||
+      error instanceof Prisma.PrismaClientInitializationError
+    ) {
+      console.error("Database error during registration:", error);
+      return NextResponse.json(
+        { message: "Serviço temporariamente indisponível. Tente novamente." },
+        { status: 503 }
+      );
+    }
     console.error("Register error:", error);
     return NextResponse.json(
       { message: "Erro ao criar conta. Tente novamente." },

@@ -2,6 +2,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "env": {
-    "DATABASE_URL": "@database_url"
+    "DATABASE_URL": "@database_url",
+    "SESSION_SECRET": "@session_secret"
   }
 }

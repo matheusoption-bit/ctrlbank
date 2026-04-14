@@ -77,7 +77,13 @@ export async function verifySignedToken(cookieValue: string): Promise<string | n
   if (!token || !sigBase64url) return null;
 
   const secret = process.env.SESSION_SECRET;
-  if (!secret || secret.length < 32) return null;
+  if (!secret || secret.length < 32) {
+    console.error(
+      "SESSION_SECRET is not configured or is too short (must be ≥32 characters). " +
+        "All session cookie verifications will fail until this is fixed."
+    );
+    return null;
+  }
 
   try {
     const key = await getHmacKey(secret);
