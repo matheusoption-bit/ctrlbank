@@ -9,9 +9,7 @@ import {
   Plus,
   Eye,
   EyeOff,
-  LogOut,
   TrendingUp,
-  MoreVertical,
 } from "lucide-react";
 import {
   AreaChart,
@@ -23,7 +21,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
 
 // Mock data for 6 months
 const chartData = [
@@ -111,34 +108,16 @@ interface User {
 }
 
 export default function DashboardClient({ user }: { user: User }) {
-  const router = useRouter();
   const [showBalance, setShowBalance] = useState(true);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const totalBalance = 12450.8;
   const monthIncome = 8500.0;
   const monthExpense = 1342.4;
   const netWorth = totalBalance;
 
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    try {
-      const response = await fetch("/api/auth/logout", { method: "POST" });
-      if (response.ok) {
-        router.push("/login");
-        router.refresh();
-      } else {
-        setIsLoggingOut(false);
-      }
-    } catch (error) {
-      console.error("Logout failed:", error);
-      setIsLoggingOut(false);
-    }
-  };
-
   return (
     <motion.div
-      className="space-y-8 pb-40"
+      className="space-y-8 pb-8"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
@@ -147,27 +126,12 @@ export default function DashboardClient({ user }: { user: User }) {
       <motion.header className="flex justify-between items-center pt-4" variants={itemVariants}>
         <div>
           <h1 className="text-4xl md:text-5xl font-black tracking-tighter">
-            <span className="text-primary">Ctrl</span>
-            <span className="text-foreground">Bank</span>
+            Olá, <span className="text-primary font-bold">{user.name?.split(" ")[0] || user.email.split("@")[0]}</span> 👋
           </h1>
           <p className="text-secondary text-sm mt-2 font-medium">
-            Bem-vindo, <span className="text-primary font-bold">{user.name || user.email}</span>
+            Aqui está um resumo das suas finanças
           </p>
         </div>
-        <motion.button
-          onClick={handleLogout}
-          disabled={isLoggingOut}
-          className="p-3 rounded-full bg-surface border border-border hover:bg-white/5 transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Logout"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          {isLoggingOut ? (
-            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <LogOut className="w-5 h-5 text-secondary hover:text-primary transition-colors" />
-          )}
-        </motion.button>
       </motion.header>
 
       {/* Main Balance Card - Premium */}
@@ -424,43 +388,6 @@ export default function DashboardClient({ user }: { user: User }) {
           ))}
         </div>
       </motion.section>
-
-      {/* Bottom Navigation - Premium */}
-      <motion.nav
-        className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background to-transparent pt-12 pb-8 px-4"
-        variants={itemVariants}
-      >
-        <div className="max-w-2xl mx-auto flex justify-around items-center bg-surface/90 backdrop-blur-xl border border-border rounded-full p-4 shadow-soft-xl hover:shadow-soft-2xl transition-shadow">
-          <motion.button
-            className="p-3 bg-primary rounded-full text-black hover:opacity-90 transition-all"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Wallet className="w-6 h-6" />
-          </motion.button>
-          <motion.button
-            className="p-3 text-secondary hover:text-white transition-colors hover:bg-white/5 rounded-full"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <CreditCard className="w-6 h-6" />
-          </motion.button>
-          <motion.button
-            className="p-3 text-secondary hover:text-white transition-colors hover:bg-white/5 rounded-full"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <TrendingUp className="w-6 h-6" />
-          </motion.button>
-          <motion.button
-            className="p-3 text-secondary hover:text-white transition-colors hover:bg-white/5 rounded-full"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <MoreVertical className="w-6 h-6" />
-          </motion.button>
-        </div>
-      </motion.nav>
     </motion.div>
   );
 }

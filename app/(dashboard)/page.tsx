@@ -1,21 +1,21 @@
 import React from "react";
-import { redirect } from "next/navigation";
-import { validateRequest } from "@/lib/auth";
+import { validateSession } from "@/lib/auth";
 import DashboardClient from "@/components/dashboard-client";
 
 export default async function DashboardPage() {
-  const { user, session } = await validateRequest();
+  const { user } = await validateSession();
 
-  // Redirect to login if not authenticated
-  if (!user || !session) {
-    redirect("/login");
-  }
+  // DashboardLayout já redireciona para /login se não autenticado,
+  // mas mantemos como fallback de segurança
+  if (!user) return null;
 
-  const userData = {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-  };
-
-  return <DashboardClient user={userData} />;
+  return (
+    <DashboardClient
+      user={{
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      }}
+    />
+  );
 }
