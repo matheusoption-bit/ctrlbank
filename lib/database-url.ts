@@ -25,6 +25,11 @@ export interface ResolvedDatabaseUrl {
   url: string;
 }
 
+export interface DatabaseDebugInfo {
+  key: DatabaseUrlKey;
+  host: string;
+}
+
 function pickDatabaseUrl(
   keys: readonly DatabaseUrlKey[],
   env: NodeJS.ProcessEnv
@@ -74,4 +79,21 @@ export function resolveMigrationDatabaseUrl(
   env: NodeJS.ProcessEnv = process.env
 ): ResolvedDatabaseUrl {
   return resolveDatabaseUrl(MIGRATION_DATABASE_URL_KEYS, env, "migration");
+}
+
+export function getDatabaseDebugInfo(
+  resolved: ResolvedDatabaseUrl
+): DatabaseDebugInfo {
+  try {
+    const parsed = new URL(resolved.url);
+    return {
+      key: resolved.key,
+      host: parsed.host,
+    };
+  } catch {
+    return {
+      key: resolved.key,
+      host: "invalid-url",
+    };
+  }
 }

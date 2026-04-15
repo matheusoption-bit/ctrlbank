@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSession } from "@/lib/auth";
+import { getRuntimeDatabaseDebugInfo } from "@/lib/prisma";
 import { compare } from "bcryptjs";
 import { Prisma } from "@prisma/client";
+
+export const runtime = "nodejs";
+export const preferredRegion = "gru1";
 
 export async function POST(request: NextRequest) {
   try {
@@ -72,7 +76,12 @@ export async function POST(request: NextRequest) {
       error instanceof Prisma.PrismaClientUnknownRequestError ||
       error instanceof Prisma.PrismaClientInitializationError
     ) {
-      console.error("Database error during login:", error);
+      console.error("Database error during login:", {
+        database: getRuntimeDatabaseDebugInfo(),
+        name: error.name,
+        code: "code" in error ? error.code : undefined,
+        message: error.message,
+      });
       return NextResponse.json(
         { message: "Serviço temporariamente indisponível. Tente novamente." },
         { status: 503 }
