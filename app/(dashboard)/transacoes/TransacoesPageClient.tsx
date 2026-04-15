@@ -11,6 +11,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { createTransaction, deleteTransaction } from "@/app/actions/transactions";
 import { TransactionType, TransactionStatus, BankAccountType } from "@prisma/client";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import ReceiptScanButton from "@/components/ui/ReceiptScanButton";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -141,13 +142,16 @@ function TransactionModal({
           {/* Valor */}
           <div className="space-y-1.5">
             <label className="section-label">Valor (R$)</label>
-            <input
-              name="amount" type="number" step="0.01" min="0.01"
-              placeholder="0,00" required
-              value={formData.amount}
-              onChange={(e) => setFormData({...formData, amount: e.target.value})}
-              className="input-c6 w-full text-xl font-bold"
-            />
+            <div className="relative flex items-center">
+              <span className="absolute left-3 text-secondary text-sm font-semibold pointer-events-none">R$</span>
+              <CurrencyInput
+                name="amount"
+                placeholder="0,00" required
+                value={formData.amount}
+                onValueChange={(v) => setFormData({...formData, amount: v})}
+                className="input-c6 w-full text-xl font-bold pl-9"
+              />
+            </div>
           </div>
 
           {/* Conta */}

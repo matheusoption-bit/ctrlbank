@@ -530,3 +530,48 @@ export async function getMonthForecast() {
 
   return data;
 }
+
+/**
+ * Desfazer transação criada pelo AI Composer.
+ */
+export async function undoTransaction(id: string) {
+  const ctx = await getAuthContext();
+
+  const existing = await prisma.transaction.findFirst({
+    where: {
+      id,
+      OR: [{ userId: ctx.id }, { householdId: ctx.householdId ?? "" }],
+    },
+  });
+
+  if (!existing) return { error: "Transação não encontrada" };
+
+  const revertDelta =
+    !existing.ignoreInTotals && existing.status === "COMPLETED"
+      ? existing.type === "INCOME"
+        ? -Number(existing.amount)
+        : existing.type === "EXPENSE"
+        ? Number(existing.amount)
+        : 0
+      : 0;
+
+  try {
+    await prisma.$transaction([
+      prisma.transaction.delete({ where: { id } }),
+      ...(revertDelta !== 0
+        ? [prisma.bankAccount.update({
+            where: { id: existing.bankAccountId },
+            data: { balance: { increment: revertDelta } },
+          })]
+        : []),
+    ]);
+
+    revalidatePath("/");
+    revalidatePath("/transacoes");
+    revalidatePath("/contas");
+    return { success: true };
+  } catch (err) {
+    console.error("undoTransaction error:", err);
+    return { error: "Erro ao desfazer transação." };
+  }
+}

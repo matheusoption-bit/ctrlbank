@@ -93,14 +93,28 @@ export async function joinHousehold(code: string) {
     return { error: "Você já pertence a este grupo familiar" };
   }
 
-  // Sair do household atual se tiver um
-  await prisma.user.update({
-    where: { id: ctx.id },
-    data: {
-      householdId: household.id,
-      role: UserRole.VIEWER, // novos membros entram como VIEWER
-    },
-  });
+  // Sair do household atual se tiver um e migrar registros órfãos
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: ctx.id },
+      data: {
+        householdId: household.id,
+        role: UserRole.VIEWER, // novos membros entram como VIEWER
+      },
+    }),
+    prisma.bankAccount.updateMany({
+      where: { userId: ctx.id, householdId: null },
+      data: { householdId: household.id },
+    }),
+    prisma.category.updateMany({
+      where: { userId: ctx.id, householdId: null },
+      data: { householdId: household.id },
+    }),
+    prisma.transaction.updateMany({
+      where: { userId: ctx.id, householdId: null },
+      data: { householdId: household.id },
+    })
+  ]);
 
   revalidatePath("/familia");
   revalidatePath("/");
@@ -132,10 +146,24 @@ export async function createHousehold(name: string) {
     },
   });
 
-  await prisma.user.update({
-    where: { id: ctx.id },
-    data: { householdId: household.id, role: UserRole.ADMIN },
-  });
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: ctx.id },
+      data: { householdId: household.id, role: UserRole.ADMIN },
+    }),
+    prisma.bankAccount.updateMany({
+      where: { userId: ctx.id, householdId: null },
+      data: { householdId: household.id },
+    }),
+    prisma.category.updateMany({
+      where: { userId: ctx.id, householdId: null },
+      data: { householdId: household.id },
+    }),
+    prisma.transaction.updateMany({
+      where: { userId: ctx.id, householdId: null },
+      data: { householdId: household.id },
+    })
+  ]);
 
   revalidatePath("/familia");
   return { success: true, data: household };

@@ -2,11 +2,13 @@
 
 import React, { useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import {
-  Target, Plus, Check, X, PiggyBank, Edit2, Trash2, Calendar
+  Target, Plus, Check, X, Edit2, Trash2, Calendar, AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, calcPercent, formatDate } from "@/lib/format";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createGoal, updateGoal, deleteGoal, contributeToGoal } from "@/app/actions/goals";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -110,17 +112,20 @@ function GoalCard({
               </motion.button>
             ) : (
                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="flex gap-2">
-                 <input
-                   type="number" step="0.01" value={addVal} onChange={e => setAddVal(e.target.value)}
-                   placeholder="Valor (R$)" autoFocus className="input-c6 py-1.5 px-3 text-xs flex-1 min-w-0"
-                   onKeyDown={(e) => {
-                     if (e.key === "Enter" && addVal) {
-                        onContribute(Number(addVal)); setShowAdd(false); setAddVal("");
-                     } else if (e.key === "Escape") {
-                        setShowAdd(false); setAddVal("");
-                     }
-                   }}
-                 />
+                 <div className="relative flex-1">
+                   <CurrencyInput
+                     value={addVal} onValueChange={setAddVal}
+                     placeholder="Valor (R$)" autoFocus className="input-c6 py-1.5 px-3 pl-8 text-xs w-full"
+                     onKeyDown={(e: any) => {
+                       if (e.key === "Enter" && addVal) {
+                          onContribute(Number(addVal)); setShowAdd(false); setAddVal("");
+                       } else if (e.key === "Escape") {
+                          setShowAdd(false); setAddVal("");
+                       }
+                     }}
+                   />
+                   <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-secondary pointer-events-none">R$</span>
+                 </div>
                  <button onClick={() => { if(addVal) onContribute(Number(addVal)); setShowAdd(false); setAddVal(""); }} className="bg-primary text-white p-2 rounded-lg hover:bg-primary-600 transition-colors">
                     <Check size={14} />
                  </button>
@@ -143,6 +148,8 @@ const COLORS = ["#FF2D55", "#FF9500", "#FFCC00", "#34C759", "#30D158", "#5AC8FA"
 
 function GoalModal({ editing, onClose }: { editing?: Goal; onClose: () => void }) {
   const [isPending, startTransition] = useTransition();
+  const [targetAmount, setTargetAmount] = useState<string | number>(editing?.targetAmount ?? "");
+  const [currentAmount, setCurrentAmount] = useState<string | number>(editing?.currentAmount ?? "");
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -177,11 +184,17 @@ function GoalModal({ editing, onClose }: { editing?: Goal; onClose: () => void }
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
                <label className="section-label">Valor Alvo (R$)</label>
-               <input name="targetAmount" type="number" step="0.01" defaultValue={editing?.targetAmount} required placeholder="0,00" className="input-c6 w-full font-bold" />
+               <div className="relative flex items-center">
+                 <span className="absolute left-3 text-secondary text-sm font-semibold pointer-events-none">R$</span>
+                 <CurrencyInput name="targetAmount" value={targetAmount} onValueChange={(v) => setTargetAmount(v)} required placeholder="0,00" className="input-c6 w-full font-bold pl-9" />
+               </div>
             </div>
             <div className="space-y-1.5">
                <label className="section-label">Já Guardado (R$)</label>
-               <input name="currentAmount" type="number" step="0.01" defaultValue={editing?.currentAmount ?? 0} placeholder="0,00" className="input-c6 w-full" />
+               <div className="relative flex items-center">
+                 <span className="absolute left-3 text-secondary text-sm font-semibold pointer-events-none">R$</span>
+                 <CurrencyInput name="currentAmount" value={currentAmount} onValueChange={(v) => setCurrentAmount(v)} placeholder="0,00" className="input-c6 w-full pl-9" />
+               </div>
             </div>
           </div>
           {/* Data */}
@@ -228,7 +241,8 @@ function GoalModal({ editing, onClose }: { editing?: Goal; onClose: () => void }
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.07 } } };
 const item = { hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } };
 
-export default function MetasPageClient({ goals }: { goals: Goal[] }) {
+export default function MetasPageClient({ goals, hasHouseholdId }: { goals: Goal[], hasHouseholdId: boolean }) {
+  const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Goal | undefined>();
   const [isPending, startTransition] = useTransition();
@@ -262,10 +276,29 @@ export default function MetasPageClient({ goals }: { goals: Goal[] }) {
           <p className="section-label mb-1">Objetivos</p>
           <h1 className="text-3xl font-black tracking-tight">Metas</h1>
         </div>
-        <button onClick={() => { setEditing(undefined); setShowModal(true); }} className="btn-primary px-4 py-2 text-sm">
+        <button onClick={() => { setEditing(undefined); setShowModal(true); }} disabled={!hasHouseholdId} className="btn-primary px-4 py-2 text-sm disabled:opacity-50">
           <Plus size={16} /> Nova
         </button>
       </motion.header>
+
+      {/* UX Bloqueio Guiado para Household */}
+      {!hasHouseholdId && (
+        <motion.div variants={item} className="card-c6 text-center py-10 space-y-4 border-warning/50 border relative overflow-hidden">
+          <div className="absolute inset-0 bg-warning/5 pointer-events-none" />
+          <div className="relative z-10 w-14 h-14 rounded-2xl bg-warning/10 flex items-center justify-center mx-auto text-warning">
+            <AlertTriangle size={24} />
+          </div>
+          <div className="relative z-10">
+            <h3 className="font-bold text-lg text-white">Grupo Familiar Necessário</h3>
+            <p className="text-secondary text-sm mt-1 max-w-[300px] mx-auto">
+              Metas são objetivos colaborativos do módulo Household. Crie ou entre num grupo familiar para planejar o futuro.
+            </p>
+          </div>
+          <button onClick={() => router.push("/familia")} className="relative z-10 btn-primary bg-warning hover:bg-warning-500 text-white px-6 mx-auto w-fit text-sm">
+            Ir para Meu Grupo Familiar
+          </button>
+        </motion.div>
+      )}
 
       {/* Dashboard Resumo */}
       {goals.length > 0 && (
@@ -303,7 +336,7 @@ export default function MetasPageClient({ goals }: { goals: Goal[] }) {
             <h3 className="font-bold text-lg">Nenhuma meta ainda</h3>
             <p className="text-secondary text-sm mt-1 max-w-[250px] mx-auto">Defina objetivos financeiros para a família e acompanhe o progresso.</p>
           </div>
-          <button onClick={() => setShowModal(true)} className="btn-primary px-6 mx-auto w-fit text-sm">
+          <button onClick={() => setShowModal(true)} disabled={!hasHouseholdId} className="btn-primary px-6 mx-auto w-fit text-sm disabled:opacity-50">
              Criar primeira meta
           </button>
         </motion.div>

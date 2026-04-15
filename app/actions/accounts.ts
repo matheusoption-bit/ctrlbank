@@ -17,6 +17,8 @@ const CreateAccountSchema = z.object({
   creditLimit: z.coerce.number().optional(),
   invoiceClosingDay: z.coerce.number().min(1).max(31).optional(),
   invoiceDueDay: z.coerce.number().min(1).max(31).optional(),
+  createSetupBalance: z.coerce.boolean().optional(),
+  isDefault: z.coerce.boolean().optional().default(false),
 });
 
 const UpdateAccountSchema = CreateAccountSchema.extend({
@@ -66,23 +68,54 @@ export async function createAccount(formData: unknown) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
   }
 
-  const { name, type, balance, color, icon, creditLimit, invoiceClosingDay, invoiceDueDay } =
+  const { name, type, balance, color, icon, creditLimit, invoiceClosingDay, invoiceDueDay, createSetupBalance, isDefault } =
     parsed.data;
 
   try {
-    const account = await prisma.bankAccount.create({
-      data: {
-        userId: ctx.id,
-        householdId: ctx.householdId,
-        name,
-        type,
-        balance,
-        color,
-        icon,
-        creditLimit:       type === BankAccountType.CREDIT ? creditLimit : undefined,
-        invoiceClosingDay: type === BankAccountType.CREDIT ? invoiceClosingDay : undefined,
-        invoiceDueDay:     type === BankAccountType.CREDIT ? invoiceDueDay : undefined,
-      },
+    const account = await prisma.$transaction(async (tx) => {
+      const acc = await tx.bankAccount.create({
+        data: {
+          userId: ctx.id,
+          householdId: ctx.householdId,
+          name,
+          type,
+          balance,
+          color,
+          icon,
+          creditLimit:       type === BankAccountType.CREDIT ? creditLimit : undefined,
+          invoiceClosingDay: type === BankAccountType.CREDIT ? invoiceClosingDay : undefined,
+          invoiceDueDay:     type === BankAccountType.CREDIT ? invoiceDueDay : undefined,
+          isDefault,
+        },
+      });
+
+      // Maintain uniqueness of isDefault
+      if (isDefault) {
+        await tx.bankAccount.updateMany({
+          where: {
+            id: { not: acc.id },
+            OR: [{ userId: ctx.id }, { householdId: ctx.householdId ?? "" }],
+          },
+          data: { isDefault: false },
+        });
+      }
+
+      if (createSetupBalance && balance !== 0) {
+        await tx.transaction.create({
+          data: {
+            userId: ctx.id,
+            householdId: ctx.householdId,
+            bankAccountId: acc.id,
+            type: balance >= 0 ? "INCOME" : "EXPENSE",
+            amount: Math.abs(balance),
+            date: new Date(),
+            description: "Saldo Inicial / Ajuste",
+            status: "COMPLETED",
+          }
+        });
+      }
+
+      return acc;
     });
 
     revalidatePath("/contas");
@@ -106,7 +139,7 @@ export async function updateAccount(formData: unknown) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
   }
 
-  const { id, name, type, balance, color, icon, creditLimit, invoiceClosingDay, invoiceDueDay } =
+  const { id, name, type, balance, color, icon, creditLimit, invoiceClosingDay, invoiceDueDay, createSetupBalance, isDefault } =
     parsed.data;
 
   // Verificar ownership
@@ -122,18 +155,49 @@ export async function updateAccount(formData: unknown) {
   }
 
   try {
-    const account = await prisma.bankAccount.update({
-      where: { id },
-      data: {
-        name,
-        type,
-        balance,
-        color,
-        icon,
-        creditLimit:       type === BankAccountType.CREDIT ? creditLimit : null,
-        invoiceClosingDay: type === BankAccountType.CREDIT ? invoiceClosingDay : null,
-        invoiceDueDay:     type === BankAccountType.CREDIT ? invoiceDueDay : null,
-      },
+    const account = await prisma.$transaction(async (tx) => {
+      const acc = await tx.bankAccount.update({
+        where: { id },
+        data: {
+          name,
+          type,
+          balance,
+          color,
+          icon,
+          creditLimit:       type === BankAccountType.CREDIT ? creditLimit : null,
+          invoiceClosingDay: type === BankAccountType.CREDIT ? invoiceClosingDay : null,
+          invoiceDueDay:     type === BankAccountType.CREDIT ? invoiceDueDay : null,
+          isDefault,
+        },
+      });
+
+      if (isDefault) {
+        await tx.bankAccount.updateMany({
+          where: {
+            id: { not: acc.id },
+            OR: [{ userId: ctx.id }, { householdId: ctx.householdId ?? "" }],
+          },
+          data: { isDefault: false },
+        });
+      }
+
+      const diff = Number(balance) - Number(existing.balance);
+      if (createSetupBalance && diff !== 0) {
+        await tx.transaction.create({
+          data: {
+            userId: ctx.id,
+            householdId: ctx.householdId,
+            bankAccountId: acc.id,
+            type: diff > 0 ? "INCOME" : "EXPENSE",
+            amount: Math.abs(diff),
+            date: new Date(),
+            description: "Ajuste de Saldo",
+            status: "COMPLETED",
+          }
+        });
+      }
+
+      return acc;
     });
 
     revalidatePath("/contas");

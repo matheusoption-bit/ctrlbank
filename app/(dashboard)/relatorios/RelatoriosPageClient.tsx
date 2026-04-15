@@ -17,6 +17,8 @@ interface Transaction {
   description: string | null; date: string;
   bankAccount: { name: string; color: string | null };
   category: { name: string; icon: string | null; color: string | null } | null;
+  status: string;
+  ignoreInTotals: boolean;
 }
 interface Category { id: string; name: string; icon: string | null; color: string | null; type: string }
 interface Account   { id: string; name: string; color: string | null }
@@ -43,8 +45,8 @@ const CHART_COLORS = ["#FF2D55", "#0A84FF", "#34C759", "#FF9500", "#BF5AF2", "#F
 function DRETable({ transactions }: {
   transactions: Transaction[];
 }) {
-  // Transactions already filtered by month/account in page.tsx
-  const monthTx = transactions;
+  // Filtrar apenas o que entra nos totais contábeis e que já foi efetivado
+  const monthTx = transactions.filter(tx => tx.status === "COMPLETED" && !tx.ignoreInTotals);
 
   // Agrupar por categoria
   const incomeByCategory = useMemo(() => {
@@ -253,8 +255,8 @@ export default function RelatoriosPageClient({ evolution, transactions, categori
     router.push(`${pathname}?${p.toString()}`);
   }
 
-  // Pie chart – categorias de despesa (mês selecionado – dados já vêm filtrados)
-  const monthTx = transactions; // page.tsx já filtra pelo mês/conta selecionados
+  // Pie chart – categorias de despesa (mês selecionado – filtra pendentes e ignorados)
+  const monthTx = transactions.filter(tx => tx.status === "COMPLETED" && !tx.ignoreInTotals);
 
   const pieData = useMemo(() => {
     const map = new Map<string, { name: string; color: string | null; value: number }>();

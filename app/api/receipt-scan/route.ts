@@ -58,13 +58,18 @@ Regras:
 
     const responseText = result.response.text().trim();
     
-    // Limpar possível markdown wrapper
-    const cleanJson = responseText
-      .replace(/^```json\n?/, "")
-      .replace(/\n?```$/, "")
-      .trim();
+    // Extrai o bloco de JSON caso o Gemini inclua algum texto extra antes ou depois
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error("Não foi possível extrair dados legíveis da imagem");
+    }
 
-    const parsed = JSON.parse(cleanJson);
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch {
+      throw new Error("Não foi possível extrair dados legíveis da imagem");
+    }
 
     return NextResponse.json({
       success: true,
@@ -79,8 +84,9 @@ Regras:
     });
   } catch (error) {
     console.error("[receipt-scan] Erro:", error);
+    const msg = error instanceof Error ? error.message : "Falha ao processar o comprovante. Tente novamente.";
     return NextResponse.json(
-      { error: "Falha ao processar o comprovante. Tente novamente." },
+      { error: msg },
       { status: 500 }
     );
   }

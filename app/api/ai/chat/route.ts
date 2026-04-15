@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { validateRequest } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { formatCurrency } from "@/lib/format";
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const MODEL        = process.env.GROQ_MODEL ?? "gemma2-9b-it";
@@ -44,38 +45,43 @@ Contexto financeiro atual do usuário (últimos 30 dias):
 ${context}`;
 
   // Groq SSE streaming
-  const groqRes = await fetch(GROQ_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model:       MODEL,
-      stream:      true,
-      max_tokens:  512,
-      temperature: 0.7,
-      messages: [
-        { role: "system",  content: systemPrompt },
-        { role: "user",    content: body.message },
-      ],
-    }),
-  });
+  try {
+    const groqRes = await fetch(GROQ_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model:       MODEL,
+        stream:      true,
+        max_tokens:  512,
+        temperature: 0.7,
+        messages: [
+          { role: "system",  content: systemPrompt },
+          { role: "user",    content: body.message },
+        ],
+      }),
+    });
 
-  if (!groqRes.ok) {
-    const err = await groqRes.text();
-    console.error("Groq error:", err);
-    return Response.json({ error: "IA indisponível. Tente novamente." }, { status: 502 });
+    if (!groqRes.ok) {
+      const err = await groqRes.text();
+      console.error("Groq error:", err);
+      return Response.json({ error: "IA indisponível. Tente novamente mais tarde." }, { status: 502 });
+    }
+
+    // Pass SSE stream through to the client
+    return new Response(groqRes.body, {
+      headers: {
+        "Content-Type":      "text/event-stream",
+        "Cache-Control":     "no-cache",
+        "X-Accel-Buffering": "no",
+      },
+    });
+  } catch (error) {
+    console.error("Groq fetch error:", error);
+    return Response.json({ error: "Falha na comunicação com a IA." }, { status: 500 });
   }
-
-  // Pass SSE stream through to the client
-  return new Response(groqRes.body, {
-    headers: {
-      "Content-Type":      "text/event-stream",
-      "Cache-Control":     "no-cache",
-      "X-Accel-Buffering": "no",
-    },
-  });
 }
 
 // ─── Context Builder ──────────────────────────────────────────────────────────
@@ -110,17 +116,17 @@ async function buildFinancialContext(householdId: string | null): Promise<string
   const topCategories = Array.from(byCategory.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
-    .map(([name, val]) => `  - ${name}: R$ ${val.toFixed(2)}`)
+    .map(([name, val]) => `  - ${name}: ${formatCurrency(val)}`)
     .join("\n");
 
   const budgetLines = budgets
-    .map(b => `  - ${b.category?.name ?? "?"}: limite R$ ${Number(b.amount).toFixed(2)}`)
+    .map(b => `  - ${b.category?.name ?? "?"}: limite ${formatCurrency(Number(b.amount))}`)
     .join("\n");
 
   return [
-    `Receitas (30d): R$ ${income.toFixed(2)}`,
-    `Despesas (30d): R$ ${expense.toFixed(2)}`,
-    `Saldo líquido: R$ ${(income - expense).toFixed(2)}`,
+    `Receitas (30d): ${formatCurrency(income)}`,
+    `Despesas (30d): ${formatCurrency(expense)}`,
+    `Saldo líquido: ${formatCurrency(income - expense)}`,
     topCategories ? `\nTop despesas por categoria:\n${topCategories}` : "",
     budgetLines    ? `\nOrçamentos do mês:\n${budgetLines}` : "",
   ].filter(Boolean).join("\n");
