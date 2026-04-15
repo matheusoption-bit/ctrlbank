@@ -38,8 +38,7 @@ html {
   scroll-behavior: smooth;
   color-scheme: dark;
   -webkit-text-size-adjust: 100%;
-  /* iOS safe areas */
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  /* Safe areas aplicadas apenas nos componentes específicos — não no html */
 }
 
 body {

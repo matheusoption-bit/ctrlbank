@@ -101,9 +101,13 @@ function AccountScrollCard({ account }: { account: BankAccount }) {
 
   return (
     <div
-      className="account-card scroll-snap-start min-w-[280px] flex-shrink-0 flex flex-col justify-between h-[160px] select-none group border-l-[3px]"
-      style={{ borderLeftColor: color }}
+      className="account-card scroll-snap-start min-w-[280px] flex-shrink-0 flex flex-col justify-between h-[160px] select-none group"
     >
+      {/* dot de cor no topo-direito para indicar a cor da conta */}
+      <div
+        className="absolute top-4 right-4 w-2.5 h-2.5 rounded-full flex-shrink-0"
+        style={{ backgroundColor: color }}
+      />
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <p className="text-xs text-secondary font-bold uppercase tracking-wider">{account.type}</p>

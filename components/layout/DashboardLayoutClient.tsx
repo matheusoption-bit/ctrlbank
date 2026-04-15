@@ -66,7 +66,7 @@ export default function DashboardLayoutClient({
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    <div className="min-h-dvh bg-background flex">
+    <div className="min-h-dvh bg-background">
       {/* ── Sidebar (desktop) ── */}
       <aside className="hidden md:flex flex-col w-72 min-h-dvh bg-black border-r border-white/5 fixed top-0 left-0 z-40">
         {/* Logo */}
@@ -95,7 +95,7 @@ export default function DashboardLayoutClient({
               <Link
                 key={href}
                 href={href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
+                className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
                   active
                     ? "bg-primary/10 text-primary"
                     : "text-secondary hover:bg-white/5 hover:text-white"
@@ -134,7 +134,7 @@ export default function DashboardLayoutClient({
       </aside>
 
       {/* ── Main Content ── */}
-      <main className="flex-1 md:ml-72 w-full min-h-dvh">
+      <main className="md:pl-72 w-full min-h-dvh">
         <div className="max-w-6xl mx-auto px-4 pt-6 pb-24 md:py-10 md:px-10">
           {children}
         </div>
@@ -175,8 +175,8 @@ export default function DashboardLayoutClient({
         </div>
       </nav>
 
-      {/* ── FAB Rosa – Nova Transação ── */}
-      <div className="fixed z-50"
+      {/* ── FAB Rosa – Nova Transação (apenas mobile) ── */}
+      <div className="fixed z-50 md:hidden"
         style={{
           right: "1.25rem",
           bottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))",

@@ -11,6 +11,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { createTransaction, deleteTransaction } from "@/app/actions/transactions";
 import { TransactionType, TransactionStatus, BankAccountType } from "@prisma/client";
+import ReceiptScanButton from "@/components/ui/ReceiptScanButton";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -50,11 +51,30 @@ function TransactionModal({
 }) {
   const [type, setType] = useState<TransactionType>(initialType ?? "EXPENSE");
   const [isPending, startTransition] = useTransition();
+  const [formData, setFormData] = useState({
+    amount: "",
+    description: "",
+    date: "",
+    categoryId: "",
+    bankAccountId: "",
+  });
 
   const filteredCategories = categories.filter((c) => c.type === type || type === "TRANSFER");
 
   const now = new Date();
   const localDateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+
+  const handleScanComplete = (scannedData: any) => {
+    setType(scannedData.tipo);
+    setFormData({
+      amount: scannedData.valor?.toString() || "",
+      description: scannedData.descricao || "",
+      date: scannedData.data,
+      categoryId: "",
+      bankAccountId: "",
+    });
+    toast.success("Comprovante lido! Preencha os campos restantes.");
+  };
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -95,6 +115,9 @@ function TransactionModal({
         </div>
 
         <form onSubmit={submit} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+          {/* OCR de Comprovantes */}
+          <ReceiptScanButton onScanComplete={handleScanComplete} />
+
           {/* Tipo */}
           <div className="grid grid-cols-3 gap-2">
             {(["EXPENSE", "INCOME", "TRANSFER"] as TransactionType[]).map((t) => (
@@ -121,6 +144,8 @@ function TransactionModal({
             <input
               name="amount" type="number" step="0.01" min="0.01"
               placeholder="0,00" required
+              value={formData.amount}
+              onChange={(e) => setFormData({...formData, amount: e.target.value})}
               className="input-c6 w-full text-xl font-bold"
             />
           </div>
@@ -161,6 +186,8 @@ function TransactionModal({
             <input
               name="description" type="text" maxLength={200}
               placeholder="Ex: Almoço, Salário, etc."
+              value={formData.description}
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
               className="input-c6 w-full"
             />
           </div>
@@ -169,7 +196,7 @@ function TransactionModal({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="section-label">Data</label>
-              <input name="date" type="date" defaultValue={localDateStr} required className="input-c6 w-full" />
+              <input name="date" type="date" value={formData.date || localDateStr} onChange={(e) => setFormData({...formData, date: e.target.value})} required className="input-c6 w-full" />
             </div>
             <div className="space-y-1.5">
               <label className="section-label">Status</label>
