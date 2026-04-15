@@ -2,185 +2,275 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─────────────────────────────────────────────
+   CSS Custom Properties – Design System C6 Bank
+   ───────────────────────────────────────────── */
 :root {
   --background: #0A0A0A;
   --foreground: #FFFFFF;
   --primary: #FF2D55;
+  --primary-rgb: 255, 45, 85;
   --surface: #1C1C1E;
-  --surface-elevated: #242426;
-  --secondary: #A1A1AA;
-  --border: #2A2A2E;
-  --success: #00C853;
-  --danger: #FF3B5C;
+  --surface-2: #2C2C2E;
+  --secondary: #8E8E93;
+  --border: #3A3A3C;
+  --positive: #34C759;
+  --positive-rgb: 52, 199, 89;
+  --negative: #FF3B30;
+  --negative-rgb: 255, 59, 48;
   --warning: #FF9500;
-  --info: #5AC8FA;
+  --info: #0A84FF;
+
+  /* Spacing */
+  --bottom-nav-height: 5rem;
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-top: env(safe-area-inset-top, 0px);
 }
 
-* {
-  @apply border-border;
+/* ─────────────────────────────────────────────
+   Base Reset
+   ───────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
 html {
   scroll-behavior: smooth;
   color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+  /* iOS safe areas */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-inter, "system-ui"), -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  min-height: 100dvh;
 }
 
-/* ========================================
-   C6 BANK PREMIUM DESIGN SYSTEM
-   ======================================== */
-
+/* ─────────────────────────────────────────────
+   Component Classes – Premium C6 Bank Style
+   ───────────────────────────────────────────── */
 @layer components {
-  /* ---- Cards ---- */
-  .card-premium {
-    @apply bg-surface border border-border rounded-3xl p-6 transition-all duration-200;
+
+  /* Cards ─ sólidos, minimalistas */
+  .card-c6 {
+    @apply bg-surface border border-white/10 rounded-[24px] p-6
+           transition-all duration-300;
   }
 
-  .card-premium:hover {
-    border-color: rgba(255, 255, 255, 0.08);
+  .card-c6-sm {
+    @apply bg-surface border border-white/10 rounded-[20px] p-4
+           transition-all duration-300;
   }
 
-  .card-premium-sm {
-    @apply bg-surface border border-border rounded-2xl p-4 transition-all duration-200;
+  .card-c6-interactive {
+    @apply card-c6 cursor-pointer
+           hover:border-white/10 hover:bg-white/[0.02]
+           active:scale-[0.99];
   }
 
-  .card-premium-sm:hover {
-    border-color: rgba(255, 255, 255, 0.08);
+  /* Physical card style (contas/cartões) */
+  .account-card {
+    @apply relative overflow-hidden rounded-[24px] p-6
+           bg-surface border border-white/10
+           transition-all duration-300;
   }
 
-  /* Card de conta bancária estilo cartão físico */
-  .card-bank {
-    @apply bg-surface border border-border rounded-3xl p-6 relative overflow-hidden transition-all duration-300;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  /* Saldo hero – número grande e pesado */
+  .balance-hero {
+    @apply text-6xl md:text-7xl font-black tracking-tighter leading-none;
+    font-feature-settings: "tnum" 1, "kern" 1;
   }
 
-  .card-bank:hover {
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
-  }
-
-  /* Brilho sutil na borda superior do card (estilo cartão premium) */
-  .card-bank::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 20%;
-    right: 20%;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
-    pointer-events: none;
-  }
-
-  /* ---- Buttons ---- */
+  /* Botões */
   .btn-primary {
-    @apply bg-primary text-white font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed w-full;
-  }
-
-  .btn-primary:hover:not(:disabled) {
-    @apply brightness-110;
+    @apply inline-flex items-center justify-center gap-2
+           bg-primary text-white font-semibold
+           py-3 px-6 rounded-full
+           transition-all duration-200
+           hover:bg-primary-600 hover:shadow-glow-primary
+           active:scale-95
+           disabled:opacity-50 disabled:cursor-not-allowed
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50;
   }
 
   .btn-secondary {
-    @apply bg-surface-elevated text-white font-semibold py-3.5 px-6 rounded-xl border border-border transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed w-full;
-  }
-
-  .btn-secondary:hover:not(:disabled) {
-    @apply bg-[#2C2C2E];
+    @apply inline-flex items-center justify-center gap-2
+           bg-surface-2 text-white font-semibold
+           py-3 px-6 rounded-full border border-border
+           transition-all duration-200
+           hover:bg-white/10 hover:border-white/20
+           active:scale-95
+           disabled:opacity-50 disabled:cursor-not-allowed
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20;
   }
 
   .btn-ghost {
-    @apply text-white font-medium py-2.5 px-4 rounded-xl transition-all duration-200 active:scale-[0.98];
-  }
-
-  .btn-ghost:hover {
-    @apply bg-white/5;
+    @apply inline-flex items-center justify-center gap-2
+           text-secondary font-medium py-2 px-4 rounded-full
+           transition-all duration-200
+           hover:bg-white/5 hover:text-white
+           active:scale-95;
   }
 
   .btn-outline {
-    @apply border border-border bg-transparent text-white font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed w-full;
+    @apply inline-flex items-center justify-center gap-2
+           border border-border bg-transparent text-white font-semibold
+           py-3 px-6 rounded-full
+           transition-all duration-200
+           hover:bg-white/5 hover:border-white/20
+           active:scale-95
+           disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  .btn-outline:hover:not(:disabled) {
-    @apply bg-white/5 border-white/15;
+  /* FAB – Floating Action Button */
+  .fab-button {
+    @apply fixed bottom-[calc(var(--bottom-nav-height)+1.5rem)] right-5
+           w-14 h-14 rounded-full
+           bg-primary text-white shadow-glow-primary
+           flex items-center justify-center
+           transition-all duration-200
+           hover:scale-110 hover:bg-primary-600
+           active:scale-95
+           z-50;
+    /* iOS safe area */
+    bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 1.5rem);
   }
 
-  /* ---- Badges ---- */
-  .badge-success {
-    @apply inline-flex items-center gap-1 px-3 py-1 bg-success/10 text-success text-xs font-medium rounded-full;
+  /* Inputs */
+  .input-c6 {
+    @apply w-full bg-surface-2 border border-border rounded-[12px]
+           px-4 py-3 text-white placeholder:text-secondary/60
+           transition-all duration-150
+           focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50
+           disabled:opacity-40 disabled:cursor-not-allowed;
   }
 
-  .badge-danger {
-    @apply inline-flex items-center gap-1 px-3 py-1 bg-danger/10 text-danger text-xs font-medium rounded-full;
+  .input-c6-sm {
+    @apply input-c6 py-2 text-sm rounded-[10px];
   }
 
-  /* ---- Inputs ---- */
-  .input-premium {
-    @apply w-full bg-surface border border-border rounded-xl px-4 py-3.5 text-white placeholder-secondary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition-all duration-200;
+  /* Badges financeiros */
+  .badge-positive {
+    @apply inline-flex items-center gap-1 px-2.5 py-1
+           bg-positive/10 text-positive text-xs font-semibold rounded-full;
   }
 
-  .input-premium:disabled {
-    @apply opacity-50 cursor-not-allowed;
+  .badge-negative {
+    @apply inline-flex items-center gap-1 px-2.5 py-1
+           bg-negative/10 text-negative text-xs font-semibold rounded-full;
   }
 
-  /* ---- Section Labels ---- */
+  .badge-warning {
+    @apply inline-flex items-center gap-1 px-2.5 py-1
+           bg-warning/10 text-warning text-xs font-semibold rounded-full;
+  }
+
+  .badge-info {
+    @apply inline-flex items-center gap-1 px-2.5 py-1
+           bg-info/10 text-info text-xs font-semibold rounded-full;
+  }
+
+  /* Progress bar orçamento */
+  .budget-bar {
+    @apply h-2 rounded-full overflow-hidden bg-surface-2;
+  }
+
+  .budget-bar-fill {
+    @apply h-full rounded-full transition-all duration-500;
+  }
+
+  /* Section labels */
   .section-label {
     @apply text-xs font-semibold uppercase tracking-widest text-secondary;
   }
 
-  /* ---- Skeleton Loading ---- */
+  /* Skeleton loading */
   .skeleton {
-    @apply bg-surface rounded-xl relative overflow-hidden;
-    background: linear-gradient(90deg, #1C1C1E 25%, #2A2A2E 50%, #1C1C1E 75%);
+    @apply animate-shimmer rounded-xl;
+    background: linear-gradient(
+      90deg,
+      #2C2C2E 0%,
+      #3A3A3C 50%,
+      #2C2C2E 100%
+    );
     background-size: 200% 100%;
-    animation: shimmer 2s ease-in-out infinite;
   }
+
+  /* Divider */
+  .divider {
+    @apply border-0 border-t border-border my-1;
+  }
+
+  /* Selected tab */
+  .tab-active {
+    @apply text-primary;
+  }
+
+  /* Texto financeiro */
+  .amount-positive { @apply text-positive font-bold tabular-nums; }
+  .amount-negative { @apply text-negative font-bold tabular-nums; }
+  .amount-neutral  { @apply text-foreground font-bold tabular-nums; }
 }
 
-/* ========================================
-   SCROLLBAR
-   ======================================== */
+/* ─────────────────────────────────────────────
+   Scrollbar Premium
+   ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--secondary); }
 
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--secondary);
-}
-
-/* Hide scrollbar for horizontal scroll areas */
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-
-.scrollbar-hide {
-  -ms-overflow-style: none;
+/* Scrollbar horizontal elegante (contas/cartões) */
+.scroll-horizontal {
   scrollbar-width: none;
+  -ms-overflow-style: none;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-horizontal::-webkit-scrollbar { display: none; }
+.scroll-snap-start { scroll-snap-align: start; }
+
+/* ─────────────────────────────────────────────
+   Animations
+   ───────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-/* ========================================
-   UTILITY ANIMATIONS
-   ======================================== */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@keyframes pulseScale {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.05); }
+}
+
+.animate-fade-in    { animation: fadeIn 0.3s ease-out; }
+.animate-slide-up   { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-shimmer    { animation: shimmer 2s linear infinite; }
+.animate-pulse-scale { animation: pulseScale 2s ease-in-out infinite; }
+
+/* ─────────────────────────────────────────────
+   Utility – número com fonte tabelada
+   ───────────────────────────────────────────── */
+.tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* Bottom nav safe area padding */
+.pb-safe-nav {
+  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 1.5rem);
 }

@@ -1,70 +1,62 @@
-import { prisma } from "@/lib/prisma";
-import { validateSession } from "@/lib/auth";
-import { TransactionsClient } from "@/components/transacoes/TransactionsClient";
+import { redirect } from "next/navigation";
+import { validateRequest } from "@/lib/auth";
+import { getTransactions } from "@/app/actions/transactions";
+import { getAccounts } from "@/app/actions/accounts";
+import { getCategories } from "@/app/actions/categories";
+import TransacoesPageClient from "./TransacoesPageClient";
 
-export default async function TransacoesPage() {
-  const { user } = await validateSession();
-  if (!user) return null;
+export const metadata = { title: "Extrato" };
 
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { householdId: true },
-  });
+export default async function TransacoesPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | undefined };
+}) {
+  const { user } = await validateRequest();
+  if (!user) redirect("/login");
 
-  const householdId = dbUser?.householdId;
+  const [txResult, accounts, categories] = await Promise.all([
+    getTransactions({
+      page:          Number(searchParams.page ?? 1),
+      type:          searchParams.type as "INCOME" | "EXPENSE" | "TRANSFER" | undefined,
+      categoryId:    searchParams.categoryId,
+      bankAccountId: searchParams.bankAccountId,
+      dateFrom:      searchParams.dateFrom,
+      dateTo:        searchParams.dateTo,
+      search:        searchParams.q,
+    }),
+    getAccounts(),
+    getCategories(),
+  ]);
 
-  // Fetch accounts for select
-  const rawAccounts = householdId
-    ? await prisma.bankAccount.findMany({
-        where: { householdId },
-        select: { id: true, name: true, type: true },
-        orderBy: { name: "asc" },
-      })
-    : [];
-
-  // Fetch categories for select
-  const rawCategories = householdId
-    ? await prisma.category.findMany({
-        where: { householdId },
-        select: { id: true, name: true, type: true, icon: true },
-        orderBy: { name: "asc" },
-      })
-    : [];
-
-  // Fetch transactions
-  const rawTransactions = householdId
-    ? await prisma.transaction.findMany({
-        where: { householdId },
-        orderBy: { date: "desc" },
-        take: 50,
-        include: {
-          category: { select: { name: true, icon: true, color: true } },
-          bankAccount: { select: { name: true } },
-        },
-      })
-    : [];
-
-  const transactions = rawTransactions.map((tx) => ({
-    id: tx.id,
-    type: tx.type,
+  // Serialize Prisma Decimal → number before passing to Client Component
+  const serializedTransactions = (txResult.data ?? []).map((tx) => ({
+    id:          tx.id,
+    type:        tx.type,
+    status:      tx.status,
+    amount:      Number(tx.amount),
     description: tx.description,
-    amount: Number(tx.amount),
-    date: tx.date.toISOString(),
-    bankAccountId: tx.bankAccountId,
-    categoryId: tx.categoryId,
-    status: tx.status,
-    installmentNumber: tx.installmentNumber,
-    totalInstallments: tx.totalInstallments,
-    ignoreInTotals: tx.ignoreInTotals,
-    category: tx.category,
-    bankAccount: tx.bankAccount ? { name: tx.bankAccount.name } : null,
+    date:        tx.date instanceof Date ? tx.date.toISOString() : tx.date,
+    bankAccount: tx.bankAccount,
+    category:    tx.category,
+    user:        tx.user,
+  }));
+
+  const serializedAccounts = accounts.map((a) => ({
+    id:    a.id,
+    name:  a.name,
+    type:  a.type,
+    color: a.color,
+    icon:  a.icon,
   }));
 
   return (
-    <TransactionsClient
-      accounts={rawAccounts}
-      categories={rawCategories}
-      transactions={transactions}
+    <TransacoesPageClient
+      initialTransactions={serializedTransactions}
+      totalCount={txResult.total ?? 0}
+      accounts={serializedAccounts}
+      categories={categories}
+      currentUserId={user.id}
     />
   );
 }

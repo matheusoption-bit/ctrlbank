@@ -11,95 +11,112 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // C6 Bank Dark Mode Palette
-        background: "#0A0A0A",
-        foreground: "#FFFFFF",
-        primary: {
-          DEFAULT: "#FF2D55",
-          foreground: "#FFFFFF",
-        },
-        surface: "#1C1C1E",
-        "surface-elevated": "#242426",
-        secondary: {
-          DEFAULT: "#A1A1AA",
-          foreground: "#FFFFFF",
-        },
-        border: "#2A2A2E",
-        success: "#00C853",
-        danger: "#FF3B5C",
-        warning: "#FF9500",
-        info: "#5AC8FA",
+        // ── Core ──────────────────────────────────────────
+        background:   "#0A0A0A",
+        foreground:   "#FFFFFF",
+        surface:      "#1C1C1E",
+        "surface-2":  "#252528",
+        secondary:    "#A1A1AA",
+        border:       "#2A2A2E",
 
-        // shadcn compatibility tokens (mapped to C6 palette)
-        card: {
-          DEFAULT: "#1C1C1E",
+        // ── Primary Accent – Rosa C6 Bank ─────────────────
+        primary: {
+          DEFAULT:    "#FF2D55",
+          50:         "#FFF0F3",
+          100:        "#FFE0E8",
+          200:        "#FFC2D1",
+          300:        "#FF99B3",
+          400:        "#FF6685",
+          500:        "#FF2D55",
+          600:        "#E6003D",
+          700:        "#CC0035",
+          800:        "#B3002E",
+          900:        "#8C0023",
           foreground: "#FFFFFF",
-        },
-        popover: {
-          DEFAULT: "#1C1C1E",
-          foreground: "#FFFFFF",
-        },
-        muted: {
-          DEFAULT: "#242426",
-          foreground: "#A1A1AA",
         },
         accent: {
-          DEFAULT: "#242426",
+          DEFAULT:    "#FF2D55",
           foreground: "#FFFFFF",
         },
-        destructive: {
-          DEFAULT: "#FF3B5C",
-          foreground: "#FFFFFF",
-        },
-        input: "#2A2A2E",
-        ring: "#FF2D55",
+
+        // ── Financial semantic colors ──────────────────────
+        positive:  "#00C853",  // Verde forte financeiro
+        negative:  "#FF3B5C",  // Vermelho rosado C6
+        warning:   "#FF9500",
+        info:      "#0A84FF",
+
+        // ── Aliases ───────────────────────────────────────
+        success:   "#34C759",
+        danger:    "#FF3B30",
+
+        // ── shadcn/ui base tokens (C6 palette) ────────────
+        card:        { DEFAULT: "#1C1C1E", foreground: "#FFFFFF" },
+        popover:     { DEFAULT: "#1C1C1E", foreground: "#FFFFFF" },
+        muted:       { DEFAULT: "#2C2C2E", foreground: "#8E8E93" },
+        destructive: { DEFAULT: "#FF3B30", foreground: "#FFFFFF" },
+        input:       "#3A3A3C",
+        ring:        "#FF2D55",
       },
+
       borderRadius: {
-        "2xl": "16px",
-        "3xl": "20px",
-        "4xl": "24px",
+        "3xl":   "24px",
+        "4xl":   "32px",
+        "20px":  "20px",
+        "16px":  "16px",
+        "12px":  "12px",
       },
+
       boxShadow: {
-        "card": "0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.03)",
-        "card-hover": "0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)",
-        "fab": "0 4px 14px rgba(255, 45, 85, 0.35)",
+        soft:           "0 2px 12px rgba(0, 0, 0, 0.4)",
+        "soft-md":      "0 4px 20px rgba(0, 0, 0, 0.5)",
+        "soft-lg":      "0 8px 32px rgba(0, 0, 0, 0.6)",
+        "soft-xl":      "0 16px 48px rgba(0, 0, 0, 0.7)",
+        "glow-primary": "0 0 20px rgba(255, 45, 85, 0.3)",
+        "glow-positive":"0 0 20px rgba(52, 199, 89, 0.3)",
       },
+
       spacing: {
-        "4.5": "1.125rem",
-        "5.5": "1.375rem",
-        "18": "4.5rem",
+        "4.5":       "1.125rem",
+        "5.5":       "1.375rem",
+        "18":        "4.5rem",
+        "22":        "5.5rem",
+        "bottom-nav":"5rem",
       },
+
       fontSize: {
-        "2xs": ["0.625rem", { lineHeight: "0.75rem" }],
-        "balance": ["3rem", { lineHeight: "3.5rem", fontWeight: "800" }],
-        "balance-lg": ["3.5rem", { lineHeight: "4rem", fontWeight: "800" }],
+        "2xs":  ["0.625rem", { lineHeight: "0.75rem" }],
+        "hero": ["3.5rem", { lineHeight: "1", fontWeight: "900", letterSpacing: "-0.04em" }],
       },
+
       fontFamily: {
+        sans:  ["var(--font-inter)", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
         inter: ["var(--font-inter)", "system-ui", "-apple-system", "sans-serif"],
       },
+
       keyframes: {
         shimmer: {
-          "0%": { backgroundPosition: "-200% 0" },
+          "0%":   { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
-        "fade-in": {
-          "0%": { opacity: "0" },
-          "100%": { opacity: "1" },
-        },
-        "slide-up": {
-          "0%": { opacity: "0", transform: "translateY(12px)" },
+        "slide-up-fade": {
+          "0%":   { opacity: "0", transform: "translateY(16px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
         "scale-in": {
-          "0%": { opacity: "0", transform: "scale(0.95)" },
+          "0%":   { opacity: "0", transform: "scale(0.95)" },
           "100%": { opacity: "1", transform: "scale(1)" },
         },
+        "pulse-glow": {
+          "0%, 100%": { boxShadow: "0 0 0 0 rgba(255, 45, 85, 0)" },
+          "50%":      { boxShadow: "0 0 0 8px rgba(255, 45, 85, 0.15)" },
+        },
       },
+
       animation: {
-        shimmer: "shimmer 2s ease-in-out infinite",
-        "fade-in": "fade-in 0.3s ease-out",
-        "slide-up": "slide-up 0.3s ease-out",
-        "scale-in": "scale-in 0.2s ease-out",
+        shimmer:          "shimmer 2s linear infinite",
+        "slide-up-fade":  "slide-up-fade 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+        "scale-in":       "scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+        "pulse-glow":     "pulse-glow 2s ease-in-out infinite",
       },
     },
   },
