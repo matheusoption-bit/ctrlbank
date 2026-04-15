@@ -7,7 +7,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { Download, FileText, TrendingUp, TrendingDown, Minus, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { Download, FileText, TrendingUp, TrendingDown, Minus, ChevronLeft, ChevronRight, ChevronDown, Table } from "lucide-react";
 import { formatCurrency, formatMonthYear } from "@/lib/format";
 
 // ─── Types ────────────────────────────────────────────────────────────────────

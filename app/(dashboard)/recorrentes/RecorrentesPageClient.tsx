@@ -106,7 +106,7 @@ function RecurringModal({
 
           <div className="space-y-1.5">
             <label className="section-label">Categoria (Opcional)</label>
-            <select name="categoryId" defaultValue={itemToEdit?.category?.name ? categories.find(c => c.name === itemToEdit.category.name)?.id : ""} className="input-c6 w-full text-sm">
+            <select name="categoryId" defaultValue={itemToEdit?.category?.name ? categories.find(c => c.name === itemToEdit!.category!.name)?.id : ""} className="input-c6 w-full text-sm">
               <option value="">Nenhuma</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
             </select>

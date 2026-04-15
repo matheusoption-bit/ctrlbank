@@ -35,7 +35,7 @@ export default async function PublicCounterPage({ params }: { params: { token: s
         </header>
 
         <ContadorPublicClient 
-          transactions={res.transactions} 
+          transactions={res.transactions.map(t => ({ ...t, amount: Number(t.amount) }))} 
           year={res.year!} 
         />
       </div>
