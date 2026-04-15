@@ -1,36 +1,28 @@
-import { prisma } from "@/lib/prisma";
-import { validateSession } from "@/lib/auth";
-import { AccountsClient } from "@/components/contas/accounts-client";
-import { SafeBankAccount } from "@/components/cards/BankAccountCard";
+import { redirect } from "next/navigation";
+import { validateRequest } from "@/lib/auth";
+import { getAccounts } from "@/app/actions/accounts";
+import ContasPageClient from "./ContasPageClient";
+
+export const metadata = { title: "Contas" };
 
 export default async function ContasPage() {
-  const { user } = await validateSession();
-  if (!user) return null;
+  const { user } = await validateRequest();
+  if (!user) redirect("/login");
 
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { householdId: true }
-  });
+  const raw = await getAccounts();
 
-  let accounts: SafeBankAccount[] = [];
+  // Serialize Prisma Decimal → number before passing to Client Component
+  const accounts = raw.map((a) => ({
+    id:               a.id,
+    name:             a.name,
+    type:             a.type,
+    balance:          Number(a.balance),
+    color:            a.color,
+    icon:             a.icon,
+    creditLimit:      a.creditLimit != null ? Number(a.creditLimit) : null,
+    invoiceClosingDay: a.invoiceClosingDay,
+    invoiceDueDay:    a.invoiceDueDay,
+  }));
 
-  if (dbUser?.householdId) {
-    const rawAccounts = await prisma.bankAccount.findMany({
-      where: { householdId: dbUser.householdId },
-      orderBy: { createdAt: "desc" }
-    });
-
-    accounts = rawAccounts.map(acc => ({
-      id: acc.id,
-      name: acc.name,
-      type: acc.type,
-      balance: Number(acc.balance),
-      color: acc.color,
-      creditLimit: acc.creditLimit ? Number(acc.creditLimit) : null,
-      invoiceClosingDay: acc.invoiceClosingDay,
-      invoiceDueDay: acc.invoiceDueDay,
-    }));
-  }
-
-  return <AccountsClient accounts={accounts} />;
+  return <ContasPageClient accounts={accounts} />;
 }
