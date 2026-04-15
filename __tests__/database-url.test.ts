@@ -18,10 +18,22 @@ describe("resolveRuntimeDatabaseUrl", () => {
     });
   });
 
-  it("falls back to the unpooled URL before DATABASE_URL", () => {
+  it("prefers DATABASE_URL over direct connections for runtime", () => {
     const resolved = resolveRuntimeDatabaseUrl({
-      DATABASE_URL: "postgres://broken-runtime",
+      DATABASE_URL: "postgres://pooled-runtime",
       DATABASE_URL_UNPOOLED: "postgres://safe-direct",
+    });
+
+    expect(resolved).toEqual({
+      key: "DATABASE_URL",
+      url: "postgres://pooled-runtime",
+    });
+  });
+
+  it("falls back to the unpooled URL when pooled envs are absent", () => {
+    const resolved = resolveRuntimeDatabaseUrl({
+      DATABASE_URL_UNPOOLED: "postgres://safe-direct",
+      DIRECT_URL: "postgres://another-direct",
     });
 
     expect(resolved).toEqual({

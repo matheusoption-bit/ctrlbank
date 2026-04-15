@@ -4,11 +4,11 @@ import path from "node:path";
 
 const runtimeDatabaseUrlKeys = [
   "POSTGRES_PRISMA_URL",
+  "DATABASE_URL",
+  "POSTGRES_URL",
   "DATABASE_URL_UNPOOLED",
   "DIRECT_URL",
   "POSTGRES_URL_NON_POOLING",
-  "DATABASE_URL",
-  "POSTGRES_URL",
 ];
 
 const migrationDatabaseUrlKeys = [
