@@ -133,6 +133,7 @@ model BankAccount {
   balance     Decimal         @default(0) @db.Decimal(15, 2)
   color       String?
   icon        String?
+  isDefault   Boolean         @default(false)
 
   // Cartão de crédito
   creditLimit       Decimal? @db.Decimal(15, 2)

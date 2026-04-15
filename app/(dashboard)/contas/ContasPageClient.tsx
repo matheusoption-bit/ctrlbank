@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/format";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createAccount, updateAccount, deleteAccount } from "@/app/actions/accounts";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -20,6 +21,7 @@ interface BankAccount {
   creditLimit?: number | string | null;
   invoiceClosingDay?: number | null;
   invoiceDueDay?: number | null;
+  isDefault?: boolean;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -42,11 +44,13 @@ function getTypeInfo(type: BankAccountType) {
 interface AccountFormData {
   name: string; type: BankAccountType; balance: string; color: string;
   icon: string; creditLimit: string; invoiceClosingDay: string; invoiceDueDay: string;
+  createSetupBalance: boolean; isDefault: boolean;
 }
 
 const EMPTY_FORM: AccountFormData = {
   name: "", type: "CHECKING", balance: "0",
   color: "#FF2D55", icon: "💳", creditLimit: "", invoiceClosingDay: "", invoiceDueDay: "",
+  createSetupBalance: false, isDefault: false,
 };
 
 function AccountFormModal({ editing, onClose }: { editing?: BankAccount; onClose: () => void }) {
@@ -59,11 +63,13 @@ function AccountFormModal({ editing, onClose }: { editing?: BankAccount; onClose
       creditLimit: editing.creditLimit ? String(Number(editing.creditLimit)) : "",
       invoiceClosingDay: editing.invoiceClosingDay ? String(editing.invoiceClosingDay) : "",
       invoiceDueDay: editing.invoiceDueDay ? String(editing.invoiceDueDay) : "",
+      createSetupBalance: false,
+      isDefault: editing.isDefault ?? false,
     } : {}),
   });
   const [isPending, startTransition] = useTransition();
 
-  function set(field: keyof AccountFormData, val: string) {
+  function set(field: keyof AccountFormData, val: string | boolean) {
     setForm((prev) => ({ ...prev, [field]: val }));
   }
 
@@ -76,6 +82,8 @@ function AccountFormModal({ editing, onClose }: { editing?: BankAccount; onClose
         creditLimit: form.creditLimit ? Number(form.creditLimit) : undefined,
         invoiceClosingDay: form.invoiceClosingDay ? Number(form.invoiceClosingDay) : undefined,
         invoiceDueDay: form.invoiceDueDay ? Number(form.invoiceDueDay) : undefined,
+        createSetupBalance: form.createSetupBalance,
+        isDefault: form.isDefault,
       };
       const result = editing
         ? await updateAccount({ ...payload, id: editing.id })
@@ -134,8 +142,18 @@ function AccountFormModal({ editing, onClose }: { editing?: BankAccount; onClose
           {/* Saldo */}
           <div className="space-y-1.5">
             <label className="section-label">Saldo Atual (R$)</label>
-            <input type="number" step="0.01" value={form.balance}
-              onChange={(e) => set("balance", e.target.value)} className="input-c6 w-full" />
+            <div className="relative flex items-center">
+              <span className="absolute left-3 text-secondary text-sm font-semibold pointer-events-none">R$</span>
+              <CurrencyInput value={form.balance} onValueChange={(v) => set("balance", v)} className="input-c6 w-full pl-9" placeholder="0,00" />
+            </div>
+            <label className="flex items-center gap-2 mt-2 pt-2 text-sm text-secondary cursor-pointer hover:text-white transition-colors">
+              <input type="checkbox" checked={form.createSetupBalance} onChange={(e) => set("createSetupBalance", e.target.checked)} className="rounded border-white/20 bg-surface text-primary" />
+              <span>Gerar transação de {editing ? 'Ajuste' : 'Saldo Inicial'}</span>
+            </label>
+            <label className="flex items-center gap-2 mt-2 pt-2 text-sm text-secondary cursor-pointer hover:text-white transition-colors">
+              <input type="checkbox" checked={form.isDefault} onChange={(e) => set("isDefault", e.target.checked)} className="rounded border-white/20 bg-surface text-primary" />
+              <span>Marcar como conta padrão do AI Composer</span>
+            </label>
           </div>
 
           {/* Crédito */}
@@ -143,8 +161,10 @@ function AccountFormModal({ editing, onClose }: { editing?: BankAccount; onClose
             <>
               <div className="space-y-1.5">
                 <label className="section-label">Limite de Crédito (R$)</label>
-                <input type="number" step="0.01" value={form.creditLimit}
-                  onChange={(e) => set("creditLimit", e.target.value)} className="input-c6 w-full" />
+                <div className="relative flex items-center">
+                  <span className="absolute left-3 text-secondary text-sm font-semibold pointer-events-none">R$</span>
+                  <CurrencyInput value={form.creditLimit} onValueChange={(v) => set("creditLimit", v)} className="input-c6 w-full pl-9" placeholder="0,00" />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -266,8 +286,9 @@ export default function ContasPageClient({ accounts }: { accounts: BankAccount[]
               >
                 <div className="flex items-start justify-between relative z-10">
                   <div className="space-y-1">
-                    <p className="text-[10px] text-secondary font-black uppercase tracking-widest">
+                    <p className="text-[10px] text-secondary font-black uppercase tracking-widest flex items-center gap-2">
                       {info.label}
+                      {acc.isDefault && <span className="text-primary bg-primary/20 px-1 py-0.5 rounded text-[8px]">PADRÃO AI</span>}
                     </p>
                     <h3 className="text-xl font-black text-white/90">{acc.name}</h3>
                   </div>

@@ -129,13 +129,12 @@ export async function deleteBudget(id: string) {
  * Sugestões inteligentes de economia.
  * Compara gasto médio dos 3 meses anteriores com o mês atual.
  */
-export async function getSmartInsights() {
+export async function getSmartInsights(month: number, year: number) {
   const ctx = await getAuthContext();
   if (!ctx.householdId) return [];
 
-  const now = new Date();
-  const currentMonth = now.getMonth() + 1;
-  const currentYear  = now.getFullYear();
+  const currentMonth = month;
+  const currentYear  = year;
 
   const currentStart = new Date(currentYear, currentMonth - 1, 1);
   const currentEnd   = new Date(currentYear, currentMonth, 0, 23, 59, 59);
