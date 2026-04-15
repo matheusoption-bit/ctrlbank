@@ -3,30 +3,16 @@
 import React, { useState, useRef, useEffect, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles, X, Send, Loader2, Camera, Undo2, Check, FileImage, 
-  ChevronDown
+  Sparkles, X, Send, Loader2, Camera, Undo2, Check,
+  ChevronDown, AlertTriangle, Settings2, Calendar
 } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { getAccounts } from "@/app/actions/accounts";
 import { getCategories } from "@/app/actions/categories";
 import { createTransaction, undoTransaction } from "@/app/actions/transactions";
-
-// ─── Contracts ───────────────────────────────────────────────────────────────
-
-type AIComposerResponse = {
-  intent: "chat_reply" | "transaction_created" | "transaction_draft" | "clarification_needed";
-  message: string;
-  requiresReview: boolean;
-  autoSaved: boolean;
-  transactionDraft: any | null;
-  createdTransactionId: string | null;
-  undoAvailable: boolean;
-  undoToken: string | null;
-  missingFields: string[];
-};
-
-// ─── Component ───────────────────────────────────────────────────────────────
+import { AIComposerResponse, AIComposerTransactionDraft } from "@/lib/ai/contracts";
 
 export default function AIChatWidget() {
   const [open, setOpen] = useState(false);
@@ -35,9 +21,11 @@ export default function AIChatWidget() {
   
   const [composerState, setComposerState] = useState<"idle" | "loading" | "review" | "success" | "clarification">("idle");
   const [responseMsg, setResponseMsg] = useState("");
+  const [missingFields, setMissingFields] = useState<string[]>([]);
+  const [activeEventId, setActiveEventId] = useState<string | null>(null);
   
   // Data for review
-  const [draft, setDraft] = useState<any>(null);
+  const [draft, setDraft] = useState<AIComposerTransactionDraft | null>(null);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [createdTxId, setCreatedTxId] = useState<string | null>(null);
@@ -74,13 +62,14 @@ export default function AIChatWidget() {
     setComposerState("loading");
     setResponseMsg("");
     setDraft(null);
+    setMissingFields([]);
     setCreatedTxId(null);
+    setActiveEventId(null);
 
     const payload = imageBase64 
-      ? { inputType: "image", imageBase64 }
+      ? { inputType: input.trim() ? "text+image" : "image", imageBase64, content: input.trim() || undefined }
       : { inputType: "text", content: input.trim() };
 
-    // Clear inputs immediately for better UX
     setInput("");
     setImageBase64(null);
 
@@ -97,14 +86,19 @@ export default function AIChatWidget() {
         setComposerState("success");
         setResponseMsg(data.message);
         setCreatedTxId(data.createdTransactionId);
+        setDraft(data.transactionDraft);
+        setActiveEventId(data.eventId);
       } else if (data.intent === "transaction_draft") {
         setComposerState("review");
         setResponseMsg(data.message);
         setDraft(data.transactionDraft);
+        setActiveEventId(data.eventId);
       } else {
         setComposerState("clarification");
         setResponseMsg(data.message);
-        setDraft(data.transactionDraft); // In case it has partial data
+        setDraft(data.transactionDraft);
+        setMissingFields(data.missingFields || []);
+        setActiveEventId(data.eventId);
       }
     } catch (err) {
       setComposerState("clarification");
@@ -121,6 +115,7 @@ export default function AIChatWidget() {
         toast.success("Transação desfeita.");
         setComposerState("idle");
         setCreatedTxId(null);
+        setDraft(null);
       }
     });
   }
@@ -137,7 +132,8 @@ export default function AIChatWidget() {
         status: "COMPLETED",
         amount: Number(draft.amount),
         description: draft.description,
-        date: new Date(draft.date),
+        date: draft.date ? new Date(draft.date) : new Date(),
+        aiEventId: activeEventId,
       });
 
       if (result.error) toast.error(result.error);
@@ -185,8 +181,8 @@ export default function AIChatWidget() {
                 <Sparkles size={18} className="text-primary" />
               </div>
               <div>
-                <p className="font-bold text-base leading-tight">AI Composer</p>
-                <p className="text-[11px] text-secondary">Captura sem atrito</p>
+                <p className="font-bold text-base leading-tight">AI Composer {composerState === "review" && "· Revisar"}</p>
+                <p className="text-[11px] text-secondary">Captura inteligente e sem atrito</p>
               </div>
             </div>
 
@@ -197,7 +193,7 @@ export default function AIChatWidget() {
                 <div className="flex flex-col items-center justify-center text-center h-40 space-y-3 opacity-60">
                   <Sparkles size={32} className="text-secondary" />
                   <p className="text-sm font-medium">O que vamos registrar agora?</p>
-                  <p className="text-xs text-secondary/70">Texto, foto ou áudio.</p>
+                  <p className="text-xs text-secondary/70">Digite, cole um print ou narre sua despesa.</p>
                 </div>
               )}
 
@@ -208,54 +204,94 @@ export default function AIChatWidget() {
                 </div>
               )}
 
-              {composerState === "success" && (
-                <div className="card-c6 border-positive/30 bg-positive/5 space-y-3">
+              {composerState === "success" && draft && (
+                <div className="card-c6 space-y-3 border border-border/40 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-positive"></div>
                   <div className="flex items-center gap-2 text-positive">
                     <Check size={18} />
-                    <p className="font-bold text-sm">{responseMsg}</p>
+                    <p className="font-bold text-sm">Transação criada com sucesso!</p>
                   </div>
-                  <button onClick={handleUndo} disabled={isPending} className="flex items-center justify-center gap-2 w-full py-2 bg-surface border border-border rounded-xl text-sm font-semibold hover:border-negative/50 hover:text-negative transition-colors">
-                    <Undo2 size={16} /> Desfazer Acerto Automático
+                  
+                  <div className="space-y-1">
+                    <p className="text-xl font-black">R$ {Number(draft.amount).toFixed(2).replace('.',',')}</p>
+                    <p className="text-sm text-secondary font-medium">{draft.description}</p>
+                  </div>
+
+                  <div className="flex gap-2 flex-wrap pt-2">
+                    {draft.accountName && <span className="px-2 py-0.5 bg-white/5 rounded text-[10px] text-secondary font-semibold border border-white/10">{draft.accountName}</span>}
+                    {draft.categoryName && <span className="px-2 py-0.5 bg-white/5 rounded text-[10px] text-secondary font-semibold border border-white/10">{draft.categoryName}</span>}
+                    <span className="px-2 py-0.5 bg-primary/20 text-primary rounded text-[10px] font-semibold border border-primary/20">Auto-Saved</span>
+                  </div>
+
+                  <button onClick={handleUndo} disabled={isPending} className="flex items-center justify-center gap-2 w-full py-2.5 mt-2 bg-surface-2 border border-border rounded-xl text-sm font-semibold hover:border-negative/50 hover:text-negative hover:bg-negative/5 transition-all">
+                    <Undo2 size={16} /> Desfazer instantâneo
                   </button>
                 </div>
               )}
 
-              {composerState === "clarification" && (
+              {/* Next Best Action - Missing Account */}
+              {composerState === "clarification" && missingFields.includes("account") && (
+                <div className="card-c6 border-primary/30 bg-primary/5 space-y-3">
+                  <div className="flex gap-2 items-start text-primary">
+                    <AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />
+                    <p className="font-bold text-sm leading-tight">Defina uma conta padrão para liberar o autosave.</p>
+                  </div>
+                  <div className="flex flex-col gap-2 pt-1">
+                    <Link href="/contas?highlightDefault=1&from=ai-composer" className="flex items-center justify-center gap-2 w-full py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:scale-[1.02] transition-transform">
+                      <Settings2 size={16} /> Definir conta padrão
+                    </Link>
+                    <button onClick={() => setComposerState("review")} className="text-xs font-semibold text-secondary hover:text-white transition-colors py-1">
+                      Continuar sem autosave
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Next Best Action - Generic Error */}
+              {composerState === "clarification" && !missingFields.includes("account") && responseMsg && (
                 <div className="card-c6 border-info/30 bg-info/5 space-y-2">
-                  <p className="font-bold text-sm text-info">Ops...</p>
+                  <p className="font-bold text-sm text-info">Incompleto</p>
                   <p className="text-xs text-secondary">{responseMsg}</p>
                 </div>
               )}
 
-              {(composerState === "review" || (composerState === "clarification" && draft)) && (
+              {(composerState === "review" || (composerState === "clarification" && draft && !missingFields.includes("account"))) && draft && (
                 <div className="bg-surface-2 border border-border rounded-2xl p-4 shadow-soft">
-                  <p className="text-xs font-black uppercase tracking-wider text-secondary mb-3 flex items-center justify-between">
-                    Revisão Rápida
-                    <span className="bg-primary/20 text-primary px-2 py-0.5 rounded text-[10px]">
-                      {(draft.confidence.overall * 100).toFixed(0)}% Match
-                    </span>
-                  </p>
+                  <div className="mb-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-secondary flex items-center justify-between pb-1">
+                      Quick Review
+                      <span className="bg-primary/20 text-primary px-1.5 py-0.5 rounded flex items-center gap-1">
+                        <Sparkles size={8} /> {(draft.confidence.overall * 100).toFixed(0)}% Match
+                      </span>
+                    </p>
+                    <p className="text-xs text-secondary leading-relaxed pt-1">
+                      A IA extraiu os dados abaixo, revise e complete o que faltar.
+                    </p>
+                  </div>
                   
-                  <form onSubmit={submitReview} className="space-y-3 mt-4">
+                  <form onSubmit={submitReview} className="space-y-3">
                     {/* Amount */}
                     <div className="space-y-1">
-                      <label className="text-[10px] text-secondary font-semibold">Valor</label>
+                      <label className="text-[10px] text-secondary font-semibold">Valor Registrado</label>
                       <div className="relative flex items-center">
                         <span className="absolute left-3 text-secondary text-sm font-semibold pointer-events-none">R$</span>
-                        <CurrencyInput value={draft.amount} onValueChange={(v) => setDraft({...draft, amount: v})} className="input-c6-sm w-full pl-9 font-bold" required placeholder="0,00" />
+                        <CurrencyInput value={draft.amount || ""} onValueChange={(v) => setDraft({...draft, amount: v ? Number(v) : null})} className="input-c6-sm w-full pl-9 font-bold" required placeholder="0,00" />
                       </div>
                     </div>
                     {/* Description */}
                     <div className="space-y-1">
-                      <label className="text-[10px] text-secondary font-semibold">Descrição</label>
+                      <label className="text-[10px] text-secondary font-semibold">Descrição Rápida</label>
                       <input type="text" value={draft.description} onChange={(e) => setDraft({...draft, description: e.target.value})} className="input-c6-sm w-full" required />
                     </div>
                     {/* Account */}
                     <div className="space-y-1">
-                      <label className="text-[10px] text-secondary font-semibold">Conta Origem</label>
+                      <label className="text-[10px] text-secondary font-semibold flex justify-between">
+                        Conta Origem
+                        {missingFields.includes("account") && <span className="text-negative font-bold">Obrigatório</span>}
+                      </label>
                       <div className="relative">
-                        <select value={draft.accountId || ""} onChange={(e) => setDraft({...draft, accountId: e.target.value})} className="input-c6-sm w-full appearance-none pr-8" required>
-                          <option value="">Selecione a conta...</option>
+                        <select value={draft.accountId || ""} onChange={(e) => setDraft({...draft, accountId: e.target.value})} className={`input-c6-sm w-full appearance-none pr-8 ${missingFields.includes("account") && !draft.accountId ? 'border-negative/50 bg-negative/5' : ''}`} required>
+                          <option value="">Selecione de onde saiu / onde entrou...</option>
                           {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                         </select>
                         <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" />
@@ -263,18 +299,28 @@ export default function AIChatWidget() {
                     </div>
                     {/* Category */}
                     <div className="space-y-1">
-                      <label className="text-[10px] text-secondary font-semibold">Categoria (Opcional)</label>
+                      <label className="text-[10px] text-secondary font-semibold">Categoria Inferida (Opcional)</label>
                       <div className="relative">
                         <select value={draft.categoryId || ""} onChange={(e) => setDraft({...draft, categoryId: e.target.value})} className="input-c6-sm w-full appearance-none pr-8">
-                          <option value="">Sem categoria definida...</option>
+                          <option value="">Sem categoria definida (Outros)...</option>
                           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                         <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" />
                       </div>
                     </div>
+                    {/* Chips Operacionais */}
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                       <span className="px-2 py-0.5 bg-surface rounded text-[9px] text-secondary border border-border flex items-center gap-1 font-semibold uppercase tracking-wider">
+                         <Calendar size={10} /> {draft.date ? new Date(draft.date).toLocaleDateString('pt-BR') : "Hoje"}
+                       </span>
+                       <span className="px-2 py-0.5 bg-surface rounded text-[9px] text-secondary border border-border font-semibold uppercase tracking-wider">
+                         Type: {draft.transactionType === "INCOME" ? "Receita" : "Despesa"}
+                       </span>
+                    </div>
+
                     {/* Submit */}
-                    <button type="submit" disabled={isPending} className="btn-primary w-full py-2 mt-2">
-                      {isPending ? <Loader2 size={16} className="animate-spin text-white mx-auto" /> : "Confirmar e Registrar"}
+                    <button type="submit" disabled={isPending} className="btn-primary w-full py-2 mt-4 text-sm font-bold flex gap-2 items-center justify-center">
+                      {isPending ? <Loader2 size={16} className="animate-spin text-white" /> : <><Check size={16}/> Salvar Manualmente</>}
                     </button>
                   </form>
                 </div>
@@ -282,7 +328,7 @@ export default function AIChatWidget() {
             </div>
 
             {/* Omni Input */}
-            <div className="p-3 border-t border-border/50 bg-black/40">
+            <div className="p-3 border-t border-border/50 bg-surface-2/40">
               {imageBase64 && (
                 <div className="mb-2 w-16 h-16 rounded-xl bg-surface border border-primary/50 relative overflow-hidden flex-shrink-0">
                   <img src={`data:image/jpeg;base64,${imageBase64}`} className="object-cover w-full h-full opacity-80" />
@@ -302,7 +348,7 @@ export default function AIChatWidget() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
                   }}
-                  placeholder="Escreva algo ou envie um comprovante..."
+                  placeholder="Escreva, cole um print..."
                   className="flex-1 bg-transparent text-sm min-h-[40px] max-h-24 resize-none outline-none placeholder:text-secondary/60 py-2.5 disabled:opacity-50"
                   disabled={composerState === "loading"}
                   rows={(input.match(/\n/g)||[]).length + 1 > 3 ? 3 : (input.match(/\n/g)||[]).length + 1}

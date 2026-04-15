@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateRequest } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createManagedTransaction } from "@/app/actions/transactions";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
 
@@ -9,49 +10,13 @@ const GROQ_MODEL = process.env.GROQ_MODEL ?? "gemma2-9b-it";
 
 // ─── Contracts ───────────────────────────────────────────────────────────────
 
-type AIComposerIntent =
-  | "chat_reply"
-  | "transaction_created"
-  | "transaction_draft"
-  | "clarification_needed";
-
-type AIComposerTransactionDraft = {
-  amount: number | null;
-  date: string | null; // YYYY-MM-DD
-  description: string;
-  transactionType: "INCOME" | "EXPENSE" | "TRANSFER";
-  categoryName: string | null;
-  categoryId: string | null;
-  accountId: string | null;
-  accountName: string | null;
-  confidence: {
-    overall: number; // 0..1
-    amount: number;
-    date: number;
-    description: number;
-    category: number;
-    account: number;
-    transactionType: number;
-  };
-  source: "text" | "image" | "text+image";
-};
-
-type AIComposerResponse = {
-  intent: AIComposerIntent;
-  message: string;
-  requiresReview: boolean;
-  autoSaved: boolean;
-  transactionDraft: AIComposerTransactionDraft | null;
-  createdTransactionId: string | null;
-  undoAvailable: boolean;
-  undoToken: string | null;
-  missingFields: Array<"amount" | "date" | "description" | "category" | "account" | "transactionType">;
-};
+import { AIComposerIntent, AIComposerTransactionDraft, AIComposerResponse } from "@/lib/ai/contracts";
+import { resolveTargetAccount, resolveCategory, shouldAutoSave, logAiCaptureEvent } from "@/lib/ai/composer";
 
 // ─── Prompts and Schemas ────────────────────────────────────────────────────
 
 const BodySchema = z.object({
-  inputType: z.enum(["text", "image"]),
+  inputType: z.enum(["text", "image", "text+image"]),
   content: z.string().optional(),
   imageBase64: z.string().optional(),
   mimeType: z.string().default("image/jpeg").optional(),
@@ -86,50 +51,7 @@ Regras:
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-async function resolveTargetAccount(userId: string, householdId: string | null, inferredAccountName: string | null) {
-  let accounts = [];
-  if (householdId) {
-    accounts = await prisma.bankAccount.findMany({ where: { householdId } });
-  } else {
-    accounts = await prisma.bankAccount.findMany({ where: { userId } });
-  }
 
-  if (accounts.length === 0) return null;
-
-  // 1. Exact or partial match if AI provided a name
-  if (inferredAccountName) {
-    const matched = accounts.find(a => a.name.toLowerCase().includes(inferredAccountName.toLowerCase()));
-    if (matched) return matched;
-  }
-
-  // 2. Fallback to default
-  const defaultAcc = accounts.find(a => a.isDefault);
-  if (defaultAcc) return defaultAcc;
-
-  // 3. Fallback to null (user stated "not the first account in the list")
-  return null;
-}
-
-async function resolveCategory(userId: string, householdId: string | null, categoryName: string, transactionType: string) {
-  if (categoryName === "Outros") return { id: null, name: "Outros" };
-  
-  const categories = await prisma.category.findMany({
-    where: { 
-      OR: [{ userId }, { householdId: householdId ?? "" }],
-      type: transactionType as any
-    }
-  });
-
-  const matched = categories.find(c => c.name.toLowerCase().includes(categoryName.toLowerCase()));
-  if (matched) return { id: matched.id, name: matched.name };
-  
-  return { id: null, name: "Outros" };
-}
-
-function shouldAutoSave(draft: AIComposerTransactionDraft, missing: string[]): boolean {
-  if (missing.length > 0) return false;
-  return draft.confidence.overall >= 0.85;
-}
 
 // ─── Endpoint ─────────────────────────────────────────────────────────────
 
@@ -169,12 +91,14 @@ export async function POST(req: NextRequest) {
 
       if (!groqRes.ok) throw new Error("Erro via GROQ");
       resultJsonString = (await groqRes.json()).choices[0]?.message?.content?.trim();
-    } else if (body.inputType === "image" && body.imageBase64) {
+    } else if ((body.inputType === "image" || body.inputType === "text+image") && body.imageBase64) {
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const promptContext = body.content ? `${JSON_PROMPT}\n\nContexto extra fornecido pelo usuário: "${body.content}"` : JSON_PROMPT;
+      
       const result = await model.generateContent([
         { inlineData: { data: body.imageBase64, mimeType: body.mimeType ?? "image/jpeg" } },
-        JSON_PROMPT,
+        promptContext,
       ]);
       resultJsonString = result.response.text().trim();
     } else {
@@ -221,6 +145,7 @@ export async function POST(req: NextRequest) {
       createdTransactionId: null,
       undoAvailable: false,
       undoToken: null,
+      eventId: null,
       missingFields: missingFields as any,
     };
 
@@ -236,18 +161,16 @@ export async function POST(req: NextRequest) {
       response.message = "Fiz um rascunho, mas preciso da sua revisão.";
     } else if (isAutoSaveReady) {
       // PERFORM AUTO-SAVE
-      const tx = await prisma.transaction.create({
-        data: {
-          userId: user.id,
-          householdId: dbUser?.householdId,
-          bankAccountId: draft.accountId!,
-          categoryId: draft.categoryId,
-          type: draft.transactionType,
-          status: "COMPLETED",
-          amount: Math.abs(draft.amount!),
-          description: draft.description,
-          date: new Date(draft.date!),
-        }
+      const tx = await createManagedTransaction({
+        userId: user.id,
+        householdId: dbUser?.householdId ?? null,
+        bankAccountId: draft.accountId!,
+        categoryId: draft.categoryId,
+        type: draft.transactionType,
+        status: "COMPLETED",
+        amount: Math.abs(draft.amount!),
+        description: draft.description,
+        date: new Date(draft.date!),
       });
       
       response.intent = "transaction_created";
@@ -257,6 +180,23 @@ export async function POST(req: NextRequest) {
       response.createdTransactionId = tx.id;
       response.undoAvailable = true;
       response.undoToken = `undo_${tx.id}`;
+    }
+
+    // Audit Trail Persistence
+    const aiEvent = await logAiCaptureEvent({
+      userId: user.id,
+      householdId: dbUser?.householdId ?? null,
+      source: body.inputType,
+      inputType: "composer",
+      rawText: body.content ?? null,
+      normalizedDraft: draft,
+      confidenceOverall: draft.confidence.overall,
+      decision: response.intent,
+      createdTransactionId: response.createdTransactionId,
+    });
+    
+    if (aiEvent) {
+      response.eventId = aiEvent.id;
     }
 
     return NextResponse.json(response);

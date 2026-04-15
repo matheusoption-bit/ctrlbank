@@ -36,9 +36,9 @@ enum UserRole {
 
 /// Classificação tributária para o módulo contador
 enum TaxClassification {
-  DEDUCTIBLE_IR    // Dedutível IR
-  NON_DEDUCTIBLE   // Não dedutível
-  TAXABLE_INCOME   // Receita tributável
+  DEDUCTIBLE_IR // Dedutível IR
+  NON_DEDUCTIBLE // Não dedutível
+  TAXABLE_INCOME // Receita tributável
   OTHER
 }
 
@@ -57,35 +57,36 @@ enum RecurringFrequency {
 // ─────────────────────────────────────────────
 
 model Notification {
-  id          String   @id @default(cuid())
-  userId      String
-  title       String
-  message     String
-  isRead      Boolean  @default(false)
-  type        String   @default("INFO") // INFO, WARNING, SUCCESS, ERROR
-  link        String?  // Opcional: link para redirecionar ao clicar
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  type      String   @default("INFO") // INFO, WARNING, SUCCESS, ERROR
+  link      String? // Opcional: link para redirecionar ao clicar
+  createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Household {
-  id           String        @id @default(cuid())
-  name         String
-  inviteCode   String?       @unique @default(cuid()) // Fase 6: código de convite
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id         String   @id @default(cuid())
+  name       String
+  inviteCode String?  @unique @default(cuid()) // Fase 6: código de convite
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  users                User[]
-  bankAccounts         BankAccount[]
-  categories           Category[]
-  transactions         Transaction[]
-  budgets              Budget[]
-  tags                 Tag[]
-  goals                Goal[]
+  users                 User[]
+  bankAccounts          BankAccount[]
+  categories            Category[]
+  transactions          Transaction[]
+  budgets               Budget[]
+  tags                  Tag[]
+  goals                 Goal[]
   recurringTransactions RecurringTransaction[]
-  bankConnections      BankConnection[]
-  counterSessions      CounterSession[]
+  bankConnections       BankConnection[]
+  counterSessions       CounterSession[]
+  AiCaptureEvent        AiCaptureEvent[]
 }
 
 model User {
@@ -101,12 +102,13 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  household     Household?     @relation(fields: [householdId], references: [id], onDelete: SetNull)
-  sessions      Session[]
-  bankAccounts  BankAccount[]
-  transactions  Transaction[]
-  categories    Category[]
-  notifications Notification[]
+  household      Household?       @relation(fields: [householdId], references: [id], onDelete: SetNull)
+  sessions       Session[]
+  bankAccounts   BankAccount[]
+  transactions   Transaction[]
+  categories     Category[]
+  notifications  Notification[]
+  AiCaptureEvent AiCaptureEvent[]
 
   @@index([householdId])
 }
@@ -143,9 +145,9 @@ model BankAccount {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  household            Household?             @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  user                 User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions         Transaction[]
+  household             Household?             @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions          Transaction[]
   recurringTransactions RecurringTransaction[]
 
   @@index([userId])
@@ -164,10 +166,10 @@ model Category {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
-  household            Household?             @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  user                 User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions         Transaction[]
-  budgets              Budget[]
+  household             Household?             @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions          Transaction[]
+  budgets               Budget[]
   recurringTransactions RecurringTransaction[]
 
   @@index([userId])
@@ -185,7 +187,7 @@ model Transaction {
   amount        Decimal           @db.Decimal(15, 2)
   description   String?
   date          DateTime          @default(now())
-  notes         String?           // Fase 7: notas adicionais
+  notes         String? // Fase 7: notas adicionais
 
   // Parcelamento
   installmentNumber Int?
@@ -197,10 +199,10 @@ model Transaction {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  household   Household?  @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bankAccount BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
-  category    Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  household   Household?       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankAccount BankAccount      @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  category    Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   tags        TransactionTag[]
 
   @@index([userId])
@@ -208,6 +210,28 @@ model Transaction {
   @@index([bankAccountId])
   @@index([categoryId])
   @@index([date])
+}
+
+// ─────────────────────────────────────────────
+// IA Operational Log
+// ─────────────────────────────────────────────
+
+model AiCaptureEvent {
+  id                   String   @id @default(cuid())
+  userId               String
+  householdId          String?
+  source               String // "text", "image", "text+image"
+  inputType            String
+  rawText              String?
+  normalizedDraft      Json?
+  confidenceOverall    Float
+  decision             String
+  createdTransactionId String?
+  wasUndone            Boolean  @default(false)
+  createdAt            DateTime @default(now())
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
 }
 
 // ─────────────────────────────────────────────
@@ -220,7 +244,7 @@ model Budget {
   householdId String
   categoryId  String
   amount      Decimal  @db.Decimal(15, 2) // limite orçado
-  month       Int      // 1-12
+  month       Int // 1-12
   year        Int
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -239,7 +263,7 @@ model Tag {
   color       String?
   createdAt   DateTime @default(now())
 
-  household    Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  household    Household        @relation(fields: [householdId], references: [id], onDelete: Cascade)
   transactions TransactionTag[]
 
   @@unique([householdId, name])
@@ -265,8 +289,8 @@ model CounterSession {
   id          String   @id @default(cuid())
   householdId String
   tokenHash   String   @unique // SHA-256 do token temporário
-  label       String?  // ex: "Contador João – Abril 2026"
-  permissions Json?    // Fase 8: escopos de acesso
+  label       String? // ex: "Contador João – Abril 2026"
+  permissions Json? // Fase 8: escopos de acesso
   expiresAt   DateTime
   createdAt   DateTime @default(now())
 
@@ -309,7 +333,7 @@ model RecurringTransaction {
   description   String?
   frequency     RecurringFrequency
   nextDate      DateTime
-  endDate       DateTime?          // null = sem fim
+  endDate       DateTime? // null = sem fim
   active        Boolean            @default(true)
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
@@ -326,11 +350,11 @@ model RecurringTransaction {
 model BankConnection {
   id          String    @id @default(cuid())
   householdId String
-  provider    String    // "pluggy", "open_finance"
-  externalId  String    // ID da conta na API externa
+  provider    String // "pluggy", "open_finance"
+  externalId  String // ID da conta na API externa
   status      String    @default("pending") // "active" | "error" | "pending"
   lastSyncAt  DateTime?
-  metadata    Json?     // dados extras do provider
+  metadata    Json? // dados extras do provider
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 

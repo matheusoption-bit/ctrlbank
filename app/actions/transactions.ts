@@ -19,6 +19,7 @@ const CreateTransactionSchema = z.object({
   installmentNumber: z.coerce.number().int().positive().optional().nullable(),
   totalInstallments: z.coerce.number().int().positive().optional().nullable(),
   ignoreInTotals:   z.boolean().default(false),
+  aiEventId:        z.string().optional().nullable(),
 });
 
 const UpdateTransactionSchema = CreateTransactionSchema.extend({
@@ -109,8 +110,94 @@ export async function getTransactions(filters?: unknown) {
   return { data: transactions, total, page, limit };
 }
 
+export type ManagedTransactionParams = {
+  userId: string;
+  householdId: string | null;
+  bankAccountId: string;
+  categoryId?: string | null;
+  type: TransactionType;
+  status: TransactionStatus;
+  amount: number;
+  description?: string | null;
+  date: Date;
+  installmentNumber?: number | null;
+  totalInstallments?: number | null;
+  ignoreInTotals?: boolean;
+  aiEventId?: string | null;
+};
+
 /**
- * Criar nova transação.
+ * Helper interno para transações via código (inclui Auto-Save do IA).
+ * Cria a transação e ajusta o saldo da conta numa transaction do Prisma.
+ */
+export async function createManagedTransaction(params: ManagedTransactionParams) {
+  // Verificar que a conta pertence ao household
+  const account = await prisma.bankAccount.findFirst({
+    where: {
+      id: params.bankAccountId,
+      OR: [{ userId: params.userId }, { householdId: params.householdId ?? "" }],
+    },
+  });
+
+  if (!account) {
+    throw new Error("Conta não encontrada ou sem permissão");
+  }
+
+  // Calcular delta do saldo
+  const balanceDelta =
+    !params.ignoreInTotals && params.status === "COMPLETED"
+      ? params.type === "INCOME"
+        ? params.amount
+        : params.type === "EXPENSE"
+        ? -params.amount
+        : 0
+      : 0;
+
+  const [transaction] = await prisma.$transaction([
+    prisma.transaction.create({
+      data: {
+        userId:       params.userId,
+        householdId:  params.householdId,
+        bankAccountId: params.bankAccountId,
+        categoryId:   params.categoryId ?? null,
+        type: params.type,
+        status: params.status,
+        amount: params.amount,
+        description:  params.description ?? null,
+        date: params.date,
+        installmentNumber:  params.installmentNumber ?? null,
+        totalInstallments:  params.totalInstallments ?? null,
+        ignoreInTotals: params.ignoreInTotals ?? false,
+      },
+    }),
+    // Atualizar saldo da conta
+    ...(balanceDelta !== 0
+      ? [
+          prisma.bankAccount.update({
+            where: { id: params.bankAccountId },
+            data: { balance: { increment: balanceDelta } },
+          }),
+        ]
+      : []),
+    
+  ]);
+
+  // Backfill trace de IA
+  if (params.aiEventId) {
+    await prisma.aiCaptureEvent.updateMany({
+      where: { 
+        id: params.aiEventId,
+        OR: [{ userId: params.userId }, { householdId: params.householdId ?? "" }],
+      },
+      data: { createdTransactionId: transaction.id },
+    }).catch(console.error);
+  }
+
+  return transaction;
+}
+
+/**
+ * Criar nova transação (fluxo manual).
  * Atualiza o saldo da conta automaticamente.
  */
 export async function createTransaction(formData: unknown) {
@@ -121,67 +208,20 @@ export async function createTransaction(formData: unknown) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
   }
 
-  const { bankAccountId, categoryId, type, status, amount, description,
-    date, installmentNumber, totalInstallments, ignoreInTotals } = parsed.data;
-
-  // Verificar que a conta pertence ao household
-  const account = await prisma.bankAccount.findFirst({
-    where: {
-      id: bankAccountId,
-      OR: [{ userId: ctx.id }, { householdId: ctx.householdId ?? "" }],
-    },
-  });
-
-  if (!account) {
-    return { error: "Conta não encontrada ou sem permissão" };
-  }
-
-  // Calcular delta do saldo
-  const balanceDelta =
-    !ignoreInTotals && status === "COMPLETED"
-      ? type === "INCOME"
-        ? amount
-        : type === "EXPENSE"
-        ? -amount
-        : 0
-      : 0;
-
   try {
-    const [transaction] = await prisma.$transaction([
-      prisma.transaction.create({
-        data: {
-          userId:       ctx.id,
-          householdId:  ctx.householdId,
-          bankAccountId,
-          categoryId:   categoryId ?? null,
-          type,
-          status,
-          amount,
-          description:  description ?? null,
-          date,
-          installmentNumber:  installmentNumber ?? null,
-          totalInstallments:  totalInstallments ?? null,
-          ignoreInTotals,
-        },
-      }),
-      // Atualizar saldo da conta
-      ...(balanceDelta !== 0
-        ? [
-            prisma.bankAccount.update({
-              where: { id: bankAccountId },
-              data: { balance: { increment: balanceDelta } },
-            }),
-          ]
-        : []),
-    ]);
+    const transaction = await createManagedTransaction({
+      userId: ctx.id,
+      householdId: ctx.householdId,
+      ...parsed.data
+    });
 
     revalidatePath("/");
     revalidatePath("/transacoes");
     revalidatePath("/contas");
     return { success: true, data: transaction };
-  } catch (err) {
+  } catch (err: any) {
     console.error("createTransaction error:", err);
-    return { error: "Erro ao registrar transação." };
+    return { error: err.message || "Erro ao registrar transação." };
   }
 }
 
@@ -565,6 +605,12 @@ export async function undoTransaction(id: string) {
           })]
         : []),
     ]);
+
+    // Async auditoria para não quebrar a transação de banco em caso de falha
+    prisma.aiCaptureEvent.updateMany({
+      where: { createdTransactionId: id },
+      data: { wasUndone: true }
+    }).catch(console.error);
 
     revalidatePath("/");
     revalidatePath("/transacoes");
