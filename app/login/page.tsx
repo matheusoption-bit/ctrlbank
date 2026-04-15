@@ -85,7 +85,7 @@ function LoginForm() {
 
         {/* Card */}
         <motion.div
-          className="card-premium space-y-6"
+          className="card-c6 space-y-6"
           variants={itemVariants}
         >
           <div className="space-y-1">
@@ -99,13 +99,13 @@ function LoginForm() {
           <AnimatePresence>
             {error && (
               <motion.div
-                className="bg-danger/10 border border-danger/30 rounded-xl p-3.5 flex items-center gap-3"
+                className="bg-negative/10 border border-negative/30 rounded-xl p-3.5 flex items-center gap-3"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
               >
-                <AlertCircle className="w-4 h-4 text-danger flex-shrink-0" />
-                <p className="text-sm text-danger">{error}</p>
+                <AlertCircle className="w-4 h-4 text-negative flex-shrink-0" />
+                <p className="text-sm text-negative">{error}</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -114,13 +114,13 @@ function LoginForm() {
           <AnimatePresence>
             {success && (
               <motion.div
-                className="bg-success/10 border border-success/30 rounded-xl p-3.5 flex items-center gap-3"
+                className="bg-positive/10 border border-positive/30 rounded-xl p-3.5 flex items-center gap-3"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
               >
-                <CheckCircle className="w-4 h-4 text-success flex-shrink-0" />
-                <p className="text-sm text-success">{success}</p>
+                <CheckCircle className="w-4 h-4 text-positive flex-shrink-0" />
+                <p className="text-sm text-positive">{success}</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -137,7 +137,7 @@ function LoginForm() {
                   placeholder="seu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="input-premium pl-12"
+                  className="input-c6 pl-12"
                   required
                   disabled={loading}
                   autoComplete="email"
@@ -155,7 +155,7 @@ function LoginForm() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="input-premium pl-12"
+                  className="input-c6 pl-12"
                   required
                   disabled={loading}
                   autoComplete="current-password"
