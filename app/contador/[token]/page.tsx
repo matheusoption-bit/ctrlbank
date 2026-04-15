@@ -2,8 +2,8 @@ import { getCounterReports } from "@/app/actions/counter";
 import ContadorPublicClient from "./ContadorPublicClient";
 import { Shield } from "lucide-react";
 
-export default async function PublicCounterPage({ params }: { params: { token: string } }) {
-  const { token } = params;
+export default async function PublicCounterPage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params;
   const res = await getCounterReports(token);
 
   if (res.error || !res.transactions) {

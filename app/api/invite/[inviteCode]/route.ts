@@ -4,9 +4,10 @@ import { validateRequest } from "@/lib/auth";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { inviteCode: string } }
+  { params }: { params: Promise<{ inviteCode: string }> }
 ) {
-  const code = params.inviteCode.toUpperCase();
+  const { inviteCode } = await params;
+  const code = inviteCode.toUpperCase();
   
   // Verifica se o código é válido
   const household = await prisma.household.findUnique({
