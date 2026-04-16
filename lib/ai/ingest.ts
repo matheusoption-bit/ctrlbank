@@ -7,8 +7,7 @@ import { resolveTargetAccount, resolveCategory, shouldAutoSave, logAiCaptureEven
 import { parseCSVForAI } from "./csv-pdf-parser";
 import { formatCurrency } from "@/lib/format";
 
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL = process.env.GROQ_MODEL ?? "gemma2-9b-it";
+const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
 const JSON_PROMPT_SINGLE = `
 Você é o AI Composer do CtrlBank, assistente financeiro premium inteligente.
@@ -93,9 +92,8 @@ Responda à pergunta do usuário de forma clara.`;
   let resultJsonString = "";
 
   if (input.inputType === "text" || input.inputType === "csv") {
-    // text only could fallback to Groq, but directives say "Gemini for ingest".
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
     
     let processedContent = input.content;
     if (input.inputType === "csv" && input.content) {
@@ -108,7 +106,7 @@ Responda à pergunta do usuário de forma clara.`;
   } else {
     // image, text+image, pdf
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
     const content = input.content ? `${prompt}\n\nEntrada: "${input.content}"` : prompt;
     const result = await model.generateContent([
       { inlineData: { data: input.imageBase64!, mimeType: input.mimeType || "image/jpeg" } },
