@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Eye, EyeOff, ArrowUpRight, ArrowDownLeft, ArrowLeftRight,
-  Wallet, TrendingUp, ChevronRight, BarChart3,
+  Wallet, TrendingUp, ChevronRight, BarChart3, Sparkles
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -59,6 +59,7 @@ interface Props {
   summary: Summary;
   evolution: EvolutionItem[];
   forecast: ForecastItem[];
+  recommendations?: any[];
 }
 
 // ─── Animation Variants ───────────────────────────────────────────────────────
@@ -174,7 +175,7 @@ function TransactionRow({ tx, currentUserId }: { tx: Transaction, currentUserId:
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function DashboardPageClient({ user, summary, evolution, forecast }: Props) {
+export default function DashboardPageClient({ user, summary, evolution, forecast, recommendations = [] }: Props) {
   const [showBalance, setShowBalance] = useState(true);
   const { totalBalance, monthIncome, monthExpense, accounts, recentTransactions, categoryBreakdown } = summary;
   const netMonth = monthIncome - monthExpense;
@@ -223,6 +224,29 @@ export default function DashboardPageClient({ user, summary, evolution, forecast
           )}
         </h1>
       </motion.section>
+
+      {/* ── AI Recommendations ── */}
+      {recommendations.length > 0 && (
+        <motion.section variants={item} className="space-y-3">
+          {recommendations.map(rec => (
+            <div key={rec.id} className="card-c6 border border-info/20 bg-info/5 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-3 p-4">
+               <div className="absolute top-0 left-0 w-1 h-full bg-info/80"></div>
+               <div className="flex gap-3 text-sm text-foreground items-start">
+                  <div className="p-2 bg-info/10 text-info rounded-xl shrink-0 mt-0.5"><Sparkles size={16} /></div>
+                  <div>
+                    <p className="font-bold text-info mb-1 tracking-tight uppercase text-xs">Ação Recomendada</p>
+                    <p className="leading-relaxed font-medium">{rec.message}</p>
+                  </div>
+               </div>
+               {rec.actionLabel && rec.actionTarget && (
+                  <Link href={rec.actionTarget} className="inline-flex items-center justify-center border border-info/30 bg-info/10 text-info hover:bg-info hover:text-white text-xs px-4 py-2 rounded-xl font-bold transition-colors whitespace-nowrap">
+                     {rec.actionLabel}
+                  </Link>
+               )}
+            </div>
+          ))}
+        </motion.section>
+      )}
 
       {/* ── Stats Row (3 Colunas como no Print) ── */}
       <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-3 gap-4">

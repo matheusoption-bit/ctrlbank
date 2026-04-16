@@ -52,6 +52,11 @@ enum RecurringFrequency {
   YEARLY
 }
 
+enum VisibilityScope {
+  PERSONAL
+  HOUSEHOLD
+}
+
 // ─────────────────────────────────────────────
 // Core Models
 // ─────────────────────────────────────────────
@@ -88,6 +93,10 @@ model Household {
   counterSessions       CounterSession[]
   AiCaptureEvent        AiCaptureEvent[]
   merchantMemories      MerchantMemory[]
+
+  aiConversations       AiConversation[]
+  financialPlans        FinancialPlan[]
+  aiRecommendations     AiRecommendation[]
 }
 
 model User {
@@ -111,6 +120,11 @@ model User {
   notifications  Notification[]
   AiCaptureEvent AiCaptureEvent[]
   merchantMemories MerchantMemory[]
+
+  aiConversations   AiConversation[]
+  aiMessages        AiMessage[]
+  financialPlans    FinancialPlan[]
+  aiRecommendations AiRecommendation[]
 
   @@index([householdId])
 }
@@ -394,5 +408,106 @@ model BankConnection {
   household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
   @@unique([householdId, provider, externalId])
+  @@index([householdId])
+}
+
+// ─────────────────────────────────────────────
+// Fase 11 a 14: Conversations, Plans & Recommendations
+// ─────────────────────────────────────────────
+
+model AiConversation {
+  id          String   @id @default(cuid())
+  userId      String
+  householdId String?
+  title       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  messages  AiMessage[]
+
+  @@index([userId])
+  @@index([householdId])
+}
+
+model AiMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String
+  role           String   // 'user', 'assistant', 'system'
+  mode           String   // 'Registrar', 'Revisar', 'Perguntar', 'Planejar'
+  inputType      String   @default("text") // text, image, audio, etc.
+  content        String
+  
+  audioDurationMs Int?
+  
+  metadata       Json?    // To store generic payloads like drafts, saved_plan reference, operational_result
+  createdAt      DateTime @default(now())
+
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+}
+
+model FinancialPlan {
+  id                    String   @id @default(cuid())
+  userId                String
+  householdId           String?
+  visibility            VisibilityScope @default(PERSONAL)
+  title                 String
+  objectiveType         String   
+  targetAmount          Decimal? @db.Decimal(15,2)
+  targetDate            DateTime?
+  targetMonths          Int?
+  monthlyRequiredAmount Decimal? @db.Decimal(15,2)
+  summary               String
+  recommendedCuts       Json?
+  scenarioData          Json?    
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household  Household?  @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  progresses PlanProgressSnapshot[]
+
+  @@index([userId])
+  @@index([householdId])
+}
+
+model PlanProgressSnapshot {
+  id                  String   @id @default(cuid())
+  planId              String
+  currentAmount       Decimal  @db.Decimal(15,2)
+  progressPercentage  Float
+  projectedCompletion DateTime?
+  isOnTrack           Boolean
+  createdAt           DateTime @default(now())
+
+  plan  FinancialPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+}
+
+model AiRecommendation {
+  id            String   @id @default(cuid())
+  userId        String
+  householdId   String?
+  visibility    VisibilityScope @default(PERSONAL)
+  relatedPlanId String?
+  type          String   // 'budget_warning', 'plan_progress', 'general_saving'
+  message       String
+  actionLabel   String?  
+  actionTarget  String?  // Ex: '/orcamentos'
+  score         Float    @default(0) // order by priority
+  isDismissed   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household Household?     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
   @@index([householdId])
 }

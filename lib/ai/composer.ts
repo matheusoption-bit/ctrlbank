@@ -131,3 +131,107 @@ export async function learnFromCorrection(userId: string, householdId: string | 
     });
   }
 }
+
+// ─────────────────────────────────────────────
+// Phase 11-14: Persistence & AI
+// ─────────────────────────────────────────────
+
+export async function getOrCreateConversation(userId: string, householdId: string | null, conversationId?: string | null) {
+  if (conversationId) {
+    const conv = await prisma.aiConversation.findFirst({
+      where: {
+        id: conversationId,
+        userId,
+      },
+    });
+    if (conv) return conv.id;
+  }
+  const newConv = await prisma.aiConversation.create({
+    data: { userId, householdId, title: "Nova Conversa" }
+  });
+  return newConv.id;
+}
+
+export async function saveAiMessage(data: {
+  conversationId: string;
+  userId: string;
+  role: "user" | "assistant" | "system";
+  mode: string;
+  inputType?: string;
+  content: string;
+  metadata?: any;
+}) {
+  try {
+    const message = await prisma.aiMessage.create({
+      data: {
+        conversationId: data.conversationId,
+        userId: data.userId,
+        role: data.role,
+        mode: data.mode,
+        inputType: data.inputType ?? "text",
+        content: data.content,
+        metadata: data.metadata ?? null,
+      }
+    });
+    await prisma.aiConversation.update({
+      where: { id: data.conversationId },
+      data: { updatedAt: new Date() },
+    });
+    return message;
+  } catch (err) {
+    console.error("[ai/composer] failed to save ai message", err);
+    return null;
+  }
+}
+
+export async function createFinancialPlan(userId: string, householdId: string | null, planData: any) {
+  try {
+    const visibility = planData.visibility === "HOUSEHOLD" && householdId ? "HOUSEHOLD" : "PERSONAL";
+    
+    const plan = await prisma.financialPlan.create({
+      data: {
+        userId,
+        householdId: visibility === "HOUSEHOLD" ? householdId : null,
+        visibility,
+        title: planData.title ?? "Plano Financeiro",
+        objectiveType: planData.objectiveType ?? "general",
+        targetAmount: planData.targetAmount,
+        targetMonths: planData.targetMonths,
+        monthlyRequiredAmount: planData.monthlyRequiredAmount,
+        summary: planData.summary ?? "",
+        recommendedCuts: planData.recommendedCuts,
+        scenarioData: planData.scenarioData,
+      }
+    });
+    // Auto sync immediately upon creation to seed initial snapshot
+    const { syncFinancialPlan } = await import("./planner");
+    await syncFinancialPlan(plan.id);
+    return plan;
+  } catch (err) {
+    console.error("[ai/composer] failed to create financial plan", err);
+    return null;
+  }
+}
+
+export async function createRecommendation(userId: string, householdId: string | null, recData: any) {
+  try {
+    const visibility = recData.visibility === "HOUSEHOLD" && householdId ? "HOUSEHOLD" : "PERSONAL";
+    
+    return await prisma.aiRecommendation.create({
+      data: {
+        userId,
+        householdId: visibility === "HOUSEHOLD" ? householdId : null,
+        visibility,
+        relatedPlanId: recData.relatedPlanId ?? null,
+        type: recData.type ?? "insight",
+        message: recData.message,
+        actionLabel: recData.actionLabel,
+        actionTarget: recData.actionTarget,
+        score: recData.score ?? 0,
+      }
+    });
+  } catch (err) {
+    console.error("[ai/composer] failed to create rec", err);
+    return null;
+  }
+}
