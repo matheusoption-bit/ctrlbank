@@ -87,6 +87,7 @@ model Household {
   bankConnections       BankConnection[]
   counterSessions       CounterSession[]
   AiCaptureEvent        AiCaptureEvent[]
+  merchantMemories      MerchantMemory[]
 }
 
 model User {
@@ -109,6 +110,7 @@ model User {
   categories     Category[]
   notifications  Notification[]
   AiCaptureEvent AiCaptureEvent[]
+  merchantMemories MerchantMemory[]
 
   @@index([householdId])
 }
@@ -149,6 +151,7 @@ model BankAccount {
   user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions          Transaction[]
   recurringTransactions RecurringTransaction[]
+  merchantMemories      MerchantMemory[]
 
   @@index([userId])
   @@index([householdId])
@@ -171,6 +174,7 @@ model Category {
   transactions          Transaction[]
   budgets               Budget[]
   recurringTransactions RecurringTransaction[]
+  merchantMemories      MerchantMemory[]
 
   @@index([userId])
   @@index([householdId])
@@ -188,6 +192,7 @@ model Transaction {
   description   String?
   date          DateTime          @default(now())
   notes         String? // Fase 7: notas adicionais
+  aiCaptureEventId String?        @unique
 
   // Parcelamento
   installmentNumber Int?
@@ -203,6 +208,7 @@ model Transaction {
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   bankAccount BankAccount      @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
   category    Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  aiCaptureEvent AiCaptureEvent? @relation(fields: [aiCaptureEventId], references: [id], onDelete: SetNull)
   tags        TransactionTag[]
 
   @@index([userId])
@@ -220,6 +226,7 @@ model AiCaptureEvent {
   id                   String   @id @default(cuid())
   userId               String
   householdId          String?
+  captureGroupId       String?
   source               String // "text", "image", "text+image"
   inputType            String
   rawText              String?
@@ -232,6 +239,32 @@ model AiCaptureEvent {
 
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   household Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  transaction Transaction?
+
+  @@index([captureGroupId])
+}
+
+// ─────────────────────────────────────────────
+// IA Operational Memory
+// ─────────────────────────────────────────────
+
+model MerchantMemory {
+  id              String   @id @default(cuid())
+  householdId     String?
+  userId          String
+  merchantName    String
+  categoryId      String?
+  bankAccountId   String?
+  correctedCount  Int      @default(0)
+  lastUsedAt      DateTime @default(now())
+
+  household     Household?   @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category      Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+
+  @@index([householdId])
+  @@index([userId])
 }
 
 // ─────────────────────────────────────────────

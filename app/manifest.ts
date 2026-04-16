@@ -21,5 +21,23 @@ export default function manifest(): MetadataRoute.Manifest {
         type: 'image/png',
       },
     ],
+    // @ts-ignore - share_target is valid in W3C manifest but may not be typed fully in Next.js 14
+    share_target: {
+      action: '/share',
+      method: 'POST',
+      enctype: 'multipart/form-data',
+      params: {
+        title: 'title',
+        text: 'text',
+        url: 'url',
+        files: [
+          {
+            name: 'image',
+            accept: ['image/*', 'application/pdf', 'text/csv']
+          }
+        ]
+      }
+    }
   }
 }
+
