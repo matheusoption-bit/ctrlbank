@@ -47,7 +47,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(response);
 
   } catch (error: any) {
-    console.error("[ai/composer] Error:", error.message || error);
-    return NextResponse.json({ error: "Falha ao extrair dados" }, { status: 500 });
+    const message = error?.message || "Falha ao extrair dados";
+    console.error("[ai/composer] Error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
