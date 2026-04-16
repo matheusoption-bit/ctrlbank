@@ -61,13 +61,16 @@ export type ProcessIngestInput = {
 
 export async function processAiIngest(input: ProcessIngestInput): Promise<AIComposerResponse> {
   const isChatMode = input.mode === "Perguntar" || input.mode === "Planejar";
+  const isSuggestMode = input.mode === "Sugerir";
   const isBatch = input.inputType === "pdf" || input.inputType === "csv";
   const captureGroupId = randomUUID();
   
   let prompt = isBatch ? JSON_PROMPT_BATCH : JSON_PROMPT_SINGLE;
   let finContext = "";
 
-  if (isChatMode) {
+  if (isSuggestMode) {
+    prompt = "Você analisa feedback de produto. Converta input em JSON com: title, summary, type (bug|ux|feature|improvement), area (composer|mobile|dashboard|orcamentos|metas|relatorios|planner|other), impact (low|medium|high), reproductionSteps[], suggestedSolution, acceptanceCriteria[]";
+  } else if (isChatMode) {
     finContext = await buildFinancialContext(input.userId, input.householdId);
     prompt = input.mode === "Planejar"
       ? `Você é o CtrlBot, consultor financeiro premium do CtrlBank.
@@ -130,7 +133,74 @@ Responda à pergunta do usuário de forma clara. Se houver áudio, forneça um J
 
   // extract JSON / reply
   let parsedJson: any = null;
-  if (isChatMode) {
+  
+  if (isSuggestMode) {
+    // Handle Sugerir mode
+    try {
+      const jsonMatch = resultJsonString.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        const { createProductFeedback } = await import("@/lib/ai/composer");
+        
+        // Prepare artifacts if audio or image
+        const artifacts: Array<{ kind: string; url?: string; content?: any }> = [];
+        if (input.inputType === "audio") {
+          artifacts.push({
+            kind: "transcript",
+            content: { transcript: parsed.userTranscript || "[Audio enviado]" }
+          });
+        }
+        if (input.inputType === "image" || input.inputType === "text+image") {
+          artifacts.push({
+            kind: "image",
+            url: input.imageBase64 ? `data:${input.mimeType || "image/jpeg"};base64,${input.imageBase64}` : undefined
+          });
+        }
+        
+        // Create feedback
+        const feedback = await createProductFeedback(
+          input.userId,
+          input.householdId,
+          {
+            rawInput: input.content || "[Feedback enviado]",
+            normalizedTitle: parsed.title || "Feedback sem título",
+            summary: parsed.summary || input.content || "",
+            type: parsed.type || "improvement",
+            area: parsed.area || "other",
+            impact: parsed.impact || "low",
+            reproductionSteps: parsed.reproductionSteps,
+            suggestedSolution: parsed.suggestedSolution,
+            acceptanceCriteria: parsed.acceptanceCriteria
+          },
+          artifacts
+        );
+        
+        if (feedback) {
+          return {
+            intent: "product_feedback_logged",
+            message: "Sugestão registrada com sucesso.",
+            requiresReview: false,
+            autoSaved: true,
+            transactionDraft: null,
+            feedbackId: feedback.id,
+            normalizedFeedback: parsed,
+            createdTransactionId: null,
+            undoAvailable: false,
+            undoToken: null,
+            eventId: null,
+            captureGroupId,
+            conversationId: null,
+            missingFields: [],
+            userTranscript: parsed.userTranscript
+          };
+        }
+      }
+    } catch (e) {
+      console.error("[ai/ingest] Failed to process Sugerir mode:", e);
+    }
+    
+    throw new Error("Não foi possível processar o feedback de produto.");
+  } else if (isChatMode) {
     if (input.mode === "Planejar") {
       try {
         const jsonMatch = resultJsonString.match(/\{[\s\S]*\}/);

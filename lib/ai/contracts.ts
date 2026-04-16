@@ -8,9 +8,10 @@ export type AIComposerIntent =
   | "transaction_draft"
   | "clarification_needed"
   | "batch_review"
-  | "saved_plan";
+  | "saved_plan"
+  | "product_feedback_logged";
 
-export type AIComposerMode = "Registrar" | "Revisar" | "Perguntar" | "Planejar";
+export type AIComposerMode = "Registrar" | "Revisar" | "Perguntar" | "Planejar" | "Sugerir";
 
 export type AIComposerTransactionDraft = {
   amount: number | null;
@@ -47,6 +48,8 @@ export type AIComposerResponse = {
   batchDrafts?: AIComposerBatchDraftItem[];
   createdTransactionId: string | null;
   savedPlanId?: string | null;
+  feedbackId?: string | null;
+  normalizedFeedback?: any | null;
   userTranscript?: string;
   undoAvailable: boolean;
   undoToken: string | null;

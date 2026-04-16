@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles, X, Send, Loader2, Camera, BarChart3, Search, Paperclip, CheckSquare, Copy, MessageSquare, Mic, Square, Trash2, ChevronUp
+  Sparkles, X, Send, Loader2, Camera, BarChart3, Search, Paperclip, CheckSquare, Copy, MessageSquare, Mic, Square, Trash2, ChevronUp, Lightbulb
 } from "lucide-react";
 import { toast } from "sonner";
 import { getAccounts } from "@/app/actions/accounts";
@@ -12,7 +12,7 @@ import { getAiCaptureGroup } from "@/app/actions/ai/review";
 import { getConversationHistory } from "@/app/actions/ai/conversation";
 import { AIComposerBatchDraftItem, AIComposerResponse, AIComposerTransactionDraft, AIComposerMode } from "@/lib/ai/contracts";
 
-import { SuccessCard, DraftReviewCard, BatchReviewCard, NextBestActionCard, SavedPlanCard } from "./AICards";
+import { SuccessCard, DraftReviewCard, BatchReviewCard, NextBestActionCard, SavedPlanCard, ProductFeedbackCard } from "./AICards";
 
 type ComposerMessage = {
   id: string;
@@ -386,7 +386,7 @@ export default function AIChatWidget() {
     }
   }
 
-  const modes: AIComposerMode[] = ["Registrar", "Revisar", "Perguntar", "Planejar"];
+  const modes: AIComposerMode[] = ["Registrar", "Revisar", "Perguntar", "Planejar", "Sugerir"];
 
   return (
     <>
@@ -487,6 +487,11 @@ export default function AIChatWidget() {
                                <SavedPlanCard planId={message.metadata.savedPlanId} planData={message.metadata.planData} />
                             </div>
                          )}
+                         {message.metadata?.intent === "product_feedback_logged" && message.metadata.normalizedFeedback && (
+                            <div className="mt-2 text-left">
+                               <ProductFeedbackCard feedbackId={message.metadata.feedbackId} normalizedFeedback={message.metadata.normalizedFeedback} />
+                            </div>
+                         )}
                        </div>
                     </div>
                   ))}
@@ -500,12 +505,14 @@ export default function AIChatWidget() {
                    {mode === "Revisar" && <CheckSquare size={32} className="text-secondary" />}
                    {mode === "Perguntar" && <Search size={32} className="text-secondary" />}
                    {mode === "Planejar" && <BarChart3 size={32} className="text-secondary" />}
+                   {mode === "Sugerir" && <Lightbulb size={32} className="text-secondary" />}
                   <p className="text-sm font-medium">O que vamos fazer?</p>
                   <p className="text-xs text-secondary/70 px-4">
                     {mode === "Registrar" && "Digite, fale, cole um print, anexe PDF ou CSV."}
                     {mode === "Revisar" && "Visualize drafts e lotes aguardando aprovação."}
                     {mode === "Perguntar" && "Tire dúvidas sobre suas finanças ou movimentações."}
                     {mode === "Planejar" && "Descubra como você está indo em relação às metas e orçamentos."}
+                    {mode === "Sugerir" && "Sugira melhorias, reporte bugs ou novas funcionalidades."}
                   </p>
                 </div>
               )}
