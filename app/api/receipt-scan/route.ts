@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { AIProviderRegistry } from "@/lib/ai/providers/registry";
 import { validateRequest } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
@@ -24,8 +24,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Imagem não fornecida" }, { status: 400 });
     }
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const registry = new AIProviderRegistry();
 
     const prompt = `Você é um assistente financeiro especializado em documentos brasileiros.
 Analise esta imagem (pode ser comprovante PIX, nota fiscal, recibo, boleto, cupom fiscal ou qualquer documento de pagamento brasileiro).
@@ -46,29 +45,12 @@ Regras:
 - Se não conseguir ler algum campo, use null para esse campo
 - O valor deve ser apenas o número, sem R$ ou pontos de milhar`;
 
-    const result = await model.generateContent([
-      {
-        inlineData: {
-          data: imageBase64,
-          mimeType: mimeType,
-        },
-      },
-      prompt,
-    ]);
-
-    const responseText = result.response.text().trim();
-    
-    // Extrai o bloco de JSON caso o Gemini inclua algum texto extra antes ou depois
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("Não foi possível extrair dados legíveis da imagem");
-    }
-
     let parsed;
     try {
-      parsed = JSON.parse(jsonMatch[0]);
-    } catch {
-      throw new Error("Não foi possível extrair dados legíveis da imagem");
+      parsed = await registry.generateMultimodal("transaction_extract", prompt, { base64: imageBase64, mimeType });
+    } catch (e: any) {
+      const isTransient = e.message?.includes("motor") || e.message?.includes("instabilidades");
+      throw new Error(isTransient ? e.message : "Não foi possível extrair dados legíveis da imagem");
     }
 
     return NextResponse.json({

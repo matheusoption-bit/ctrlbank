@@ -10,7 +10,7 @@ describe("resolveRuntimeDatabaseUrl", () => {
       POSTGRES_PRISMA_URL: "postgres://runtime-prisma",
       DATABASE_URL: "postgres://database-url",
       DIRECT_URL: "postgres://direct-url",
-    });
+    } as any as NodeJS.ProcessEnv);
 
     expect(resolved).toEqual({
       key: "POSTGRES_PRISMA_URL",
@@ -22,7 +22,7 @@ describe("resolveRuntimeDatabaseUrl", () => {
     const resolved = resolveRuntimeDatabaseUrl({
       DATABASE_URL: "postgres://pooled-runtime",
       DATABASE_URL_UNPOOLED: "postgres://safe-direct",
-    });
+    } as any as NodeJS.ProcessEnv);
 
     expect(resolved).toEqual({
       key: "DATABASE_URL",
@@ -34,7 +34,7 @@ describe("resolveRuntimeDatabaseUrl", () => {
     const resolved = resolveRuntimeDatabaseUrl({
       DATABASE_URL_UNPOOLED: "postgres://safe-direct",
       DIRECT_URL: "postgres://another-direct",
-    });
+    } as any as NodeJS.ProcessEnv);
 
     expect(resolved).toEqual({
       key: "DATABASE_URL_UNPOOLED",
@@ -43,7 +43,7 @@ describe("resolveRuntimeDatabaseUrl", () => {
   });
 
   it("throws a helpful error when no database URL exists", () => {
-    expect(() => resolveRuntimeDatabaseUrl({})).toThrow(
+    expect(() => resolveRuntimeDatabaseUrl({} as any as NodeJS.ProcessEnv)).toThrow(
       "Missing database URL for runtime"
     );
   });
@@ -54,7 +54,7 @@ describe("resolveMigrationDatabaseUrl", () => {
     const resolved = resolveMigrationDatabaseUrl({
       DIRECT_URL: "postgres://direct-url",
       DATABASE_URL: "postgres://runtime-url",
-    });
+    } as any as NodeJS.ProcessEnv);
 
     expect(resolved).toEqual({
       key: "DIRECT_URL",
@@ -66,7 +66,7 @@ describe("resolveMigrationDatabaseUrl", () => {
     const resolved = resolveMigrationDatabaseUrl({
       POSTGRES_URL_NON_POOLING: "postgres://non-pooling",
       DATABASE_URL: "postgres://runtime-url",
-    });
+    } as any as NodeJS.ProcessEnv);
 
     expect(resolved).toEqual({
       key: "POSTGRES_URL_NON_POOLING",

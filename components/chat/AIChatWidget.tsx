@@ -86,6 +86,15 @@ export default function AIChatWidget() {
     if (params.get("captureGroupId") || params.get("shared") || params.get("share_error")) {
       setOpen(true);
     }
+
+    const handleToggle = () => {
+      setOpen(prev => {
+        if (!prev) setComposerState("idle");
+        return !prev;
+      });
+    };
+    window.addEventListener("toggle-composer", handleToggle);
+    return () => window.removeEventListener("toggle-composer", handleToggle);
   }, []);
 
   useEffect(() => {
@@ -395,10 +404,10 @@ export default function AIChatWidget() {
           setOpen(!open);
           if (!open) setComposerState("idle");
         }}
-        className="fixed z-50 w-14 h-14 rounded-full bg-primary shadow-glow-primary flex items-center justify-center text-white"
+        className="hidden md:flex fixed z-50 w-14 h-14 rounded-full bg-primary shadow-glow-primary items-center justify-center text-white"
         style={{
-          right: isMobile ? "5.5rem" : "1.25rem",
-          bottom: "calc(6rem + env(safe-area-inset-bottom, 0px))",
+          right: "1.25rem",
+          bottom: "1.25rem",
         }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -420,11 +429,13 @@ export default function AIChatWidget() {
             transition={{ type: "spring", damping: 28, stiffness: 380 }}
             className="fixed z-50 bg-surface border border-border rounded-3xl shadow-soft-xl flex flex-col overflow-hidden"
             style={{
-              right: "1.25rem",
-              top: "calc(env(safe-area-inset-top, 0px) + 0.75rem)",
-              bottom: "calc(8.25rem + env(safe-area-inset-bottom, 0px))",
-              width: "min(calc(100vw - 2.5rem), 400px)",
-              maxHeight: "min(650px, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 9rem))"
+              right: isMobile ? "0.5rem" : "1.25rem",
+              left: isMobile ? "0.5rem" : "auto",
+              top: isMobile ? "calc(env(safe-area-inset-top, 0px) + 0.5rem)" : "auto",
+              bottom: isMobile ? "calc(5.5rem + env(safe-area-inset-bottom, 0px))" : "5.5rem",
+              width: "auto",
+              maxWidth: isMobile ? "none" : "400px",
+              maxHeight: isMobile ? "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 6.5rem)" : "650px",
             }}
           >
             {/* Context/Operating Header Modes */}
