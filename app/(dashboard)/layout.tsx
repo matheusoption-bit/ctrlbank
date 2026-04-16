@@ -20,7 +20,7 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  const aiEnabled = !!process.env.GROQ_API_KEY;
+  const aiEnabled = !!process.env.GEMINI_API_KEY;
 
   return (
     <DashboardLayoutClient userName={user.name}>

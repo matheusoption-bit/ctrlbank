@@ -135,7 +135,10 @@ export default function DashboardLayoutClient({
 
       {/* ── Main Content ── */}
       <main className="md:pl-72 w-full min-h-dvh">
-        <div className="max-w-6xl mx-auto px-4 pt-6 pb-24 md:py-10 md:px-10">
+        <div
+          className="max-w-6xl mx-auto px-4 pb-safe-nav md:py-10 md:px-10"
+          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1rem)" }}
+        >
           {children}
         </div>
       </main>
@@ -147,7 +150,7 @@ export default function DashboardLayoutClient({
 
         <div
           className="relative mx-4 mb-3 max-h-dvh flex flex-col justify-end"
-          style={{ marginBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}
+          style={{ marginBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
         >
           <div className="bg-surface/95 backdrop-blur-xl border border-border rounded-2xl px-2 py-2 flex items-center justify-around shadow-soft-xl">
             {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
@@ -179,7 +182,7 @@ export default function DashboardLayoutClient({
       <div className="fixed z-50 md:hidden"
         style={{
           right: "1.25rem",
-          bottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))",
+          bottom: "calc(6rem + env(safe-area-inset-bottom, 0px))",
         }}
       >
         {/* Opções do FAB */}

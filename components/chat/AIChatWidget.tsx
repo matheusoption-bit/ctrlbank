@@ -164,38 +164,46 @@ export default function AIChatWidget() {
         body: JSON.stringify(payload),
       });
 
-      const data: AIComposerResponse = await res.json();
-      setActiveEventId(data.eventId);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(typeof data?.error === "string" ? data.error : "Falha ao extrair dados");
+      }
+
+      const composerData: AIComposerResponse = data;
+      setActiveEventId(composerData.eventId);
       
       setImageBase64(null);
       setFileName(null);
       setMimeType(null);
 
-      if (data.intent === "chat_reply") {
+      if (composerData.intent === "chat_reply") {
         setComposerState("chat_mode");
-        setResponseMsg(data.message);
-      } else if (data.intent === "transaction_created") {
+        setResponseMsg(composerData.message);
+      } else if (composerData.intent === "transaction_created") {
         setComposerState("success");
-        setResponseMsg(data.message);
-        setCreatedTxId(data.createdTransactionId);
-        setDraft(data.transactionDraft);
-      } else if (data.intent === "batch_review") {
+        setResponseMsg(composerData.message);
+        setCreatedTxId(composerData.createdTransactionId);
+        setDraft(composerData.transactionDraft);
+      } else if (composerData.intent === "batch_review") {
         setComposerState("batch_review");
-        setResponseMsg(data.message);
-        setBatchDrafts(data.batchDrafts || []);
-      } else if (data.intent === "transaction_draft") {
+        setResponseMsg(composerData.message);
+        setBatchDrafts(composerData.batchDrafts || []);
+      } else if (composerData.intent === "transaction_draft") {
         setComposerState("review");
-        setResponseMsg(data.message);
-        setDraft(data.transactionDraft);
+        setResponseMsg(composerData.message);
+        setDraft(composerData.transactionDraft);
       } else {
         setComposerState("clarification");
-        setResponseMsg(data.message);
-        setDraft(data.transactionDraft);
-        setMissingFields(data.missingFields || []);
+        setResponseMsg(composerData.message);
+        setDraft(composerData.transactionDraft);
+        setMissingFields(composerData.missingFields || []);
       }
     } catch (err) {
+      const message = err instanceof Error ? err.message : "Falha na comunicação com o AI Composer.";
       setComposerState("clarification");
-      setResponseMsg("Falha na comunicação com o AI Composer.");
+      setResponseMsg(message);
+      toast.error(message);
     }
   }
 
@@ -209,7 +217,7 @@ export default function AIChatWidget() {
           if (!open) setComposerState("idle");
         }}
         className="fixed z-50 w-14 h-14 rounded-full bg-primary shadow-glow-primary flex items-center justify-center text-white"
-        style={{ right: "1.25rem", bottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))" }}
+        style={{ right: "1.25rem", bottom: "calc(6rem + env(safe-area-inset-bottom, 0px))" }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >
@@ -229,7 +237,13 @@ export default function AIChatWidget() {
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: "spring", damping: 28, stiffness: 380 }}
             className="fixed z-50 bg-surface border border-border rounded-3xl shadow-soft-xl flex flex-col overflow-hidden"
-            style={{ right: "1.25rem", bottom: "calc(8rem + env(safe-area-inset-bottom, 0px))", width: "min(calc(100vw - 2.5rem), 380px)", maxHeight: "min(80dvh, 600px)" }}
+            style={{
+              right: "1.25rem",
+              top: "calc(env(safe-area-inset-top, 0px) + 0.75rem)",
+              bottom: "calc(8.25rem + env(safe-area-inset-bottom, 0px))",
+              width: "min(calc(100vw - 2.5rem), 380px)",
+              maxHeight: "min(600px, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 9rem))"
+            }}
           >
             {/* Context/Operating Header Modes */}
             <div className="flex bg-surface-2/80 backdrop-blur-md px-2 pt-2 border-b border-border/50 items-end overflow-x-auto no-scrollbar">
