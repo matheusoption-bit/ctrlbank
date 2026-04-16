@@ -265,3 +265,35 @@ export function RecommendationCard({ recommendation }: { recommendation: { messa
     </div>
   );
 }
+
+export function ProductFeedbackCard({ feedbackId, normalizedFeedback }: { feedbackId?: string, normalizedFeedback: any }) {
+  return (
+    <div className="card-c6 border border-secondary/20 bg-surface space-y-3 relative overflow-hidden mt-2">
+      <div className="absolute top-0 left-0 w-1 h-full bg-secondary/80"></div>
+      <div className="flex items-center gap-2 text-secondary font-bold pb-2 border-b border-border/50">
+        <Sparkles size={16} /> Sugestão Registrada
+      </div>
+      <div>
+        <p className="font-black text-sm">{normalizedFeedback.title || "Feedback de Produto"}</p>
+        <p className="text-xs text-secondary mt-1">{normalizedFeedback.summary}</p>
+      </div>
+      <div className="grid grid-cols-3 gap-2 mt-2">
+        <div className="p-2 bg-surface-2 rounded-lg text-[10px]">
+          <p className="text-secondary mb-1 uppercase font-bold tracking-tighter">Tipo</p>
+          <p className="font-bold truncate">{normalizedFeedback.type}</p>
+        </div>
+        <div className="p-2 bg-surface-2 rounded-lg text-[10px]">
+          <p className="text-secondary mb-1 uppercase font-bold tracking-tighter">Área</p>
+          <p className="font-bold truncate">{normalizedFeedback.area}</p>
+        </div>
+        <div className="p-2 bg-surface-2 rounded-lg text-[10px]">
+          <p className="text-secondary mb-1 uppercase font-bold tracking-tighter">Impacto</p>
+          <p className="font-bold truncate">{normalizedFeedback.impact}</p>
+        </div>
+      </div>
+      <div className="w-full py-2 mt-2 text-[10px] font-bold flex gap-2 items-center justify-center bg-secondary/10 text-secondary border border-secondary/20 rounded-xl">
+        ID: #{feedbackId}
+      </div>
+    </div>
+  );
+}

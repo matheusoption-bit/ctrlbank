@@ -120,6 +120,7 @@ model User {
   notifications  Notification[]
   AiCaptureEvent AiCaptureEvent[]
   merchantMemories MerchantMemory[]
+  productFeedbacks ProductFeedback[]
 
   aiConversations   AiConversation[]
   aiMessages        AiMessage[]
@@ -127,6 +128,41 @@ model User {
   aiRecommendations AiRecommendation[]
 
   @@index([householdId])
+}
+
+model ProductFeedback {
+  id String @id @default(cuid())
+  userId String
+  householdId String?
+  source String @default("composer")
+  rawInput String @db.Text
+  normalizedTitle String
+  summary String @db.Text
+  type String
+  area String
+  impact String
+  priorityScore Float @default(0)
+  reproductionSteps Json?
+  suggestedSolution String? @db.Text
+  acceptanceCriteria Json?
+  status String @default("new")
+  relatedToId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id])
+  artifacts FeedbackArtifact[]
+  relatedTo ProductFeedback? @relation("FeedbackRelation", fields: [relatedToId], references: [id])
+  relatedFeedbacks ProductFeedback[] @relation("FeedbackRelation")
+}
+
+model FeedbackArtifact {
+  id String @id @default(cuid())
+  feedbackId String
+  kind String
+  url String?
+  content Json?
+  createdAt DateTime @default(now())
+  feedback ProductFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
 }
 
 model Session {

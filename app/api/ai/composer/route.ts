@@ -6,7 +6,7 @@ import { processAiIngest } from "@/lib/ai/ingest";
 import { AIComposerMode } from "@/lib/ai/contracts";
 
 const BodySchema = z.object({
-  mode: z.enum(["Registrar", "Revisar", "Perguntar", "Planejar"]).default("Registrar"),
+  mode: z.enum(["Registrar", "Revisar", "Perguntar", "Planejar", "Sugerir"]).default("Registrar"),
   inputType: z.enum(["text", "image", "text+image", "audio", "pdf", "csv"]),
   content: z.string().optional(),
   imageBase64: z.string().optional(),
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "IA não configurada" }, { status: 503 });
     }
 
-    const { getOrCreateConversation, saveAiMessage, createFinancialPlan } = await import("@/lib/ai/composer");
+    const { getOrCreateConversation, saveAiMessage, createFinancialPlan, createProductFeedback } = await import("@/lib/ai/composer");
 
     const conversationId = await getOrCreateConversation(user.id, dbUser?.householdId ?? null, body.conversationId);
 
@@ -97,6 +97,18 @@ export async function POST(req: NextRequest) {
         });
         return NextResponse.json(response);
       }
+    }
+
+    if (response.intent === "product_feedback_logged" && response.feedbackId) {
+      await saveAiMessage({
+        conversationId,
+        userId: user.id,
+        role: "assistant",
+        mode: body.mode,
+        content: response.message,
+        metadata: { intent: response.intent, feedbackId: response.feedbackId, normalizedFeedback: response.normalizedFeedback }
+      });
+      return NextResponse.json(response);
     }
 
     // Save common assistant reply

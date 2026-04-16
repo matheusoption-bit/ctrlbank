@@ -235,3 +235,93 @@ export async function createRecommendation(userId: string, householdId: string |
     return null;
   }
 }
+
+// ─────────────────────────────────────────────
+// Phase 15-18: Product Feedback Loop
+// ─────────────────────────────────────────────
+
+export async function createProductFeedback(
+  userId: string,
+  householdId: string | null,
+  feedbackData: {
+    rawInput: string;
+    normalizedTitle: string;
+    summary: string;
+    type: string;
+    area: string;
+    impact: string;
+    reproductionSteps?: any[];
+    suggestedSolution?: string;
+    acceptanceCriteria?: any[];
+  },
+  artifacts?: Array<{ kind: string; url?: string; content?: any }>
+) {
+  try {
+    // 1. Deduplication: Find similar feedback in the same area
+    const similarFeedbacks: any[] = await prisma.$queryRaw`
+      SELECT id, "normalizedTitle", similarity("normalizedTitle", ${feedbackData.normalizedTitle}) as sim
+      FROM "ProductFeedback"
+      WHERE area = ${feedbackData.area}
+      AND similarity("normalizedTitle", ${feedbackData.normalizedTitle}) > 0.7
+      ORDER BY sim DESC
+      LIMIT 1
+    `;
+
+    const relatedToId = similarFeedbacks.length > 0 ? similarFeedbacks[0].id : null;
+
+    // 2. Calculate priorityScore
+    // impact high=3 medium=2 low=1. score = impact*10 + (relatedCount*2)
+    const impactMultiplier = feedbackData.impact === "high" ? 3 : feedbackData.impact === "medium" ? 2 : 1;
+    
+    let relatedCount = 0;
+    if (relatedToId) {
+      relatedCount = await prisma.productFeedback.count({
+        where: { OR: [{ id: relatedToId }, { relatedToId }] }
+      });
+    }
+    
+    const priorityScore = (impactMultiplier * 10) + (relatedCount * 2);
+
+    // 3. Create feedback record
+    const feedback = await prisma.productFeedback.create({
+      data: {
+        userId,
+        householdId,
+        source: "composer",
+        rawInput: feedbackData.rawInput,
+        normalizedTitle: feedbackData.normalizedTitle,
+        summary: feedbackData.summary,
+        type: feedbackData.type,
+        area: feedbackData.area,
+        impact: feedbackData.impact,
+        reproductionSteps: (feedbackData.reproductionSteps as any) ?? undefined,
+        suggestedSolution: feedbackData.suggestedSolution ?? null,
+        acceptanceCriteria: (feedbackData.acceptanceCriteria as any) ?? undefined,
+        status: "new",
+        priorityScore,
+        relatedToId,
+      }
+    });
+
+    // Create artifacts if provided
+    if (artifacts && artifacts.length > 0) {
+      await Promise.all(
+        artifacts.map(artifact =>
+          prisma.feedbackArtifact.create({
+            data: {
+              feedbackId: feedback.id,
+              kind: artifact.kind,
+              url: artifact.url ?? null,
+              content: artifact.content ?? null,
+            }
+          })
+        )
+      );
+    }
+
+    return feedback;
+  } catch (err) {
+    console.error("[ai/composer] failed to create product feedback", err);
+    return null;
+  }
+}

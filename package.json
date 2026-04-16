@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "backlog:export": "tsx scripts/generate-backlog.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
