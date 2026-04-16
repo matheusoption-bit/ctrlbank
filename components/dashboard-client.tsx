@@ -207,7 +207,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
       <Link
         href="/transacoes"
         className="md:hidden fixed z-50 w-14 h-14 bg-primary text-white rounded-full shadow-glow-primary flex items-center justify-center active:scale-95 transition-transform"
-        style={{ right: "1.25rem", bottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))" }}
+        style={{ right: "1.25rem", bottom: "calc(6rem + env(safe-area-inset-bottom, 0px))" }}
         aria-label="Nova transação"
       >
         <Plus className="w-6 h-6" />
