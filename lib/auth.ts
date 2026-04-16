@@ -124,7 +124,10 @@ export async function validateSession(): Promise<{
         expiresAt: sessionRecord.expiresAt,
       },
     };
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.digest === 'DYNAMIC_SERVER_USAGE') {
+      throw error;
+    }
     console.error("Error validating session:", error);
     return { user: null, session: null };
   }
@@ -153,7 +156,10 @@ export async function invalidateSession(token: string): Promise<void> {
     });
     const cookieStore = await cookies();
     cookieStore.delete(SESSION_COOKIE_NAME);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.digest === 'DYNAMIC_SERVER_USAGE') {
+      throw error;
+    }
     console.error("Error invalidating session:", error);
   }
 }
@@ -177,7 +183,10 @@ export async function logout(): Promise<void> {
       }
     }
     cookieStore.delete(SESSION_COOKIE_NAME);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.digest === 'DYNAMIC_SERVER_USAGE') {
+      throw error;
+    }
     console.error("Error logging out:", error);
   }
 }

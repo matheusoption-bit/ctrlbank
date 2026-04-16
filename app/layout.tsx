@@ -59,14 +59,6 @@ export default function RootLayout({
       className={`dark scroll-smooth ${inter.variable}`}
       suppressHydrationWarning
     >
-      <head>
-        <meta name="theme-color" content="#0A0A0A" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="CtrlBank" />
-        <link rel="manifest" href="/manifest.json" />
-      </head>
       <body className="bg-background text-foreground antialiased overflow-x-hidden min-h-dvh" suppressHydrationWarning>
         {children}
         <Toaster

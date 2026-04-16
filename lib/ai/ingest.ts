@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { createManagedTransaction } from "@/app/actions/transactions";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { AIProviderRegistry } from "./providers/registry";
+import { AICapability, AIGenerationOptions } from "./providers/types";
+import { extractJsonFromModelOutput } from "./providers/utils";
 import { randomUUID } from "crypto";
 import { AIComposerTransactionDraft, AIComposerResponse, AIComposerMode, AIComposerBatchDraftItem } from "@/lib/ai/contracts";
 import { resolveTargetAccount, resolveCategory, shouldAutoSave, logAiCaptureEvent } from "@/lib/ai/composer";
@@ -70,6 +72,7 @@ export async function processAiIngest(input: ProcessIngestInput): Promise<AIComp
 
   if (isSuggestMode) {
     prompt = "Você analisa feedback de produto. Converta input em JSON com: title, summary, type (bug|ux|feature|improvement), area (composer|mobile|dashboard|orcamentos|metas|relatorios|planner|other), impact (low|medium|high), reproductionSteps[], suggestedSolution, acceptanceCriteria[]";
+    if (input.inputType === 'audio') prompt += " Se a entrada for Áudio, DEVE retornar o campo raiz 'userTranscript' com a transcrição.";
   } else if (isChatMode) {
     finContext = await buildFinancialContext(input.userId, input.householdId);
     prompt = input.mode === "Planejar"
@@ -105,30 +108,44 @@ ${finContext}
 Responda à pergunta do usuário de forma clara. Se houver áudio, forneça um JSON com { "chatReply": "sua reposta", "userTranscript": "o que o usuario falou" } ao invés de texto simples!`;
   }
 
-  let resultJsonString = "";
+  const registry = new AIProviderRegistry();
+  
+  let capability: AICapability = "transaction_extract";
+  if (isSuggestMode) capability = "suggestion";
+  else if (isChatMode && input.mode === "Planejar") capability = "planning";
+  else if (isChatMode) capability = "conversation";
+
+  const isJsonExpected = capability !== "conversation" || input.inputType === "audio";
+  const opts: AIGenerationOptions = { responseFormat: isJsonExpected ? "json_object" : "text" };
+
+  let parsedItems: any = null;
+  let rawTextResponse = "";
 
   if (input.inputType === "text" || input.inputType === "csv") {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-    
     let processedContent = input.content;
     if (input.inputType === "csv" && input.content) {
       processedContent = parseCSVForAI(input.content);
     }
     
-    const content = processedContent ? `${prompt}\n\nEntrada:\n${processedContent}` : prompt;
-    const result = await model.generateContent(content);
-    resultJsonString = result.response.text().trim();
+    const textPrompt = processedContent ? `${prompt}\n\nEntrada:\n${processedContent}` : prompt;
+    if (isJsonExpected) {
+      parsedItems = await registry.generateStructured(capability, textPrompt, undefined, opts);
+    } else {
+      rawTextResponse = await registry.generateText(capability, textPrompt, opts);
+    }
   } else {
     // image, text+image, pdf, audio
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-    const content = input.content ? `${prompt}\n\nEntrada do Usuário: "${input.content}"` : prompt;
-    const result = await model.generateContent([
-      { inlineData: { data: input.imageBase64!, mimeType: input.mimeType || (input.inputType === "audio" ? "audio/webm" : "image/jpeg") } },
-      content
-    ]);
-    resultJsonString = result.response.text().trim();
+    const textPrompt = input.content ? `${prompt}\n\nEntrada do Usuário: "${input.content}"` : prompt;
+    const media = {
+      base64: input.imageBase64!,
+      mimeType: input.mimeType || (input.inputType === "audio" ? "audio/webm" : "image/jpeg")
+    };
+    const multResult = await registry.generateMultimodal(capability, textPrompt, media, opts);
+    if (isJsonExpected) {
+      parsedItems = multResult;
+    } else {
+      rawTextResponse = multResult;
+    }
   }
 
   // extract JSON / reply
@@ -137,9 +154,8 @@ Responda à pergunta do usuário de forma clara. Se houver áudio, forneça um J
   if (isSuggestMode) {
     // Handle Sugerir mode
     try {
-      const jsonMatch = resultJsonString.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
+      const parsed = parsedItems;
+      if (parsed) {
         const { createProductFeedback } = await import("@/lib/ai/composer");
         
         // Prepare artifacts if audio or image
@@ -203,9 +219,8 @@ Responda à pergunta do usuário de forma clara. Se houver áudio, forneça um J
   } else if (isChatMode) {
     if (input.mode === "Planejar") {
       try {
-        const jsonMatch = resultJsonString.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
+        const parsed = parsedItems;
+        if (parsed) {
           parsedJson = parsed;
           if (parsed.plan) {
             return {
@@ -224,17 +239,20 @@ Responda à pergunta do usuário de forma clara. Se houver áudio, forneça um J
               userTranscript: parsed.userTranscript,
             };
           } else if (parsed.chatReply) {
-             resultJsonString = parsed.chatReply;
+             rawTextResponse = parsed.chatReply;
           }
         }
       } catch (e) {
-         // fallback to string output
+         // fallback
       }
+    } else if (parsedItems && parsedItems.chatReply) {
+       rawTextResponse = parsedItems.chatReply;
+       parsedJson = parsedItems;
     }
     
     return {
       intent: "chat_reply",
-      message: resultJsonString,
+      message: rawTextResponse,
       requiresReview: false,
       autoSaved: false,
       transactionDraft: null,
@@ -249,12 +267,9 @@ Responda à pergunta do usuário de forma clara. Se houver áudio, forneça um J
     };
   }
 
-  const jsonMatch = resultJsonString.match(isBatch ? /\[[\s\S]*\]/ : /\{[\s\S]*\}/);
-  if (!jsonMatch) {
+  if (!parsedItems) {
     throw new Error("A IA não retornou um formato JSON rastreável.");
   }
-  
-  const parsedItems = JSON.parse(jsonMatch[0]);
   const processDraft = async (parsed: any): Promise<AIComposerTransactionDraft> => {
     if (parsed.amount && isNaN(Number(parsed.amount))) parsed.amount = null;
     const targetAccount = await resolveTargetAccount(input.userId, input.householdId, parsed.accountName, parsed.description);

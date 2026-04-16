@@ -23,31 +23,29 @@ import {
   BookOpen,
   Repeat,
   Puzzle,
-  BotMessageSquare,
+  Sparkles,
 } from "lucide-react";
 
-const NAV_ITEMS = [
+const SIDEBAR_ITEMS = [
   { href: "/",             icon: LayoutDashboard, label: "Início"      },
   { href: "/contas",       icon: Wallet,          label: "Contas"      },
-  { href: "/transacoes",   icon: ArrowLeftRight,  label: "Extrato"     },
-  { href: "/orcamentos",   icon: PieChart,        label: "Orçamentos"  },
+  { href: "/transacoes",   icon: ArrowLeftRight,  label: "Movimentos"  },
+  { href: "/orcamentos",   icon: Target,          label: "Planejar"    },
   { href: "/relatorios",   icon: BookOpen,        label: "Relatórios"  },
+  { href: "/categorias",   icon: Tag,             label: "Categorias"  },
+  { href: "/metas",        icon: Target,          label: "Metas"       },
+  { href: "/recorrentes",  icon: Repeat,          label: "Recorrentes" },
+  { href: "/integracoes",  icon: Puzzle,          label: "Integrações" },
+  { href: "/familia",      icon: Users,           label: "Família"     },
+  { href: "/perfil",       icon: Settings,        label: "Meu Perfil"  },
 ];
 
-const SIDEBAR_ITEMS = [
-  ...NAV_ITEMS,
-  { href: "/categorias",    icon: Tag,              label: "Categorias"    },
-  { href: "/metas",         icon: Target,           label: "Metas"         },
-  { href: "/recorrentes",   icon: Repeat,           label: "Recorrentes"   },
-  { href: "/integracoes",   icon: Puzzle,           label: "Integrações"   },
-  { href: "/familia",       icon: Users,            label: "Família"       },
-  { href: "/perfil",        icon: Settings,         label: "Meu Perfil"    },
-];
-
-const FAB_OPTIONS = [
-  { icon: ArrowUpRight,  label: "Nova Receita",     type: "income",   color: "bg-positive" },
-  { icon: ArrowDownLeft, label: "Nova Despesa",      type: "expense",  color: "bg-negative" },
-  { icon: RefreshCw,     label: "Transferência",    type: "transfer", color: "bg-info"     },
+const MOBILE_NAV_ITEMS = [
+  { href: "/",             icon: LayoutDashboard, label: "Início"      },
+  { href: "/contas",       icon: Wallet,          label: "Contas"      },
+  { id: "composer",        icon: Sparkles,        label: "Composer"    },
+  { href: "/transacoes",   icon: ArrowLeftRight,  label: "Movimentos"  },
+  { href: "/orcamentos",   icon: Target,          label: "Planejar"    },
 ];
 
 interface DashboardLayoutClientProps {
@@ -60,7 +58,6 @@ export default function DashboardLayoutClient({
   userName,
 }: DashboardLayoutClientProps) {
   const pathname = usePathname();
-  const [fabOpen, setFabOpen] = useState(false);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -153,8 +150,28 @@ export default function DashboardLayoutClient({
           style={{ marginBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
         >
           <div className="bg-surface/95 backdrop-blur-xl border border-border rounded-2xl px-2 py-2 flex items-center justify-around shadow-soft-xl">
-            {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
+            {MOBILE_NAV_ITEMS.map((item) => {
+              if (item.id === "composer") {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key="composer"
+                    onClick={() => {
+                      // Dispara o evento pro AIChatWidget abrir
+                      window.dispatchEvent(new Event("toggle-composer"));
+                    }}
+                    className="relative -top-6 w-14 h-14 rounded-full bg-primary shadow-glow-primary flex items-center justify-center text-white transition-transform active:scale-95"
+                    aria-label="Assistente IA"
+                  >
+                    <Icon size={24} fill="currentColor" />
+                  </button>
+                );
+              }
+
+              const href = item.href as string;
               const active = isActive(href);
+              const Icon = item.icon;
+
               return (
                 <Link
                   key={href}
@@ -170,7 +187,7 @@ export default function DashboardLayoutClient({
                   >
                     <Icon size={20} className={active ? "text-primary" : ""} />
                   </div>
-                  <span className="text-[10px] font-semibold leading-none">{label}</span>
+                  <span className="text-[10px] font-semibold leading-none">{item.label}</span>
                 </Link>
               );
             })}
@@ -178,62 +195,6 @@ export default function DashboardLayoutClient({
         </div>
       </nav>
 
-      {/* ── FAB Rosa – Nova Transação (apenas mobile) ── */}
-      <div className="fixed z-50 md:hidden"
-        style={{
-          right: "1.25rem",
-          bottom: "calc(6rem + env(safe-area-inset-bottom, 0px))",
-        }}
-      >
-        {/* Opções do FAB */}
-        <AnimatePresence>
-          {fabOpen && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              className="absolute bottom-16 right-0 flex flex-col gap-3 items-end"
-            >
-              {FAB_OPTIONS.map(({ icon: Icon, label, type, color }) => (
-                <motion.div
-                  key={type}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className="flex items-center gap-3"
-                >
-                  <span className="bg-surface border border-border text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-soft whitespace-nowrap">
-                    {label}
-                  </span>
-                  <Link
-                    href={`/transacoes/nova?tipo=${type}`}
-                    onClick={() => setFabOpen(false)}
-                    className={`w-11 h-11 rounded-full ${color} text-white flex items-center justify-center shadow-soft-md transition-all hover:scale-110 active:scale-95`}
-                  >
-                    <Icon size={18} />
-                  </Link>
-                </motion.div>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Botão principal */}
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setFabOpen(!fabOpen)}
-          className="w-14 h-14 rounded-full bg-primary text-white shadow-glow-primary flex items-center justify-center transition-all duration-200"
-          aria-label={fabOpen ? "Fechar menu" : "Nova transação"}
-        >
-          <motion.div
-            animate={{ rotate: fabOpen ? 45 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            {fabOpen ? <X size={24} /> : <Plus size={24} />}
-          </motion.div>
-        </motion.button>
-      </div>
     </div>
   );
 }
