@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles, X, Send, Loader2, Camera, User, BarChart3, Search, Paperclip, CheckSquare
+  Sparkles, X, Send, Loader2, Camera, BarChart3, Search, Paperclip, CheckSquare, Copy, MessageSquare
 } from "lucide-react";
 import { toast } from "sonner";
 import { getAccounts } from "@/app/actions/accounts";
@@ -12,6 +12,14 @@ import { getAiCaptureGroup } from "@/app/actions/ai/review";
 import { AIComposerBatchDraftItem, AIComposerResponse, AIComposerTransactionDraft, AIComposerMode } from "@/lib/ai/contracts";
 
 import { SuccessCard, DraftReviewCard, BatchReviewCard, NextBestActionCard } from "./AICards";
+
+type ComposerMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  mode: AIComposerMode;
+  timestamp: string;
+};
 
 export default function AIChatWidget() {
   const [open, setOpen] = useState(false);
@@ -31,15 +39,44 @@ export default function AIChatWidget() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [createdTxId, setCreatedTxId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ComposerMessage[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
 
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const appendMessage = (role: "user" | "assistant", content: string, currentMode: AIComposerMode) => {
+    if (!content.trim()) return;
+
+    const timestamp = new Intl.DateTimeFormat("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date());
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        role,
+        content,
+        mode: currentMode,
+        timestamp,
+      },
+    ]);
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("captureGroupId") || params.get("shared") || params.get("share_error")) {
       setOpen(true);
     }
+  }, []);
+
+  useEffect(() => {
+    const syncViewport = () => setIsMobile(window.innerWidth < 768);
+    syncViewport();
+    window.addEventListener("resize", syncViewport);
+    return () => window.removeEventListener("resize", syncViewport);
   }, []);
 
   useEffect(() => {
@@ -150,6 +187,15 @@ export default function AIChatWidget() {
       mimeType: inputType === "text" || inputType === "csv" ? undefined : mimeType
     };
 
+    const userMessage =
+      input.trim() ||
+      (inputType === "pdf" && fileName ? `Arquivo PDF enviado: ${fileName}` : "") ||
+      (inputType === "csv" && fileName ? `Arquivo CSV enviado: ${fileName}` : "") ||
+      (imageBase64 && fileName ? `Imagem enviada: ${fileName}` : "") ||
+      (imageBase64 ? "Imagem enviada" : "");
+
+    appendMessage("user", userMessage, mode);
+
     // Keep file name for preview, clear input so user can prepare next text
     if (inputType !== "csv") {
        setInput("");
@@ -180,30 +226,36 @@ export default function AIChatWidget() {
       if (composerData.intent === "chat_reply") {
         setComposerState("chat_mode");
         setResponseMsg(composerData.message);
+        appendMessage("assistant", composerData.message, mode);
       } else if (composerData.intent === "transaction_created") {
         setComposerState("success");
         setResponseMsg(composerData.message);
         setCreatedTxId(composerData.createdTransactionId);
         setDraft(composerData.transactionDraft);
+        appendMessage("assistant", composerData.message, mode);
       } else if (composerData.intent === "batch_review") {
         setComposerState("batch_review");
         setResponseMsg(composerData.message);
         setBatchDrafts(composerData.batchDrafts || []);
+        appendMessage("assistant", composerData.message, mode);
       } else if (composerData.intent === "transaction_draft") {
         setComposerState("review");
         setResponseMsg(composerData.message);
         setDraft(composerData.transactionDraft);
+        appendMessage("assistant", composerData.message, mode);
       } else {
         setComposerState("clarification");
         setResponseMsg(composerData.message);
         setDraft(composerData.transactionDraft);
         setMissingFields(composerData.missingFields || []);
+        appendMessage("assistant", composerData.message, mode);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Falha na comunicação com o AI Composer.";
       setComposerState("clarification");
       setResponseMsg(message);
       toast.error(message);
+      appendMessage("assistant", message, mode);
     }
   }
 
@@ -217,7 +269,10 @@ export default function AIChatWidget() {
           if (!open) setComposerState("idle");
         }}
         className="fixed z-50 w-14 h-14 rounded-full bg-primary shadow-glow-primary flex items-center justify-center text-white"
-        style={{ right: "1.25rem", bottom: "calc(6rem + env(safe-area-inset-bottom, 0px))" }}
+        style={{
+          right: isMobile ? "5.5rem" : "1.25rem",
+          bottom: "calc(6rem + env(safe-area-inset-bottom, 0px))",
+        }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >
@@ -260,8 +315,42 @@ export default function AIChatWidget() {
 
             {/* Inbox Area */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.length > 0 && (
+                <div className="space-y-2">
+                  {messages.slice(-8).map((message) => (
+                    <div
+                      key={message.id}
+                      className={`rounded-2xl border px-3 py-2.5 ${
+                        message.role === "user"
+                          ? "ml-6 border-primary/20 bg-primary/10"
+                          : "mr-6 border-border bg-surface-2"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-secondary">
+                          <MessageSquare size={11} />
+                          <span>{message.role === "user" ? "Você" : message.mode}</span>
+                          <span>{message.timestamp}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await navigator.clipboard.writeText(message.content);
+                            toast.success("Mensagem copiada.");
+                          }}
+                          className="text-secondary hover:text-white transition-colors"
+                          aria-label="Copiar mensagem"
+                        >
+                          <Copy size={12} />
+                        </button>
+                      </div>
+                      <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
               
-              {composerState === "idle" && (
+              {composerState === "idle" && messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center text-center h-40 space-y-3 opacity-60">
                    {mode === "Registrar" && <Sparkles size={32} className="text-secondary" />}
                    {mode === "Revisar" && <CheckSquare size={32} className="text-secondary" />}
