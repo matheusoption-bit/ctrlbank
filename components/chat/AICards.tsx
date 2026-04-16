@@ -1,5 +1,5 @@
 import React, { useTransition } from "react";
-import { Check, Undo2, ChevronDown, Sparkles, AlertTriangle, Settings2, LayoutList, Loader2, Trash } from "lucide-react";
+import { Check, Undo2, ChevronDown, Sparkles, AlertTriangle, Settings2, LayoutList, Loader2, Trash, BarChart3 } from "lucide-react";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { AIComposerBatchDraftItem, AIComposerTransactionDraft } from "@/lib/ai/contracts";
 import Link from "next/link";
@@ -210,6 +210,57 @@ export function NextBestActionCard({
             Revisar manualmente
           </button>
         </div>
+      )}
+    </div>
+  );
+}
+
+export function SavedPlanCard({ planId, planData }: { planId?: string, planData: any }) {
+  return (
+    <div className="card-c6 border border-primary/20 bg-surface space-y-3 relative overflow-hidden mt-2">
+      <div className="absolute top-0 left-0 w-1 h-full bg-primary/80"></div>
+      <div className="flex items-center gap-2 text-primary font-bold pb-2 border-b border-border/50">
+        <Sparkles size={16} /> Plano Salvo
+      </div>
+      <div>
+        <p className="font-black text-sm">{planData.title || "Objetivo Financeiro"}</p>
+        <p className="text-xs text-secondary mt-1">{planData.summary}</p>
+      </div>
+      {(planData.targetAmount || planData.monthlyRequiredAmount) && (
+         <div className="grid grid-cols-2 gap-2 mt-2">
+            {planData.targetAmount && (
+               <div className="p-2 bg-surface-2 rounded-lg text-xs">
+                  <p className="text-secondary mb-1">Alvo</p>
+                  <p className="font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(planData.targetAmount))}</p>
+               </div>
+            )}
+            {planData.monthlyRequiredAmount && (
+               <div className="p-2 bg-surface-2 rounded-lg text-xs">
+                  <p className="text-secondary mb-1">Poupar/Mês</p>
+                  <p className="font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(planData.monthlyRequiredAmount))}</p>
+               </div>
+            )}
+         </div>
+      )}
+      <div className="w-full py-2 mt-2 text-xs font-bold flex gap-2 items-center justify-center bg-primary/10 text-primary border border-primary/20 rounded-xl">
+        <BarChart3 size={14}/> Plano salvo nesta conversa
+      </div>
+    </div>
+  );
+}
+
+export function RecommendationCard({ recommendation }: { recommendation: { message: string, type: string, actionLabel?: string, actionTarget?: string } }) {
+  return (
+    <div className="card-c6 border border-info/20 bg-info/5 space-y-2 relative overflow-hidden mt-2">
+      <div className="absolute top-0 left-0 w-1 h-full bg-info/80"></div>
+      <div className="flex gap-2 text-sm text-foreground items-start">
+         <Sparkles size={16} className="text-info shrink-0 mt-0.5" />
+         <p className="leading-relaxed">{recommendation.message}</p>
+      </div>
+      {recommendation.actionLabel && recommendation.actionTarget && (
+         <Link href={recommendation.actionTarget} className="mt-2 inline-flex border border-info/30 bg-info/10 text-info hover:bg-info hover:text-white text-xs px-3 py-1.5 rounded-lg font-bold transition-colors">
+            {recommendation.actionLabel}
+         </Link>
       )}
     </div>
   );

@@ -15,6 +15,7 @@ Analise a entrada e crie um rascunho de UMA única transação.
 Extraia as informações e retorne APENAS um JSON válido.
 Formato:
 {
+  "userTranscript": "<transcrição do áudio se a entrada for áudio; null caso contrário>",
   "amount": <número float ex: 50.90, ou null>,
   "date": "<YYYY-MM-DD ou null>",
   "description": "<Nome curto do estabelecimento ou descrição, max 60 chars>",
@@ -52,10 +53,10 @@ export type ProcessIngestInput = {
   userId: string;
   householdId: string | null;
   mode: AIComposerMode;
-  inputType: "text" | "image" | "text+image" | "pdf" | "csv";
+  inputType: "text" | "image" | "text+image" | "audio" | "pdf" | "csv";
   content?: string;
   imageBase64?: string;
-  mimeType?: string; // image/jpeg, application/pdf
+  mimeType?: string; // image/jpeg, application/pdf, audio/webm etc.
 };
 
 export async function processAiIngest(input: ProcessIngestInput): Promise<AIComposerResponse> {
@@ -67,26 +68,38 @@ export async function processAiIngest(input: ProcessIngestInput): Promise<AIComp
   let finContext = "";
 
   if (isChatMode) {
-    finContext = await buildFinancialContext(input.householdId);
+    finContext = await buildFinancialContext(input.userId, input.householdId);
     prompt = input.mode === "Planejar"
       ? `Você é o CtrlBot, consultor financeiro premium do CtrlBank.
 Responda sempre em português, de forma objetiva, prática e acionável.
 Contexto financeiro (últimos 30 dias):
 ${finContext}
 
-Quando o usuário pedir análise, cortes, economia ou meta, responda com esta estrutura:
-1. Diagnóstico rápido
-2. Onde cortar ou otimizar
-3. Plano prático de 4 semanas
-4. Próxima melhor ação
-
-Se o contexto estiver fraco, deixe isso explícito e proponha o próximo passo mais útil.`
+Se o usuário estiver pedindo para criar ou fazer um plano financeiro específico, responda APENAS com um JSON válido (sem markdown tags fora do JSON) neste formato estruturado:
+{
+  "plan": {
+    "title": "...",
+    "objectiveType": "...",
+    "targetAmount": <numero ou null>,
+    "targetMonths": <numero ou null>,
+    "monthlyRequiredAmount": <numero ou null>,
+    "summary": "...",
+    "visibility": "PERSONAL",
+    "recommendedCuts": [{"category": "...", "amount": 100}],
+    "scenarioData": {"conservative": "...", "aggressive": "..."}
+  }
+}
+Se ele fizer perguntas soltas ou se o contexto não suportar criar um plano, responda APENAS um JSON (sem texto fora) com a seguinte chave:
+{
+  "chatReply": "1. Diagnóstico... 2. Onde otimizar..."
+}
+${input.inputType === 'audio' ? 'Se a entrada for Áudio, você DEVE retornar o campo raiz "userTranscript" com a transcrição do que o usuário disse.' : ''}`
       : `Você é o CtrlBot, assistente analítico premium no CtrlBank.
 Responda sempre em português, de forma concisa e útil.
 Contexto financeiro (últimos 30 dias):
 ${finContext}
 
-Responda à pergunta do usuário de forma clara.`;
+Responda à pergunta do usuário de forma clara. Se houver áudio, forneça um JSON com { "chatReply": "sua reposta", "userTranscript": "o que o usuario falou" } ao invés de texto simples!`;
   }
 
   let resultJsonString = "";
@@ -104,19 +117,51 @@ Responda à pergunta do usuário de forma clara.`;
     const result = await model.generateContent(content);
     resultJsonString = result.response.text().trim();
   } else {
-    // image, text+image, pdf
+    // image, text+image, pdf, audio
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-    const content = input.content ? `${prompt}\n\nEntrada: "${input.content}"` : prompt;
+    const content = input.content ? `${prompt}\n\nEntrada do Usuário: "${input.content}"` : prompt;
     const result = await model.generateContent([
-      { inlineData: { data: input.imageBase64!, mimeType: input.mimeType || "image/jpeg" } },
+      { inlineData: { data: input.imageBase64!, mimeType: input.mimeType || (input.inputType === "audio" ? "audio/webm" : "image/jpeg") } },
       content
     ]);
     resultJsonString = result.response.text().trim();
   }
 
   // extract JSON / reply
+  let parsedJson: any = null;
   if (isChatMode) {
+    if (input.mode === "Planejar") {
+      try {
+        const jsonMatch = resultJsonString.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          parsedJson = parsed;
+          if (parsed.plan) {
+            return {
+              intent: "saved_plan",
+              message: "Plano financeiro rascunhado para revisão.",
+              requiresReview: true,
+              autoSaved: false,
+              transactionDraft: parsed.plan, // reusing draft temporarily or returning raw plan block
+              createdTransactionId: null,
+              undoAvailable: false,
+              undoToken: null,
+              eventId: null,
+              captureGroupId: null,
+              conversationId: null,
+              missingFields: [],
+              userTranscript: parsed.userTranscript,
+            };
+          } else if (parsed.chatReply) {
+             resultJsonString = parsed.chatReply;
+          }
+        }
+      } catch (e) {
+         // fallback to string output
+      }
+    }
+    
     return {
       intent: "chat_reply",
       message: resultJsonString,
@@ -128,7 +173,9 @@ Responda à pergunta do usuário de forma clara.`;
       undoToken: null,
       eventId: null,
       captureGroupId: null,
+      conversationId: null,
       missingFields: [],
+      userTranscript: parsedJson?.userTranscript,
     };
   }
 
@@ -193,6 +240,7 @@ Responda à pergunta do usuário de forma clara.`;
        undoToken: null,
        eventId: null,
        captureGroupId,
+       conversationId: null,
        missingFields: []
     };
   }
@@ -217,7 +265,9 @@ Responda à pergunta do usuário de forma clara.`;
     undoToken: null,
     eventId: null,
     captureGroupId,
+    conversationId: null,
     missingFields: missingFields,
+    userTranscript: parsedItems.userTranscript ?? undefined,
   };
 
   const isAutoSave = shouldAutoSave(draft, missingFields as any[]);
@@ -274,22 +324,24 @@ Responda à pergunta do usuário de forma clara.`;
   return response;
 }
 
-async function buildFinancialContext(householdId: string | null): Promise<string> {
-  if (!householdId) return "Nenhum dado financeiro disponível.";
+async function buildFinancialContext(userId: string, householdId: string | null): Promise<string> {
+  const whereScope = householdId ? { householdId } : { userId };
 
   const since = new Date();
   since.setDate(since.getDate() - 30);
 
   const [transactions, budgets] = await Promise.all([
     prisma.transaction.findMany({
-      where: { householdId, date: { gte: since }, status: "COMPLETED" },
+      where: { ...whereScope, date: { gte: since }, status: "COMPLETED", ignoreInTotals: false },
       select: { type: true, amount: true, category: { select: { name: true } } },
       take: 200,
     }),
-    prisma.budget.findMany({
-      where: { householdId, month: new Date().getMonth() + 1, year: new Date().getFullYear() },
-      select: { amount: true, category: { select: { name: true } } },
-    }),
+    householdId
+      ? prisma.budget.findMany({
+          where: { householdId, month: new Date().getMonth() + 1, year: new Date().getFullYear() },
+          select: { amount: true, category: { select: { name: true } } },
+        })
+      : Promise.resolve([]),
   ]);
 
   const income  = transactions.filter(t => t.type === "INCOME" ).reduce((s, t) => s + Number(t.amount), 0);

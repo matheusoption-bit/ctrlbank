@@ -7,10 +7,12 @@ import { AIComposerMode } from "@/lib/ai/contracts";
 
 const BodySchema = z.object({
   mode: z.enum(["Registrar", "Revisar", "Perguntar", "Planejar"]).default("Registrar"),
-  inputType: z.enum(["text", "image", "text+image", "pdf", "csv"]),
+  inputType: z.enum(["text", "image", "text+image", "audio", "pdf", "csv"]),
   content: z.string().optional(),
   imageBase64: z.string().optional(),
   mimeType: z.string().optional(),
+  conversationId: z.string().optional(),
+  audioDurationMs: z.number().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -34,14 +36,82 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "IA não configurada" }, { status: 503 });
     }
 
+    const { getOrCreateConversation, saveAiMessage, createFinancialPlan } = await import("@/lib/ai/composer");
+
+    const conversationId = await getOrCreateConversation(user.id, dbUser?.householdId ?? null, body.conversationId);
+
+    // Save user message
+    const userMessage = await saveAiMessage({
+      conversationId,
+      userId: user.id,
+      role: "user",
+      mode: body.mode,
+      inputType: body.inputType,
+      content: body.content ?? (body.inputType === "audio" ? "[Áudio Enviado]" : (body.imageBase64 ? "[Arquivo Anexado]" : "")),
+      metadata: body.inputType === "audio"
+        ? { inputType: "audio", audioDurationMs: body.audioDurationMs, transcriptionStatus: "pending" }
+        : { inputType: body.inputType, audioDurationMs: body.audioDurationMs }
+    });
+
     const response = await processAiIngest({
       userId: user.id,
       householdId: dbUser?.householdId ?? null,
       mode: body.mode as AIComposerMode,
-      inputType: body.inputType,
+      inputType: body.inputType as any,
       content: body.content,
       imageBase64: body.imageBase64,
       mimeType: body.mimeType,
+    });
+
+    response.conversationId = conversationId;
+
+    if (body.inputType === "audio" && userMessage?.id) {
+      await prisma.aiMessage.update({
+        where: { id: userMessage.id },
+        data: {
+          content: response.userTranscript?.trim() || "[Áudio Enviado]",
+          metadata: {
+            inputType: "audio",
+            audioDurationMs: body.audioDurationMs,
+            transcriptionStatus: response.userTranscript?.trim() ? "completed" : "failed",
+            transcript: response.userTranscript?.trim() || null,
+          },
+        }
+      });
+    }
+
+    if (response.intent === "saved_plan" && response.transactionDraft) {
+      const plan = await createFinancialPlan(user.id, dbUser?.householdId ?? null, response.transactionDraft);
+      if (plan) {
+        response.savedPlanId = plan.id;
+        const { syncFinancialPlan } = await import("@/lib/ai/planner");
+        await syncFinancialPlan(plan.id);
+        // Also save assistant message for the plan
+        await saveAiMessage({
+          conversationId,
+          userId: user.id,
+          role: "assistant",
+          mode: body.mode,
+          content: "Plano financeiro criado com sucesso.",
+          metadata: { intent: response.intent, savedPlanId: plan.id, planData: response.transactionDraft }
+        });
+        return NextResponse.json(response);
+      }
+    }
+
+    // Save common assistant reply
+    await saveAiMessage({
+      conversationId,
+      userId: user.id,
+      role: "assistant",
+      mode: body.mode,
+      content: response.message,
+      metadata: {
+        intent: response.intent,
+        draft: response.transactionDraft,
+        createdTxId: response.createdTransactionId,
+        missingFields: response.missingFields
+      }
     });
 
     return NextResponse.json(response);

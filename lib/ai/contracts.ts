@@ -7,7 +7,8 @@ export type AIComposerIntent =
   | "transaction_created"
   | "transaction_draft"
   | "clarification_needed"
-  | "batch_review";
+  | "batch_review"
+  | "saved_plan";
 
 export type AIComposerMode = "Registrar" | "Revisar" | "Perguntar" | "Planejar";
 
@@ -29,7 +30,7 @@ export type AIComposerTransactionDraft = {
     account: number;
     transactionType: number;
   };
-  source: "text" | "image" | "text+image" | "pdf" | "csv";
+  source: "text" | "image" | "text+image" | "audio" | "pdf" | "csv";
 };
 
 export type AIComposerBatchDraftItem = {
@@ -45,9 +46,12 @@ export type AIComposerResponse = {
   transactionDraft: AIComposerTransactionDraft | null;
   batchDrafts?: AIComposerBatchDraftItem[];
   createdTransactionId: string | null;
+  savedPlanId?: string | null;
+  userTranscript?: string;
   undoAvailable: boolean;
   undoToken: string | null;
   eventId: string | null;
   captureGroupId: string | null;
+  conversationId: string | null;
   missingFields: Array<"amount" | "date" | "description" | "category" | "account" | "transactionType">;
 };
