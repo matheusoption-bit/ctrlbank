@@ -69,7 +69,20 @@ export async function processAiIngest(input: ProcessIngestInput): Promise<AIComp
 
   if (isChatMode) {
     finContext = await buildFinancialContext(input.householdId);
-    prompt = `Você é o CtrlBot, assistente analítico premium no CtrlBank.
+    prompt = input.mode === "Planejar"
+      ? `Você é o CtrlBot, consultor financeiro premium do CtrlBank.
+Responda sempre em português, de forma objetiva, prática e acionável.
+Contexto financeiro (últimos 30 dias):
+${finContext}
+
+Quando o usuário pedir análise, cortes, economia ou meta, responda com esta estrutura:
+1. Diagnóstico rápido
+2. Onde cortar ou otimizar
+3. Plano prático de 4 semanas
+4. Próxima melhor ação
+
+Se o contexto estiver fraco, deixe isso explícito e proponha o próximo passo mais útil.`
+      : `Você é o CtrlBot, assistente analítico premium no CtrlBank.
 Responda sempre em português, de forma concisa e útil.
 Contexto financeiro (últimos 30 dias):
 ${finContext}
