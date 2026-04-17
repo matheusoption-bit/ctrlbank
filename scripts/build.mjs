@@ -162,25 +162,47 @@ async function runPrismaMigrateDeploy() {
   }
 }
 
-async function hasPendingPrismaMigrations() {
-  const result = await run(npxCommand, [
-    "prisma",
-    "migrate",
-    "status",
-    "--schema",
-    "prisma/schema.prisma",
-  ]);
-  const output = `${result.stdout}\n${result.stderr}`;
-
+function parsePrismaMigrateStatusOutput(output) {
   if (output.includes("Database schema is up to date!")) {
     return false;
   }
 
   if (
-    output.includes("Following migration(s) have not yet been applied") ||
-    output.includes("Following migrations have not yet been applied")
+    /Following migration(?:\(s\))? (?:has|have) not yet been applied/i.test(output) ||
+    /Following migrations (?:has|have) not yet been applied/i.test(output)
   ) {
     return true;
+  }
+
+  return null;
+}
+
+async function hasPendingPrismaMigrations() {
+  let output = "";
+  let statusError = null;
+
+  try {
+    const result = await run(npxCommand, [
+      "prisma",
+      "migrate",
+      "status",
+      "--schema",
+      "prisma/schema.prisma",
+    ]);
+    output = `${result.stdout}\n${result.stderr}`;
+  } catch (error) {
+    statusError = error;
+    output = `${error?.stdout ?? ""}\n${error?.stderr ?? ""}\n${error?.message ?? ""}`;
+  }
+
+  const migrationStatus = parsePrismaMigrateStatusOutput(output);
+
+  if (migrationStatus !== null) {
+    return migrationStatus;
+  }
+
+  if (statusError) {
+    throw statusError;
   }
 
   console.warn(
