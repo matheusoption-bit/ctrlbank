@@ -230,8 +230,15 @@ export async function calculateProjection(householdId: string): Promise<Projecti
       message = "Sua projeção está positiva para os próximos 30 dias";
     }
   } else {
-    const daysToNegative = Math.floor(balance / Math.abs(netDailyFlow));
-    message = `⚠️ Projeção: saldo negativo em ${daysToNegative} dias`;
+    if (balance <= 0) {
+      daysUntilZero = 0;
+      message = "⚠️ Projeção: saldo já está negativo";
+    } else if (netDailyFlow === 0) {
+      message = "⚠️ Projeção: saldo negativo sem variação diária para estimar em quantos dias";
+    } else {
+      const daysToNegative = Math.floor(balance / Math.abs(netDailyFlow));
+      message = `⚠️ Projeção: saldo negativo em ${daysToNegative} dias`;
+    }
   }
 
   const projectionPoints: Array<{ day: number; balance: number }> = [];
