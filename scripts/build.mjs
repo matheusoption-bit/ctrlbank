@@ -96,6 +96,12 @@ function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function combineOutput(...chunks) {
+  return chunks
+    .filter((chunk) => typeof chunk === "string" && chunk.trim().length > 0)
+    .join("\n");
+}
+
 function run(command, args) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
@@ -190,10 +196,10 @@ async function hasPendingPrismaMigrations() {
       "--schema",
       "prisma/schema.prisma",
     ]);
-    output = `${result.stdout}\n${result.stderr}`;
+    output = combineOutput(result.stdout, result.stderr);
   } catch (error) {
     statusError = error;
-    output = `${error?.stdout ?? ""}\n${error?.stderr ?? ""}\n${error?.message ?? ""}`;
+    output = combineOutput(error?.stdout, error?.stderr, error?.message);
   }
 
   const migrationStatus = parsePrismaMigrateStatusOutput(output);
