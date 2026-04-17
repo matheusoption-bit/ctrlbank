@@ -141,6 +141,10 @@ model User {
   email         String   @unique
   password_hash String
   name          String?
+  phone         String?
+  whatsappNumber String? @unique
+  whatsappLinkToken String?
+  whatsappLinkTokenExpiresAt DateTime?
   householdId   String?
   role          UserRole @default(ADMIN) // Fase 6: admin ou viewer (contador)
   // Fase 10: 2FA TOTP
@@ -168,6 +172,8 @@ model User {
   monthlyCheckViews MonthlyCheckView[]
 
   @@index([householdId])
+  @@index([phone])
+  @@index([whatsappLinkToken])
 }
 
 model ProductFeedback {
