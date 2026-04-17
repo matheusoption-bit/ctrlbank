@@ -69,6 +69,7 @@ export default async function ProcessamentosPage() {
               <th className="text-left p-3">Pendentes</th>
               <th className="text-left p-3">Duplicidades</th>
               <th className="text-left p-3">Conflitos</th>
+              <th className="text-left p-3">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -84,6 +85,11 @@ export default async function ProcessamentosPage() {
                 <td className="p-3">{row.pending}</td>
                 <td className="p-3">{row.duplicates}</td>
                 <td className="p-3">{row.conflicts}</td>
+                <td className="p-3">
+                  <Link href={`/inbox${row.groupId ? `?captureGroupId=${row.groupId}` : ""}`} className="text-primary hover:underline">
+                    Reabrir
+                  </Link>
+                </td>
               </tr>
             ))}
           </tbody>

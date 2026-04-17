@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { extractTextFromImageWithOcr, extractTextFromPdf, isPdfMimeType } from "@/lib/inbox/ocr";
 import { InboxInputType, InboxDocumentKind } from "@/lib/inbox/parse";
 import { processCaptureBatch } from "@/lib/inbox/pipeline";
+import { AIComposerTransactionDraft } from "@/lib/ai/contracts";
 import { verifyTwilioSignature } from "@/lib/inbox/security";
 
 export const runtime = "nodejs";
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
       : null;
 
     const draft = parsedEvent?.normalizedDraft && typeof parsedEvent.normalizedDraft === "object"
-      ? (parsedEvent.normalizedDraft as any)
+      ? (parsedEvent.normalizedDraft as AIComposerTransactionDraft)
       : null;
     const amount = formatAmount(draft?.amount ?? null);
 

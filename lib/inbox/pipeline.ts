@@ -1,7 +1,8 @@
 import { createHash, randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
+import { TransactionType } from "@prisma/client";
 import { InboxChannel, InboxDocumentKind, InboxInputType, parseInboxRawInput } from "@/lib/inbox/parse";
-import { AIComposerTransactionDraft } from "@/lib/ai/contracts";
+import { AIComposerBatchDraftItem, AIComposerTransactionDraft } from "@/lib/ai/contracts";
 
 type CaptureInput = {
   rawInput: string;
@@ -33,48 +34,71 @@ export type CaptureBatchResult = {
   items: CaptureItemResult[];
 };
 
+type DuplicateHint = {
+  reason: string;
+  eventId: string | null;
+  transactionId: string | null;
+};
+
 function makeInputHash(input: string) {
   return createHash("sha256").update(input.trim().toLowerCase()).digest("hex");
 }
 
-function draftFromResult(result: any): AIComposerTransactionDraft | null {
-  if (result?.transactionDraft && typeof result.transactionDraft === "object") {
-    return result.transactionDraft as AIComposerTransactionDraft;
+function draftFromResult(result: unknown): AIComposerTransactionDraft | null {
+  if (!result || typeof result !== "object") return null;
+
+  const maybeResult = result as {
+    transactionDraft?: unknown;
+    batchDrafts?: unknown;
+  };
+
+  if (maybeResult.transactionDraft && typeof maybeResult.transactionDraft === "object" && "amount" in maybeResult.transactionDraft) {
+    return maybeResult.transactionDraft as AIComposerTransactionDraft;
   }
 
-  if (Array.isArray(result?.batchDrafts) && result.batchDrafts.length === 1) {
-    return result.batchDrafts[0]?.draft ?? null;
+  if (Array.isArray(maybeResult.batchDrafts) && maybeResult.batchDrafts.length === 1) {
+    const item = maybeResult.batchDrafts[0] as AIComposerBatchDraftItem;
+    return item?.draft ?? null;
   }
 
   return null;
 }
 
-async function findPossibleDuplicate(params: {
+function scopeOr(userId: string, householdId: string | null) {
+  return [{ userId }, ...(householdId ? [{ householdId }] : [])];
+}
+
+async function findDuplicateByHash(params: {
   userId: string;
   householdId: string | null;
   inputHash: string;
-  draft: AIComposerTransactionDraft | null;
-}) {
-  const scopeOr = [{ userId: params.userId }, ...(params.householdId ? [{ householdId: params.householdId }] : [])];
-
-  const duplicateByHash = await prisma.aiCaptureEvent.findFirst({
+  ignoreEventId?: string | null;
+}): Promise<DuplicateHint | null> {
+  const existing = await prisma.aiCaptureEvent.findFirst({
     where: {
-      OR: scopeOr,
+      OR: scopeOr(params.userId, params.householdId),
       rawText: { startsWith: `[HASH:${params.inputHash}]` },
+      ...(params.ignoreEventId ? { id: { not: params.ignoreEventId } } : {}),
     },
-    select: { id: true, createdTransactionId: true, createdAt: true },
+    select: { id: true, createdTransactionId: true },
     orderBy: { createdAt: "desc" },
   });
 
-  if (duplicateByHash) {
-    return {
-      reason: "Arquivo/conteúdo já processado anteriormente",
-      eventId: duplicateByHash.id,
-      transactionId: duplicateByHash.createdTransactionId,
-    };
-  }
+  if (!existing) return null;
 
-  if (!params.draft?.amount || !params.draft?.date) return null;
+  return {
+    reason: "Arquivo/conteúdo já processado anteriormente",
+    eventId: existing.id,
+    transactionId: existing.createdTransactionId,
+  };
+}
+
+async function findDuplicateByTransactionSimilarity(params: {
+  userId: string;
+  householdId: string | null;
+  draft: AIComposerTransactionDraft | null;
+}): Promise<DuplicateHint | null> {
+  if (!params.draft?.amount || !params.draft?.date || !params.draft.transactionType) return null;
 
   const baseDate = new Date(params.draft.date);
   if (Number.isNaN(baseDate.getTime())) return null;
@@ -86,9 +110,9 @@ async function findPossibleDuplicate(params: {
 
   const maybeTx = await prisma.transaction.findFirst({
     where: {
-      OR: scopeOr,
+      OR: scopeOr(params.userId, params.householdId),
       amount: params.draft.amount,
-      type: params.draft.transactionType as any,
+      type: params.draft.transactionType as TransactionType,
       date: { gte: from, lte: to },
       ...(params.draft.description
         ? { description: { contains: params.draft.description.slice(0, 20), mode: "insensitive" } }
@@ -98,22 +122,20 @@ async function findPossibleDuplicate(params: {
     orderBy: { date: "desc" },
   });
 
-  if (maybeTx) {
-    return {
-      reason: "Movimento muito semelhante já existe no caixa",
-      eventId: null,
-      transactionId: maybeTx.id,
-    };
-  }
+  if (!maybeTx) return null;
 
-  return null;
+  return {
+    reason: "Movimento muito semelhante já existe no caixa",
+    eventId: null,
+    transactionId: maybeTx.id,
+  };
 }
 
 export async function processCaptureBatch(params: {
   userId: string;
   householdId: string | null;
   inputs: CaptureInput[];
-}) : Promise<CaptureBatchResult> {
+}): Promise<CaptureBatchResult> {
   const batchId = randomUUID();
   const items: CaptureItemResult[] = [];
 
@@ -122,14 +144,14 @@ export async function processCaptureBatch(params: {
 
     try {
       const inputHash = makeInputHash(input.rawInput);
-      const duplicate = await findPossibleDuplicate({
+
+      const duplicateByHash = await findDuplicateByHash({
         userId: params.userId,
         householdId: params.householdId,
         inputHash,
-        draft: null,
       });
 
-      if (duplicate) {
+      if (duplicateByHash) {
         items.push({
           index,
           fileName: input.fileName ?? null,
@@ -137,10 +159,10 @@ export async function processCaptureBatch(params: {
           inputType: input.inputType,
           documentKind: input.documentKind,
           status: "duplicate",
-          message: duplicate.reason,
-          eventId: duplicate.eventId,
-          createdTransactionId: duplicate.transactionId,
-          duplicateReason: duplicate.reason,
+          message: duplicateByHash.reason,
+          eventId: duplicateByHash.eventId,
+          createdTransactionId: duplicateByHash.transactionId,
+          duplicateReason: duplicateByHash.reason,
         });
         continue;
       }
@@ -156,22 +178,20 @@ export async function processCaptureBatch(params: {
         captureBatchId: batchId,
       });
 
-      const draft = draftFromResult(result);
-      const postDuplicate = await findPossibleDuplicate({
+      const duplicateBySimilarity = await findDuplicateByTransactionSimilarity({
         userId: params.userId,
         householdId: params.householdId,
-        inputHash,
-        draft,
+        draft: draftFromResult(result),
       });
 
-      if (postDuplicate && result.eventId) {
+      if (duplicateBySimilarity && result.eventId) {
         await prisma.aiCaptureEvent.updateMany({
           where: { id: result.eventId },
           data: { decision: "possible_duplicate" },
         });
       }
 
-      const status: CaptureItemResult["status"] = postDuplicate
+      const status: CaptureItemResult["status"] = duplicateBySimilarity
         ? "duplicate"
         : result.requiresReview
           ? "review"
@@ -186,12 +206,13 @@ export async function processCaptureBatch(params: {
         inputType: input.inputType,
         documentKind: input.documentKind,
         status,
-        message: postDuplicate?.reason ?? result.message,
+        message: duplicateBySimilarity?.reason ?? result.message,
         eventId: result.eventId ?? null,
         createdTransactionId: result.createdTransactionId ?? null,
-        duplicateReason: postDuplicate?.reason ?? null,
+        duplicateReason: duplicateBySimilarity?.reason ?? null,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Falha ao processar item";
       items.push({
         index,
         fileName: input.fileName ?? null,
@@ -199,7 +220,7 @@ export async function processCaptureBatch(params: {
         inputType: input.inputType,
         documentKind: input.documentKind,
         status: "error",
-        message: error?.message || "Falha ao processar item",
+        message,
         eventId: null,
         createdTransactionId: null,
         duplicateReason: null,
