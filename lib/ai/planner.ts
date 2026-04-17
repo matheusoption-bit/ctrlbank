@@ -117,7 +117,7 @@ export async function syncFinancialPlan(planId: string) {
         type: "plan_progress",
         message: `Atenção: O plano "${plan.title}" está abaixo do ritmo esperado. Você economizou R$ ${netSavings.toFixed(2)} até agora.`,
         actionLabel: "Ver Orçamentos",
-        actionTarget: "/orcamentos",
+        actionTarget: "/metas",
         score: 80
       });
     }

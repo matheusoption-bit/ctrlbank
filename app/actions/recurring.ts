@@ -98,7 +98,7 @@ export async function upsertRecurringTransaction(formData: FormData) {
         },
       });
     }
-    revalidatePath("/recorrentes");
+    revalidatePath("/configuracoes");
     return { success: true };
   } catch (err) {
     return { error: "Erro ao salvar transação recorrente" };
@@ -114,7 +114,7 @@ export async function toggleRecurringState(id: string, active: boolean) {
     where: { id, householdId: ctx.householdId },
     data: { active },
   });
-  revalidatePath("/recorrentes");
+  revalidatePath("/configuracoes");
   return { success: true };
 }
 
@@ -126,7 +126,7 @@ export async function deleteRecurringTransaction(id: string) {
   await prisma.recurringTransaction.delete({
     where: { id, householdId: ctx.householdId },
   });
-  revalidatePath("/recorrentes");
+  revalidatePath("/configuracoes");
   return { success: true };
 }
 

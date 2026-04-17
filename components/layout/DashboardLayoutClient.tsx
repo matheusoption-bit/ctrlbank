@@ -24,28 +24,25 @@ import {
   Repeat,
   Puzzle,
   Sparkles,
+  Inbox,
 } from "lucide-react";
 
 const SIDEBAR_ITEMS = [
-  { href: "/",             icon: LayoutDashboard, label: "Saúde"       },
-  { href: "/contas",       icon: Wallet,          label: "Contas"      },
-  { href: "/transacoes",   icon: ArrowLeftRight,  label: "Movimentos"  },
-  { href: "/orcamentos",   icon: Target,          label: "Planejar"    },
-  { href: "/relatorios",   icon: BookOpen,        label: "Relatórios"  },
-  { href: "/categorias",   icon: Tag,             label: "Categorias"  },
-  { href: "/metas",        icon: Target,          label: "Metas"       },
-  { href: "/recorrentes",  icon: Repeat,          label: "Recorrentes" },
-  { href: "/integracoes",  icon: Puzzle,          label: "Integrações" },
-  { href: "/familia",      icon: Users,           label: "Família"     },
-  { href: "/perfil",       icon: Settings,        label: "Meu Perfil"  },
+  { href: "/",              icon: LayoutDashboard, label: "Saúde"         },
+  { href: "/caixa",         icon: Wallet,          label: "Caixa"         },
+  { href: "/inbox",         icon: Inbox,           label: "Inbox"         },
+  { href: "/metas",         icon: Target,          label: "Metas"         },
+  { href: "/relatorios",    icon: BookOpen,        label: "Relatórios"    },
+  { href: "/familia",       icon: Users,           label: "Família"       },
+  { href: "/configuracoes", icon: Settings,        label: "Configurações" },
 ];
 
 const MOBILE_NAV_ITEMS = [
-  { href: "/",             icon: LayoutDashboard, label: "Saúde"       },
-  { href: "/contas",       icon: Wallet,          label: "Contas"      },
-  { id: "composer",        icon: Sparkles,        label: "Composer"    },
-  { href: "/transacoes",   icon: ArrowLeftRight,  label: "Movimentos"  },
-  { href: "/orcamentos",   icon: Target,          label: "Planejar"    },
+  { href: "/",          icon: LayoutDashboard, label: "Saúde"    },
+  { href: "/caixa",     icon: Wallet,          label: "Caixa"    },
+  { id: "composer",     icon: Sparkles,        label: "Composer" },
+  { href: "/inbox",     icon: Inbox,           label: "Inbox"    },
+  { href: "/metas",     icon: Target,          label: "Metas"    },
 ];
 
 interface DashboardLayoutClientProps {

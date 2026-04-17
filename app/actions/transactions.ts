@@ -223,8 +223,8 @@ export async function createTransaction(formData: unknown) {
     });
 
     revalidatePath("/");
-    revalidatePath("/transacoes");
-    revalidatePath("/contas");
+    revalidatePath("/caixa");
+    revalidatePath("/caixa");
     return { success: true, data: transaction };
   } catch (err: any) {
     console.error("createTransaction error:", err);
@@ -313,8 +313,8 @@ export async function updateTransaction(formData: unknown) {
     ]);
 
     revalidatePath("/");
-    revalidatePath("/transacoes");
-    revalidatePath("/contas");
+    revalidatePath("/caixa");
+    revalidatePath("/caixa");
     return { success: true };
   } catch (err) {
     console.error("updateTransaction error:", err);
@@ -360,8 +360,8 @@ export async function deleteTransaction(id: string) {
     ]);
 
     revalidatePath("/");
-    revalidatePath("/transacoes");
-    revalidatePath("/contas");
+    revalidatePath("/caixa");
+    revalidatePath("/caixa");
     return { success: true };
   } catch (err) {
     console.error("deleteTransaction error:", err);
@@ -623,8 +623,8 @@ export async function undoTransaction(id: string) {
     }).catch(console.error);
 
     revalidatePath("/");
-    revalidatePath("/transacoes");
-    revalidatePath("/contas");
+    revalidatePath("/caixa");
+    revalidatePath("/caixa");
     return { success: true };
   } catch (err) {
     console.error("undoTransaction error:", err);
