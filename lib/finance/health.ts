@@ -220,8 +220,9 @@ export async function calculateProjection(householdId: string): Promise<Projecti
 
   const projectionPoints: Array<{ day: number; balance: number }> = [];
   for (let i = 0; i <= 6; i++) {
-    const dayBalance = balance + (netDailyFlow * i);
-    projectionPoints.push({ day: i, balance: Math.round(dayBalance * 100) / 100 });
+    const dayOffset = i * 5;
+    const dayBalance = balance + (netDailyFlow * dayOffset);
+    projectionPoints.push({ day: dayOffset, balance: Math.round(dayBalance * 100) / 100 });
   }
 
   return {
