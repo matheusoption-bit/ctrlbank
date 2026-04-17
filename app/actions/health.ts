@@ -171,7 +171,7 @@ export async function dismissRecommendation(id: string) {
     select: { householdId: true }
   });
 
-  const ownershipScope = [{ userId: user.id }];
+  const ownershipScope: ({ userId: string } | { householdId: string })[] = [{ userId: user.id }];
   if (dbUser?.householdId) {
     ownershipScope.push({ householdId: dbUser.householdId });
   }
