@@ -1,15 +1,33 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+
+type DraftLike = {
+  description?: string;
+  amount?: number;
+  categoryName?: string;
+};
 
 type InboxEvent = {
   id: string;
   source: string;
   inputType: string;
   createdAt: string;
-  rawText: string | null;
-  normalizedDraft: any;
+  decision: string;
+  captureGroupId: string | null;
+  createdTransactionId: string | null;
+  normalizedDraft: DraftLike | null;
+};
+
+type BatchResult = {
+  batchId: string;
+  processed: number;
+  possibleDuplicates: number;
+  readyToSave: number;
+  conflicts: number;
+  message: string;
 };
 
 type Props = {
@@ -29,14 +47,21 @@ function sourceBadge(channel: string, inputType: string) {
 
 export default function InboxPageClient({ events }: Props) {
   const router = useRouter();
-  const [tab, setTab] = useState<"eventos" | "upload">("eventos");
   const [rawInput, setRawInput] = useState("");
   const [documentKind, setDocumentKind] = useState("unknown");
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [batchResult, setBatchResult] = useState<BatchResult | null>(null);
 
   const hasEvents = useMemo(() => events.length > 0, [events]);
+  const byDecision = useMemo(() => {
+    return {
+      duplicates: events.filter((event) => event.decision === "possible_duplicate").length,
+      review: events.filter((event) => event.decision === "transaction_draft" || event.decision === "batch_review").length,
+      saved: events.filter((event) => Boolean(event.createdTransactionId)).length,
+    };
+  }, [events]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -45,10 +70,12 @@ export default function InboxPageClient({ events }: Props) {
 
     try {
       const formData = new FormData();
-      if (file) formData.append("file", file);
+      for (const file of files) {
+        formData.append("files", file);
+      }
       if (rawInput.trim()) formData.append("rawInput", rawInput.trim());
       formData.append("documentKind", documentKind);
-      formData.append("channel", file ? "import" : "manual");
+      formData.append("channel", files.length > 0 ? "import" : "manual");
 
       const response = await fetch("/api/inbox/parse", {
         method: "POST",
@@ -57,12 +84,21 @@ export default function InboxPageClient({ events }: Props) {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data?.error || "Falha ao processar item na Inbox");
+        throw new Error(data?.error || "Falha ao processar lote na Inbox");
       }
 
-      setMessage(data?.message || "Entrada processada com sucesso.");
+      setBatchResult({
+        batchId: data.batchId,
+        processed: data.processed,
+        possibleDuplicates: data.possibleDuplicates,
+        readyToSave: data.readyToSave,
+        conflicts: data.conflicts,
+        message: data.message,
+      });
+
+      setMessage(data?.message || "Lote processado com sucesso.");
       setRawInput("");
-      setFile(null);
+      setFiles([]);
       router.refresh();
     } catch (error: any) {
       setMessage(error?.message || "Falha ao processar entrada");
@@ -73,103 +109,116 @@ export default function InboxPageClient({ events }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="inline-flex rounded-2xl border border-border bg-surface-2 p-1">
-        <button
-          className={`px-4 py-2 rounded-xl text-sm font-bold ${tab === "eventos" ? "bg-primary text-white" : "text-secondary"}`}
-          onClick={() => setTab("eventos")}
-          type="button"
-        >
-          TAB 1 · Eventos
-        </button>
-        <button
-          className={`px-4 py-2 rounded-xl text-sm font-bold ${tab === "upload" ? "bg-primary text-white" : "text-secondary"}`}
-          onClick={() => setTab("upload")}
-          type="button"
-        >
-          TAB 2 · Upload
-        </button>
-      </div>
+      <section className="rounded-2xl border border-border bg-surface p-5 space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-bold">Captura inteligente</h2>
+            <p className="text-sm text-secondary">Envie texto, áudio, imagem, PDF, CSV ou OFX. O CtrlBank classifica e decide o fluxo.</p>
+          </div>
+          <Link href="/processamentos" className="text-sm font-semibold text-primary hover:underline">
+            Ver histórico operacional
+          </Link>
+        </div>
 
-      {tab === "upload" ? (
-        <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-border bg-surface p-5">
-          <p className="text-sm text-secondary">Upload → extração OCR/texto → parse financeiro.</p>
-
+        <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-semibold">Arquivo (JPG/PNG/PDF)</label>
+            <label className="text-sm font-semibold">Arquivos (multi-upload)</label>
             <input
               type="file"
-              accept="image/png,image/jpeg,image/jpg,application/pdf"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              multiple
+              accept="image/png,image/jpeg,image/jpg,application/pdf,text/csv,.csv,.ofx,application/x-ofx"
+              onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
               className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm"
             />
+            {files.length > 0 && (
+              <p className="text-xs text-secondary">{files.length} arquivo(s) selecionado(s).</p>
+            )}
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold">Texto manual (opcional)</label>
+            <label className="text-sm font-semibold">Texto complementar (opcional)</label>
             <textarea
               value={rawInput}
               onChange={(e) => setRawInput(e.target.value)}
-              rows={5}
+              rows={4}
               className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm"
-              placeholder="Cole aqui o texto do comprovante, se necessário"
+              placeholder="Se quiser, descreva o contexto do envio"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold">Tipo de Documento</label>
+            <label className="text-sm font-semibold">Tipo (opcional)</label>
             <select
               value={documentKind}
               onChange={(e) => setDocumentKind(e.target.value)}
               className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm"
             >
-              <option value="unknown">Indefinido</option>
-              <option value="statement">Extrato (Statement)</option>
-              <option value="invoice">Fatura (Invoice)</option>
-              <option value="receipt">Recibo (Receipt)</option>
+              <option value="unknown">Automático</option>
+              <option value="statement">Extrato</option>
+              <option value="invoice">Fatura</option>
+              <option value="receipt">Comprovante</option>
             </select>
           </div>
 
           <button
-            disabled={loading || (!file && !rawInput.trim())}
+            disabled={loading || (files.length === 0 && !rawInput.trim())}
             className="rounded-xl border border-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
           >
-            {loading ? "Processando..." : "Enviar para Inbox"}
+            {loading ? "Processando lote..." : "Enviar para captura"}
           </button>
-
-          {message && <p className="text-sm text-secondary">{message}</p>}
         </form>
-      ) : hasEvents ? (
-        <div className="space-y-3">
-          {events.map((event) => {
-            const badge = sourceBadge(event.source, event.inputType);
-            const draft = (event.normalizedDraft && typeof event.normalizedDraft === "object") ? event.normalizedDraft : null;
 
-            return (
-              <article key={event.id} className="rounded-2xl border border-border bg-surface p-4 space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-bold">{draft?.description ?? "Evento capturado"}</p>
-                  {badge && <span className="rounded-full bg-primary/15 text-primary text-xs font-bold px-2 py-1">{badge}</span>}
-                </div>
-                <p className="text-sm text-secondary">
-                  {draft?.amount ? `R$ ${Number(draft.amount).toFixed(2).replace(".", ",")}` : "Valor pendente"}
-                  {draft?.categoryName ? ` · ${draft.categoryName}` : ""}
-                </p>
-                <p className="text-xs text-secondary">{new Date(event.createdAt).toLocaleString("pt-BR")}</p>
-              </article>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-16 px-6 text-center bg-[#242424] border border-white/[0.08] rounded-[12px]">
-          <div className="w-12 h-12 rounded-[10px] bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.5 12 19.79 19.79 0 0 1 1.15 3.18 2 2 0 0 1 3.12 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.13 6.13l1.32-1.36a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        {message && <p className="text-sm text-secondary">{message}</p>}
+
+        {batchResult && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+            <div className="rounded-xl bg-surface-2 border border-border p-3"><p className="text-secondary text-xs">Processados</p><p className="font-bold">{batchResult.processed}</p></div>
+            <div className="rounded-xl bg-surface-2 border border-border p-3"><p className="text-secondary text-xs">Possíveis duplicidades</p><p className="font-bold">{batchResult.possibleDuplicates}</p></div>
+            <div className="rounded-xl bg-surface-2 border border-border p-3"><p className="text-secondary text-xs">Prontos para salvar</p><p className="font-bold">{batchResult.readyToSave}</p></div>
+            <div className="rounded-xl bg-surface-2 border border-border p-3"><p className="text-secondary text-xs">Conflitos/erros</p><p className="font-bold">{batchResult.conflicts}</p></div>
           </div>
-          <h2 className="text-base font-bold text-[#fafafa] mb-1">Inbox vazio</h2>
-          <p className="text-sm text-[#71717a] max-w-xs leading-relaxed">
-            Nenhum evento pendente. As notificações e lembretes financeiros aparecerão aqui.
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold">Fila operacional recente</h3>
+          <p className="text-xs text-secondary">
+            {byDecision.saved} salvos · {byDecision.review} em revisão · {byDecision.duplicates} possíveis duplicidades
           </p>
         </div>
-      )}
+
+        {hasEvents ? (
+          <div className="space-y-3">
+            {events.map((event) => {
+              const badge = sourceBadge(event.source, event.inputType);
+              const draft = event.normalizedDraft && typeof event.normalizedDraft === "object" ? event.normalizedDraft : null;
+              const title = draft?.description || "Evidência processada";
+
+              return (
+                <article key={event.id} className="rounded-2xl border border-border bg-surface-2 p-4 space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-bold truncate">{title}</p>
+                    <span className="rounded-full bg-primary/15 text-primary text-xs font-bold px-2 py-1">{badge}</span>
+                  </div>
+
+                  <p className="text-sm text-secondary">
+                    {draft?.amount ? `R$ ${Number(draft.amount).toFixed(2).replace(".", ",")}` : "Valor pendente"}
+                    {draft?.categoryName ? ` · ${draft.categoryName}` : ""}
+                  </p>
+
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-secondary">{new Date(event.createdAt).toLocaleString("pt-BR")}</p>
+                    <span className="text-[10px] uppercase tracking-wide text-secondary">{event.decision}</span>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-secondary">Nenhum evento recente. Envie seu primeiro lote de evidências.</p>
+        )}
+      </section>
     </div>
   );
 }

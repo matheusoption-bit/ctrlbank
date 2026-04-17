@@ -12,21 +12,20 @@ export default async function InboxPage() {
     select: { householdId: true },
   });
 
+  const scopeOr = [{ userId: user.id }, ...(dbUser?.householdId ? [{ householdId: dbUser.householdId }] : [])];
+
   const events = await prisma.aiCaptureEvent.findMany({
-    where: {
-      OR: [
-        { userId: user.id },
-        ...(dbUser?.householdId ? [{ householdId: dbUser.householdId }] : []),
-      ],
-    },
+    where: { OR: scopeOr },
     orderBy: { createdAt: "desc" },
-    take: 30,
+    take: 50,
     select: {
       id: true,
       source: true,
       inputType: true,
       createdAt: true,
-      rawText: true,
+      decision: true,
+      captureGroupId: true,
+      createdTransactionId: true,
       normalizedDraft: true,
     },
   });
@@ -35,13 +34,17 @@ export default async function InboxPage() {
     <div className="space-y-6">
       <header>
         <h1 className="text-3xl font-black tracking-tight">Inbox</h1>
-        <p className="text-secondary mt-1">Central de captura de eventos e movimentos.</p>
+        <p className="text-secondary mt-1">Central de captura inteligente de evidências financeiras.</p>
       </header>
 
       <InboxPageClient
         events={events.map((event) => ({
           ...event,
           createdAt: event.createdAt.toISOString(),
+          normalizedDraft:
+            event.normalizedDraft && typeof event.normalizedDraft === "object"
+              ? (event.normalizedDraft as { description?: string; amount?: number; categoryName?: string })
+              : null,
         }))}
       />
     </div>

@@ -8,6 +8,11 @@ export type InboxChannel = "manual" | "email" | "whatsapp" | "import";
 export type InboxInputType = "text" | "image" | "pdf" | "csv" | "ofx";
 export type InboxDocumentKind = "statement" | "invoice" | "receipt" | "unknown";
 
+function buildRawTextEnvelope(rawInput: string, documentKind: InboxDocumentKind, inputHash?: string) {
+  const hashPrefix = inputHash ? `[HASH:${inputHash}] ` : "";
+  return `${hashPrefix}[${documentKind.toUpperCase()}] ${rawInput}`;
+}
+
 export async function parseInboxRawInput({
   userId,
   householdId,
@@ -15,6 +20,8 @@ export async function parseInboxRawInput({
   channel,
   inputType,
   documentKind,
+  inputHash,
+  captureBatchId,
 }: {
   userId: string;
   householdId: string | null;
@@ -22,30 +29,36 @@ export async function parseInboxRawInput({
   channel: InboxChannel;
   inputType: InboxInputType;
   documentKind: InboxDocumentKind;
+  inputHash?: string;
+  captureBatchId?: string;
 }) {
+  const rawTextEnvelope = buildRawTextEnvelope(rawInput, documentKind, inputHash);
+
   if (inputType === "ofx" || inputType === "csv") {
-    const captureGroupId = randomUUID();
+    const captureGroupId = captureBatchId ?? randomUUID();
     const isOfx = inputType === "ofx";
-    const drafts = isOfx ? 
-      await parseDeterministicOFX(userId, householdId, rawInput) : 
-      await parseDeterministicCSV(userId, householdId, rawInput);
-    
+    const drafts = isOfx
+      ? await parseDeterministicOFX(userId, householdId, rawInput)
+      : await parseDeterministicCSV(userId, householdId, rawInput);
+
     if (drafts.length > 0) {
-      const batchDrafts = await Promise.all(drafts.map(async (draft) => {
-        const aiEvent = await logAiCaptureEvent({
-          userId,
-          householdId,
-          captureGroupId,
-          source: inputType,
-          inputType: "composer",
-          rawText: rawInput,
-          normalizedDraft: draft,
-          confidenceOverall: draft.confidence.overall,
-          decision: "batch_review",
-          createdTransactionId: null,
-        });
-        return { eventId: aiEvent?.id ?? null, draft };
-      }));
+      const batchDrafts = await Promise.all(
+        drafts.map(async (draft) => {
+          const aiEvent = await logAiCaptureEvent({
+            userId,
+            householdId,
+            captureGroupId,
+            source: inputType,
+            inputType: "composer",
+            rawText: rawTextEnvelope,
+            normalizedDraft: draft,
+            confidenceOverall: draft.confidence.overall,
+            decision: "batch_review",
+            createdTransactionId: null,
+          });
+          return { eventId: aiEvent?.id ?? null, draft };
+        })
+      );
 
       return {
         intent: "batch_review",
@@ -71,17 +84,21 @@ export async function parseInboxRawInput({
     mode: "Registrar",
     inputType: inputType === "pdf" ? "pdf" : "text",
     content: rawInput,
+    disableAutoSave: true,
   });
 
   if (response.eventId) {
-    await prisma.aiCaptureEvent.update({
-      where: { id: response.eventId },
-      data: {
-        source: channel,
-        inputType: inputType,
-        rawText: `[${documentKind.toUpperCase()}] ` + rawInput,
-      },
-    }).catch(() => null);
+    await prisma.aiCaptureEvent
+      .update({
+        where: { id: response.eventId },
+        data: {
+          source: channel,
+          inputType,
+          rawText: rawTextEnvelope,
+          captureGroupId: captureBatchId ?? response.captureGroupId ?? undefined,
+        },
+      })
+      .catch(() => null);
   }
 
   return response;

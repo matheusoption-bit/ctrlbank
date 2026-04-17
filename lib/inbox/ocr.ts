@@ -43,22 +43,30 @@ export async function extractTextFromImageWithOcr(imageBase64: string, mimeType 
 }
 
 export async function extractTextFromPdf(buffer: Buffer) {
-  const { PDFParse } = await import("pdf-parse");
-  const parser = new PDFParse({ data: buffer });
-  let text = "";
-
   try {
-    const parsed = await parser.getText();
-    text = parsed.text?.trim() ?? "";
-  } finally {
-    await parser.destroy();
-  }
+    const { PDFParse } = await import("pdf-parse");
+    const parser = new PDFParse({ data: buffer });
+    let text = "";
 
-  if (!text) {
-    throw new Error("Falha ao extrair texto do PDF");
-  }
+    try {
+      const parsed = await parser.getText();
+      text = parsed.text?.trim() ?? "";
+    } finally {
+      await parser.destroy();
+    }
 
-  return text;
+    if (!text) {
+      throw new Error("Falha ao extrair texto do PDF");
+    }
+
+    return text;
+  } catch (error: any) {
+    const msg = String(error?.message ?? "");
+    if (msg.includes("DOMMatrix is not defined")) {
+      throw new Error("Falha ao interpretar PDF neste ambiente (DOMMatrix). Tente enviar imagem ou texto do documento.");
+    }
+    throw error;
+  }
 }
 
 export function isImageMimeType(mimeType: string) {
