@@ -353,10 +353,10 @@ export default function DashboardPageClient({ user, summary, evolution, forecast
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
-                <XAxis dataKey="day" stroke="transparent" tick={ fontSize: 11, fill: "#71717a" } axisLine={false} tickLine={false} />
-                <YAxis stroke="transparent" tick={ fontSize: 10, fill: "#71717a" } axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <XAxis dataKey="day" stroke="transparent" tick={{ fontSize: 11, fill: "#71717a" }} axisLine={false} tickLine={false} />
+                <YAxis stroke="transparent" tick={{ fontSize: 10, fill: "#71717a" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip
-                  contentStyle={ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12, color: "#fafafa" }
+                  contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12, color: "#fafafa" }}
                   formatter={(v: number, name: string) => [formatCurrency(v), name === "actual" ? "Realizado" : "Previsto"]}
                   labelStyle={{ color: "#fff", fontWeight: 700 }}
                 />
@@ -394,10 +394,10 @@ export default function DashboardPageClient({ user, summary, evolution, forecast
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
-                <XAxis dataKey="month" stroke="transparent" tick={ fontSize: 11, fill: "#71717a" } axisLine={false} tickLine={false} />
-                <YAxis stroke="transparent" tick={ fontSize: 10, fill: "#71717a" } axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <XAxis dataKey="month" stroke="transparent" tick={{ fontSize: 11, fill: "#71717a" }} axisLine={false} tickLine={false} />
+                <YAxis stroke="transparent" tick={{ fontSize: 10, fill: "#71717a" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip
-                  contentStyle={ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12, color: "#fafafa" }
+                  contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12, color: "#fafafa" }}
                   formatter={(v: number, name: string) => [formatCurrency(v), name === "income" ? "Receitas" : "Despesas"]}
                   labelStyle={{ color: "#fff", fontWeight: 700 }}
                 />
@@ -426,9 +426,9 @@ export default function DashboardPageClient({ user, summary, evolution, forecast
                   tick={{ fontSize: 10 }}
                   tickFormatter={(v) => v?.slice(0, 6) ?? "Outros"}
                 />
-                <YAxis stroke="transparent" tick={ fontSize: 10, fill: "#71717a" } axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <YAxis stroke="transparent" tick={{ fontSize: 10, fill: "#71717a" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip
-                  contentStyle={ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12, color: "#fafafa" }
+                  contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12, color: "#fafafa" }}
                   formatter={(v: number) => [formatCurrency(v), "Gasto"]}
                   labelStyle={{ color: "#fff", fontWeight: 700 }}
                 />
