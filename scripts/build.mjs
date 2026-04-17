@@ -80,6 +80,18 @@ function resolveDatabaseUrl(keys, purpose) {
   );
 }
 
+function tryResolveDatabaseUrl(keys) {
+  for (const key of keys) {
+    const value = process.env[key]?.trim();
+
+    if (value) {
+      return { key, url: value };
+    }
+  }
+
+  return null;
+}
+
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -182,23 +194,35 @@ const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
 async function main() {
   loadLocalEnvFiles();
 
-  const migrationUrl = resolveDatabaseUrl(
-    migrationDatabaseUrlKeys,
-    "migration"
-  );
-  process.env.DATABASE_URL = migrationUrl.url;
-  console.log(`[build] Using ${migrationUrl.key} for Prisma migrations.`);
-  const hasPendingMigrations = await hasPendingPrismaMigrations();
+  const migrationUrl = tryResolveDatabaseUrl(migrationDatabaseUrlKeys);
 
-  if (hasPendingMigrations) {
-    await runPrismaMigrateDeploy();
+  if (migrationUrl) {
+    process.env.DATABASE_URL = migrationUrl.url;
+    console.log(`[build] Using ${migrationUrl.key} for Prisma migrations.`);
+    const hasPendingMigrations = await hasPendingPrismaMigrations();
+
+    if (hasPendingMigrations) {
+      await runPrismaMigrateDeploy();
+    } else {
+      console.log("[build] No pending Prisma migrations. Skipping migrate deploy.");
+    }
   } else {
-    console.log("[build] No pending Prisma migrations. Skipping migrate deploy.");
+    console.warn(
+      `[build] Missing database URL for migration. Skipping Prisma migrate deploy. Set one of: ${migrationDatabaseUrlKeys.join(", ")}.`
+    );
   }
 
-  const runtimeUrl = resolveDatabaseUrl(runtimeDatabaseUrlKeys, "runtime");
-  process.env.DATABASE_URL = runtimeUrl.url;
-  console.log(`[build] Using ${runtimeUrl.key} for Next.js build.`);
+  const runtimeUrl = tryResolveDatabaseUrl(runtimeDatabaseUrlKeys);
+
+  if (runtimeUrl) {
+    process.env.DATABASE_URL = runtimeUrl.url;
+    console.log(`[build] Using ${runtimeUrl.key} for Next.js build.`);
+  } else {
+    console.warn(
+      `[build] Missing database URL for runtime. Continuing Next.js build without DATABASE_URL. Set one of: ${runtimeDatabaseUrlKeys.join(", ")}.`
+    );
+  }
+
   await run(npxCommand, ["next", "build"]);
 }
 
