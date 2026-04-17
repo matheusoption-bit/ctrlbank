@@ -37,7 +37,7 @@ export async function GET(
     where: { id: user.id },
     data: {
       householdId: household.id,
-      role: "VIEWER", 
+      role: "MEMBER", 
     },
   });
 

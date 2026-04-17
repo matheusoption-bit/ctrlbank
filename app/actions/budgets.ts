@@ -22,10 +22,14 @@ async function getAuthContext() {
 
   const fullUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { id: true, householdId: true },
+    select: { id: true, householdId: true, role: true },
   });
   if (!fullUser) throw new Error("Usuário não encontrado");
   return fullUser;
+}
+
+function requireWriteRole(role: string) {
+  if (role === "VIEWER") throw new Error("Permissão negada: somente leitura");
 }
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
@@ -78,6 +82,7 @@ export async function getBudgetsWithSpending(month: number, year: number) {
  */
 export async function upsertBudget(formData: unknown) {
   const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
   if (!ctx.householdId) return { error: "Você não pertence a um grupo familiar" };
 
   const parsed = BudgetSchema.safeParse(formData);
@@ -113,6 +118,7 @@ export async function upsertBudget(formData: unknown) {
  */
 export async function deleteBudget(id: string) {
   const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
 
   const budget = await prisma.budget.findFirst({
     where: { id, householdId: ctx.householdId ?? "" },

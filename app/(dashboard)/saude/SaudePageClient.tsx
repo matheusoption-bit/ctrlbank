@@ -45,12 +45,21 @@ interface Recommendation {
   createdAt: Date;
 }
 
+interface MemberContribution {
+  id: string;
+  name: string;
+  amount: number;
+  percent: number;
+}
+
 interface SaudePageClientProps {
   healthScore: HealthScoreData | null;
   projection: ProjectionData | null;
   balance: BalanceData;
   burnRate: BurnRateData;
   recommendations: Recommendation[];
+  memberContributions: MemberContribution[];
+  userRole: string;
 }
 
 export default function SaudePageClient({
@@ -58,7 +67,9 @@ export default function SaudePageClient({
   projection,
   balance,
   burnRate,
-  recommendations: initialRecommendations
+  recommendations: initialRecommendations,
+  memberContributions,
+  userRole,
 }: SaudePageClientProps) {
   const [recommendations, setRecommendations] = useState(initialRecommendations);
 
@@ -296,6 +307,48 @@ export default function SaudePageClient({
                     >
                       <X className="h-4 w-4" />
                     </button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* BLOCK 6: Member Contributions (only for ADMIN and MEMBER) */}
+        {userRole !== "VIEWER" && memberContributions.length > 0 && (
+          <Card className="md:col-span-2 lg:col-span-3">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                Contribuição por Membro
+              </CardTitle>
+              <CardDescription>
+                Gastos do mês por membro do grupo familiar
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {memberContributions.map((member) => (
+                  <div key={member.id}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-sm font-bold text-blue-400 flex-shrink-0">
+                        {member.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="font-medium">{member.name}</span>
+                          <span className="font-semibold tabular-nums">
+                            {formatCurrency(member.amount)} ({member.percent}%)
+                          </span>
+                        </div>
+                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-blue-500 transition-all"
+                            style={{ width: `${member.percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

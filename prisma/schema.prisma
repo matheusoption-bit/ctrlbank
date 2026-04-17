@@ -31,6 +31,7 @@ enum TransactionStatus {
 
 enum UserRole {
   ADMIN
+  MEMBER
   VIEWER
 }
 
@@ -97,6 +98,42 @@ model Household {
   aiConversations       AiConversation[]
   financialPlans        FinancialPlan[]
   aiRecommendations     AiRecommendation[]
+  householdInvites      HouseholdInvite[]
+  monthlyCheckViews     MonthlyCheckView[]
+}
+
+/// Convite com token único e validade de 48h
+model HouseholdInvite {
+  id          String   @id @default(cuid())
+  householdId String
+  token       String   @unique
+  createdById String
+  expiresAt   DateTime
+  usedAt      DateTime?
+  usedById    String?
+  createdAt   DateTime @default(now())
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdBy User      @relation("InviteCreatedBy", fields: [createdById], references: [id])
+  usedBy    User?     @relation("InviteUsedBy", fields: [usedById], references: [id])
+
+  @@index([householdId])
+  @@index([token])
+}
+
+/// Registro de visualização do check mensal
+model MonthlyCheckView {
+  id          String   @id @default(cuid())
+  householdId String
+  month       String   // formato YYYY-MM
+  userId      String
+  viewedAt    DateTime @default(now())
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([householdId, month, userId])
+  @@index([householdId])
 }
 
 model User {
@@ -126,6 +163,9 @@ model User {
   aiMessages        AiMessage[]
   financialPlans    FinancialPlan[]
   aiRecommendations AiRecommendation[]
+  invitesCreated    HouseholdInvite[]  @relation("InviteCreatedBy")
+  invitesUsed       HouseholdInvite[]  @relation("InviteUsedBy")
+  monthlyCheckViews MonthlyCheckView[]
 
   @@index([householdId])
 }

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { validateRequest } from "@/lib/auth";
-import { getHouseholdMembers } from "@/app/actions/household";
+import { getHouseholdMembers, hasMonthlyCheckBeenViewed } from "@/app/actions/household";
 import FamiliaPageClient from "./FamiliaPageClient";
 
 export const metadata = { title: "Família" };
@@ -18,6 +18,11 @@ export default async function FamiliaPage() {
 
   const { members, household, inviteCode } = await getHouseholdMembers();
 
+  // Check if monthly check has been viewed
+  const now = new Date();
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const monthlyCheckViewed = await hasMonthlyCheckBeenViewed(currentMonthStr);
+
   return (
     <FamiliaPageClient
       currentUser={{
@@ -30,6 +35,7 @@ export default async function FamiliaPage() {
       members={members}
       household={household ? { id: household.id, name: household.name } : null}
       inviteCode={inviteCode}
+      monthlyCheckViewed={monthlyCheckViewed}
     />
   );
 }

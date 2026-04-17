@@ -51,11 +51,13 @@ const MOBILE_NAV_ITEMS = [
 interface DashboardLayoutClientProps {
   children: React.ReactNode;
   userName: string | null;
+  familyBadge?: boolean;
 }
 
 export default function DashboardLayoutClient({
   children,
   userName,
+  familyBadge = false,
 }: DashboardLayoutClientProps) {
   const pathname = usePathname();
 
@@ -88,6 +90,7 @@ export default function DashboardLayoutClient({
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {SIDEBAR_ITEMS.map(({ href, icon: Icon, label }) => {
             const active = isActive(href);
+            const showBadge = href === "/familia" && familyBadge;
             return (
               <Link
                 key={href}
@@ -105,6 +108,9 @@ export default function DashboardLayoutClient({
                   size={18}
                 />
                 {label}
+                {showBadge && (
+                  <span className="ml-auto w-2 h-2 bg-red-500 rounded-full animate-pulse flex-shrink-0" />
+                )}
                 {active && (
                   <motion.div
                     layoutId="sidebar-indicator"

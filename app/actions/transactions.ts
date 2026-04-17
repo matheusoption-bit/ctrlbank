@@ -32,6 +32,7 @@ const ListTransactionsSchema = z.object({
   type:         z.nativeEnum(TransactionType).optional(),
   categoryId:   z.string().cuid().optional(),
   bankAccountId: z.string().cuid().optional(),
+  userId:       z.string().cuid().optional(),
   dateFrom:     z.coerce.date().optional(),
   dateTo:       z.coerce.date().optional(),
   search:       z.string().max(100).optional(),
@@ -45,11 +46,15 @@ async function getAuthContext() {
 
   const fullUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { id: true, householdId: true },
+    select: { id: true, householdId: true, role: true },
   });
   if (!fullUser) throw new Error("Usuário não encontrado");
 
   return fullUser;
+}
+
+function requireWriteRole(role: string) {
+  if (role === "VIEWER") throw new Error("Permissão negada: somente leitura");
 }
 
 function buildWhereClause(
@@ -61,6 +66,7 @@ function buildWhereClause(
     ...(filters.type && { type: filters.type }),
     ...(filters.categoryId && { categoryId: filters.categoryId }),
     ...(filters.bankAccountId && { bankAccountId: filters.bankAccountId }),
+    ...(filters.userId && { userId: filters.userId }),
     ...(filters.dateFrom || filters.dateTo
       ? {
           date: {
@@ -202,6 +208,7 @@ export async function createManagedTransaction(params: ManagedTransactionParams)
  */
 export async function createTransaction(formData: unknown) {
   const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
   const parsed = CreateTransactionSchema.safeParse(formData);
 
   if (!parsed.success) {
@@ -231,6 +238,7 @@ export async function createTransaction(formData: unknown) {
  */
 export async function updateTransaction(formData: unknown) {
   const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
   const parsed = UpdateTransactionSchema.safeParse(formData);
 
   if (!parsed.success) {
@@ -320,6 +328,7 @@ export async function updateTransaction(formData: unknown) {
  */
 export async function deleteTransaction(id: string) {
   const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
 
   const existing = await prisma.transaction.findFirst({
     where: {
@@ -576,6 +585,7 @@ export async function getMonthForecast() {
  */
 export async function undoTransaction(id: string) {
   const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
 
   const existing = await prisma.transaction.findFirst({
     where: {

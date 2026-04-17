@@ -24,10 +24,14 @@ async function getAuthContext() {
 
   const fullUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { id: true, householdId: true },
+    select: { id: true, householdId: true, role: true },
   });
   if (!fullUser) throw new Error("Usuário não encontrado");
   return fullUser;
+}
+
+function requireWriteRole(role: string) {
+  if (role === "VIEWER") throw new Error("Permissão negada: somente leitura");
 }
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
@@ -44,6 +48,7 @@ export async function getGoals() {
 
 export async function createGoal(formData: unknown) {
   const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
   if (!ctx.householdId) return { error: "Você não pertence a um grupo familiar" };
 
   const parsed = GoalSchema.safeParse(formData);
@@ -64,6 +69,7 @@ export async function createGoal(formData: unknown) {
 
 export async function updateGoal(id: string, formData: unknown) {
   const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
 
   const goal = await prisma.goal.findFirst({
     where: { id, householdId: ctx.householdId ?? "" },
@@ -86,6 +92,7 @@ export async function updateGoal(id: string, formData: unknown) {
 
 export async function contributeToGoal(id: string, amount: number) {
   const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
 
   const goal = await prisma.goal.findFirst({
     where: { id, householdId: ctx.householdId ?? "" },
@@ -106,6 +113,7 @@ export async function contributeToGoal(id: string, amount: number) {
 
 export async function deleteGoal(id: string) {
   const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
 
   const goal = await prisma.goal.findFirst({
     where: { id, householdId: ctx.householdId ?? "" },

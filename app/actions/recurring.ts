@@ -12,10 +12,14 @@ async function getAuthContext() {
 
   const fullUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { id: true, householdId: true },
+    select: { id: true, householdId: true, role: true },
   });
   if (!fullUser) throw new Error("Usuário não encontrado");
   return fullUser;
+}
+
+function requireWriteRole(role: string) {
+  if (role === "VIEWER") throw new Error("Permissão negada: somente leitura");
 }
 
 export async function getRecurringTransactions() {
@@ -46,6 +50,7 @@ const RecurringSchema = z.object({
 
 export async function upsertRecurringTransaction(formData: FormData) {
   const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
   if (!ctx.householdId) return { error: "Sem grupo familiar" };
 
   const parsed = RecurringSchema.safeParse({
@@ -102,6 +107,7 @@ export async function upsertRecurringTransaction(formData: FormData) {
 
 export async function toggleRecurringState(id: string, active: boolean) {
   const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
   if (!ctx.householdId) return { error: "Sem grupo familiar" };
 
   await prisma.recurringTransaction.update({
@@ -114,6 +120,7 @@ export async function toggleRecurringState(id: string, active: boolean) {
 
 export async function deleteRecurringTransaction(id: string) {
   const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
   if (!ctx.householdId) return { error: "Sem grupo familiar" };
 
   await prisma.recurringTransaction.delete({
