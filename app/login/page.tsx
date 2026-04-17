@@ -80,7 +80,7 @@ function LoginForm() {
             <span className="text-primary">Ctrl</span>
             <span className="text-foreground">Bank</span>
           </h1>
-          <p className="text-secondary text-sm mt-2">Premium Banking Experience</p>
+          <p className="text-secondary text-sm mt-2">CtrlBank — Saúde Financeira Familiar</p>
         </motion.div>
 
         {/* Card */}
@@ -91,7 +91,7 @@ function LoginForm() {
           <div className="space-y-1">
             <h2 className="text-2xl font-semibold tracking-tight">Bem-vindo de volta</h2>
             <p className="text-secondary text-sm">
-              Acesse sua conta para gerenciar suas finanças
+              Governe a saúde financeira da sua família
             </p>
           </div>
 

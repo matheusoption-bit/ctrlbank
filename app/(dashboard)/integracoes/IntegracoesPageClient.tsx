@@ -101,9 +101,7 @@ export default function IntegracoesPageClient({ connections, isAdmin }: Props) {
           </div>
         </div>
         <p className="text-sm text-secondary leading-relaxed">
-          Em breve você poderá conectar sua conta bancária ao CtrlBank e importar 
-          transações automaticamente, sem precisar lançar manualmente.
-          Suportaremos os principais bancos via Open Finance regulado pelo Banco Central.
+          Em breve você poderá conectar sua conta bancária ao CtrlBank e governar a saúde financeira da sua família de forma automatizada.       Suportaremos os principais bancos via Open Finance regulado pelo Banco Central.
         </p>
         <div className="inline-flex items-center gap-2 bg-warning/10 border border-warning/20 rounded-xl px-3 py-2">
           <div className="w-2 h-2 rounded-full bg-warning animate-pulse" />

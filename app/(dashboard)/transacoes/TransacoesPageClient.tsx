@@ -93,7 +93,7 @@ function TransactionModal({
       });
 
       if (result.error) toast.error(result.error);
-      else { toast.success("Transação registrada!"); onClose(); }
+      else { toast.success("Movimento registrado!"); onClose(); }
     });
   }
 
@@ -109,7 +109,7 @@ function TransactionModal({
         exit={{ y: 40, opacity: 0 }} transition={{ type: "spring", damping: 30, stiffness: 400 }}
       >
         <div className="flex items-center justify-between p-5 border-b border-border">
-          <h2 className="font-bold text-lg">Nova Transação</h2>
+          <h2 className="font-bold text-lg">Novo Movimento</h2>
           <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
             <X size={18} className="text-secondary" />
           </button>
@@ -224,7 +224,7 @@ function TransactionModal({
           <button type="submit" disabled={isPending} className="btn-primary w-full">
             {isPending
               ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              : <><Check size={16} /> Registrar Transação</>
+              : <><Check size={16} /> Registrar Movimento</>
             }
           </button>
         </form>
@@ -400,7 +400,7 @@ export default function TransacoesPageClient({
             <p className="text-secondary text-sm mt-1">
               {activeFilters.length > 0
                 ? "Nenhuma transação encontrada com os filtros atuais."
-                : "Comece registrando sua primeira transação."}
+                : "Comece registrando seu primeiro movimento."}
             </p>
           </div>
           {activeFilters.length === 0 && (

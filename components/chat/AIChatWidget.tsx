@@ -521,7 +521,7 @@ export default function AIChatWidget() {
                   <p className="text-xs text-secondary/70 px-4">
                     {mode === "Registrar" && "Digite, fale, cole um print, anexe PDF ou CSV."}
                     {mode === "Revisar" && "Visualize drafts e lotes aguardando aprovação."}
-                    {mode === "Perguntar" && "Tire dúvidas sobre suas finanças ou movimentações."}
+                    {mode === "Perguntar" && "Tire dúvidas sobre a saúde financeira da sua família."}
                     {mode === "Planejar" && "Descubra como você está indo em relação às metas e orçamentos."}
                     {mode === "Sugerir" && "Sugira melhorias, reporte bugs ou novas funcionalidades."}
                   </p>

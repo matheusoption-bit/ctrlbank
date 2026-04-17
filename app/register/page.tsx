@@ -92,7 +92,7 @@ export default function RegisterPage() {
             <span className="text-primary">Ctrl</span>
             <span className="text-foreground">Bank</span>
           </h1>
-          <p className="text-secondary text-sm mt-2">Premium Banking Experience</p>
+          <p className="text-secondary text-sm mt-2">CtrlBank — Saúde Financeira Familiar</p>
         </motion.div>
 
         {/* Card */}
@@ -103,7 +103,7 @@ export default function RegisterPage() {
           <div className="space-y-1">
             <h2 className="text-2xl font-semibold tracking-tight">Criar conta</h2>
             <p className="text-secondary text-sm">
-              Junte-se ao CtrlBank e comece a gerenciar suas finanças
+              Governe a saúde financeira da sua família
             </p>
           </div>
 

@@ -2,9 +2,9 @@ import { MetadataRoute } from 'next'
  
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'CtrlBank Premium',
+    name: 'CtrlBank — Saúde Financeira Familiar',
     short_name: 'CtrlBank',
-    description: 'Gestão Financeira Premium',
+    description: 'O CtrlBank não registra gastos. Ele governa a saúde financeira da família.',
     start_url: '/',
     display: 'standalone',
     background_color: '#0A0A0A',

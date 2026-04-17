@@ -12,11 +12,10 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "CtrlBank – Controle Financeiro Familiar",
-    template: "%s | CtrlBank",
+    default: "CtrlBank — Saúde Financeira Familiar",
+    template: "%s | CtrlBank — Saúde Financeira Familiar",
   },
-  description:
-    "Controle financeiro familiar premium. Acompanhe receitas, despesas e patrimônio com elegância.",
+  description: "O CtrlBank não registra gastos. Ele governa a saúde financeira da família.",
   keywords: ["finanças", "controle financeiro", "família", "orçamento", "receitas", "despesas"],
   authors: [{ name: "CtrlBank" }],
   creator: "CtrlBank",
@@ -31,7 +30,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "CtrlBank",
-    description: "Controle Financeiro Familiar Premium",
+    description: "O CtrlBank não registra gastos. Ele governa a saúde financeira da família.",
     type: "website",
     locale: "pt_BR",
   },

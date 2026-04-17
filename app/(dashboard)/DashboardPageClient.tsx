@@ -253,7 +253,7 @@ export default function DashboardPageClient({ user, summary, evolution, forecast
         {/* Receitas */}
         <div className="card-c6 space-y-4">
           <div className="flex items-center justify-between">
-            <span className="section-label">Receitas Mês</span>
+            <span className="section-label">Receitas do Período</span>
             <div className="w-8 h-8 rounded-full bg-positive/10 flex items-center justify-center text-positive">
               <ArrowUpRight size={16} strokeWidth={3} />
             </div>
@@ -268,7 +268,7 @@ export default function DashboardPageClient({ user, summary, evolution, forecast
         {/* Despesas */}
         <div className="card-c6 space-y-4">
           <div className="flex items-center justify-between">
-            <span className="section-label">Despesas Mês</span>
+            <span className="section-label">Despesas do Período</span>
             <div className="w-8 h-8 rounded-full bg-negative/10 flex items-center justify-center text-negative">
               <ArrowDownLeft size={16} strokeWidth={3} />
             </div>
@@ -283,7 +283,7 @@ export default function DashboardPageClient({ user, summary, evolution, forecast
         {/* Balanço */}
         <div className="card-c6 space-y-4">
           <div className="flex items-center justify-between">
-            <span className="section-label">Balanço Mês</span>
+            <span className="section-label">Diagnóstico do Período</span>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${netMonth >= 0 ? "bg-positive/10 text-positive" : "bg-negative/10 text-negative"}`}>
               {netMonth >= 0 ? <ArrowUpRight size={16} strokeWidth={3} /> : <ArrowDownLeft size={16} strokeWidth={3} />}
             </div>
@@ -323,14 +323,14 @@ export default function DashboardPageClient({ user, summary, evolution, forecast
           value={formatCurrency(monthIncome, { compact: true })}
           icon={ArrowUpRight}
           color="bg-positive/10 text-positive"
-          sub="Este mês"
+          sub="No Período"
         />
         <StatCard
           label="Despesas"
           value={formatCurrency(monthExpense, { compact: true })}
           icon={ArrowDownLeft}
           color="bg-negative/10 text-negative"
-          sub="Este mês"
+          sub="No Período"
         />
       </motion.div>
 
@@ -459,7 +459,7 @@ export default function DashboardPageClient({ user, summary, evolution, forecast
             </div>
             <p className="text-secondary text-sm">Nenhuma transação ainda.</p>
             <Link href="/transacoes" className="btn-primary text-sm px-5 mx-auto w-fit">
-              Registrar primeira transação
+              Registrar primeiro movimento
             </Link>
           </div>
         ) : (

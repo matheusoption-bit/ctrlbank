@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 
 const SIDEBAR_ITEMS = [
-  { href: "/",             icon: LayoutDashboard, label: "Início"      },
+  { href: "/",             icon: LayoutDashboard, label: "Saúde"       },
   { href: "/contas",       icon: Wallet,          label: "Contas"      },
   { href: "/transacoes",   icon: ArrowLeftRight,  label: "Movimentos"  },
   { href: "/orcamentos",   icon: Target,          label: "Planejar"    },
@@ -41,7 +41,7 @@ const SIDEBAR_ITEMS = [
 ];
 
 const MOBILE_NAV_ITEMS = [
-  { href: "/",             icon: LayoutDashboard, label: "Início"      },
+  { href: "/",             icon: LayoutDashboard, label: "Saúde"       },
   { href: "/contas",       icon: Wallet,          label: "Contas"      },
   { id: "composer",        icon: Sparkles,        label: "Composer"    },
   { href: "/transacoes",   icon: ArrowLeftRight,  label: "Movimentos"  },

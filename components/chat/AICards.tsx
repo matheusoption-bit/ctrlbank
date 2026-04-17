@@ -31,7 +31,7 @@ export function SuccessCard({
       <div className="absolute top-0 left-0 w-1 h-full bg-positive"></div>
       <div className="flex items-center gap-2 text-positive">
         <Check size={18} />
-        <p className="font-bold text-sm">Transação criada com sucesso!</p>
+        <p className="font-bold text-sm">Movimento registrado com sucesso!</p>
       </div>
 
       <div className="space-y-1">
@@ -67,7 +67,7 @@ export function DraftReviewCard({
       const result = await approveAiDraft(internalDraft, eventId);
       if (result.error) toast.error(result.error);
       else {
-        toast.success("Transação aprovada e aprendizado salvo!");
+        toast.success("Movimento aprovado e aprendizado salvo!");
         onApproved();
       }
     });

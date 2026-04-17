@@ -16,7 +16,7 @@ export default function DashboardLoading() {
 
       <div className="text-center space-y-2">
         <h2 className="text-lg font-black tracking-tight text-white animate-pulse">Carregando dados...</h2>
-        <p className="text-xs text-secondary font-medium tracking-wide w-[200px]">Aguarde enquanto preparamos o seu painel financeiro.</p>
+        <p className="text-xs text-secondary font-medium tracking-wide w-[200px]">Aguarde enquanto preparamos o diagnóstico de saúde financeira da sua família.</p>
       </div>
 
       {/* Shimmer placeholders */}

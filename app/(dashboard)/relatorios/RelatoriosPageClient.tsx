@@ -169,7 +169,7 @@ async function exportPDF(transactions: Transaction[], month: number, year: numbe
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
-  doc.text("CtrlBank", 20, 20);
+  doc.text("CtrlBank — Saúde Financeira Familiar", 20, 20);
   doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
   doc.text(`Relatório – ${formatMonthYear(month, year)}`, 20, 30);

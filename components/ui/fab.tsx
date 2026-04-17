@@ -15,7 +15,7 @@ interface FABProps {
   className?: string;
 }
 
-export function FAB({ onClick, label = "Nova Transação", className }: FABProps) {
+export function FAB({ onClick, label = "Registrar Movimento", className }: FABProps) {
   return (
     <motion.button
       type="button"

@@ -323,7 +323,7 @@ export default function OrcamentosPageClient({ budgets, insights, categories, cu
           </div>
           <div>
             <h3 className="font-bold text-lg">Nenhum orçamento</h3>
-            <p className="text-secondary text-sm mt-1">Defina limites mensais por categoria para controlar seus gastos.</p>
+            <p className="text-secondary text-sm mt-1">Defina limites mensais por categoria para governar a saúde financeira da sua família.</p>
           </div>
           <button onClick={() => setShowModal(true)} disabled={!hasHouseholdId} className="btn-primary px-6 mx-auto w-fit text-sm disabled:opacity-50">
             <Plus size={16} /> Criar orçamento
