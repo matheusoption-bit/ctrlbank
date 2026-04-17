@@ -21,10 +21,20 @@ function normalizeE164(value: string) {
 
 function generateLinkToken() {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  const bytes = randomBytes(6);
-  return Array.from(bytes)
-    .map((byte) => alphabet[byte % alphabet.length])
-    .join("");
+  const tokenLength = 6;
+  const maxBiasedValue = Math.floor(256 / alphabet.length) * alphabet.length;
+  let token = "";
+
+  while (token.length < tokenLength) {
+    const bytes = randomBytes(16);
+    for (const byte of bytes) {
+      if (byte >= maxBiasedValue) continue;
+      token += alphabet[byte % alphabet.length];
+      if (token.length === tokenLength) break;
+    }
+  }
+
+  return token;
 }
 
 async function getCurrentUserConfig() {

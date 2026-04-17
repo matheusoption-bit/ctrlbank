@@ -16,23 +16,25 @@ export async function extractTextFromImageWithOcr(imageBase64: string, mimeType 
   const client = ensureOpenAiClient();
   const model = process.env.OPENAI_VISION_MODEL ?? "gpt-4o";
 
-  const response = await client.responses.create({
+  const response = await client.chat.completions.create({
     model,
-    input: [
+    messages: [
       {
         role: "user",
         content: [
-          { type: "input_text", text: OCR_PROMPT },
+          { type: "text", text: OCR_PROMPT },
           {
-            type: "input_image",
-            image_url: `data:${mimeType};base64,${imageBase64}`,
+            type: "image_url",
+            image_url: {
+              url: `data:${mimeType};base64,${imageBase64}`,
+            },
           },
         ],
       },
     ],
   });
 
-  const output = response.output_text?.trim();
+  const output = response.choices[0]?.message?.content?.trim();
   if (!output) {
     throw new Error("Falha ao extrair texto da imagem via OCR");
   }

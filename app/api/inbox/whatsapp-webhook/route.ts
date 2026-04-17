@@ -44,7 +44,10 @@ async function fetchMediaAsBase64(url: string) {
 
 function formatAmount(amount: number | null | undefined) {
   if (typeof amount !== "number" || Number.isNaN(amount)) return null;
-  return amount.toFixed(2).replace(".", ",");
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
 }
 
 export async function POST(req: NextRequest) {

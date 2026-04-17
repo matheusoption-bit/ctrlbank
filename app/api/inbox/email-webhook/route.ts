@@ -22,12 +22,10 @@ type PostmarkInboundPayload = {
 
 function extractEmail(from: string | undefined) {
   if (!from) return null;
-  const match = from.match(/<([^>]+)>/);
-  return (match?.[1] ?? from).trim().toLowerCase();
-}
-
-function htmlToText(html: string) {
-  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const start = from.indexOf("<");
+  const end = from.lastIndexOf(">");
+  const value = start >= 0 && end > start ? from.slice(start + 1, end) : from;
+  return value.trim().toLowerCase();
 }
 
 export async function POST(req: NextRequest) {
@@ -74,7 +72,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!rawInput) {
-      rawInput = payload.TextBody?.trim() || htmlToText(payload.HtmlBody || "");
+      rawInput = payload.TextBody?.trim() || (payload.HtmlBody ?? "").trim();
     }
 
     if (!rawInput) {
