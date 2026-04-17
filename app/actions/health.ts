@@ -166,10 +166,26 @@ export async function dismissRecommendation(id: string) {
   const { user } = await validateRequest();
   if (!user) throw new Error("Unauthorized");
 
-  await prisma.aiRecommendation.update({
-    where: { id },
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { householdId: true }
+  });
+
+  const ownershipScope = [{ userId: user.id }];
+  if (dbUser?.householdId) {
+    ownershipScope.push({ householdId: dbUser.householdId });
+  }
+
+  const result = await prisma.aiRecommendation.updateMany({
+    where: {
+      id,
+      OR: ownershipScope
+    },
     data: { isDismissed: true }
   });
 
+  if (result.count === 0) {
+    throw new Error("Recommendation not found or unauthorized");
+  }
   return { success: true };
 }
