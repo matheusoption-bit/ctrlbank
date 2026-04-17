@@ -58,17 +58,33 @@ export async function calculateHealthScore(householdId: string): Promise<HealthS
     _sum: { balance: true }
   });
 
-  const transactionsLast30Days = await prisma.transaction.aggregate({
-    where: {
-      householdId,
-      date: { gte: thirtyDaysAgo },
-      ignoreInTotals: false
-    },
-    _sum: { amount: true }
-  });
+  const [incomeLast30DaysTransactions, expenseLast30DaysTransactions] = await Promise.all([
+    prisma.transaction.aggregate({
+      where: {
+        householdId,
+        type: "INCOME",
+        status: "COMPLETED",
+        date: { gte: thirtyDaysAgo },
+        ignoreInTotals: false
+      },
+      _sum: { amount: true }
+    }),
+    prisma.transaction.aggregate({
+      where: {
+        householdId,
+        type: "EXPENSE",
+        status: "COMPLETED",
+        date: { gte: thirtyDaysAgo },
+        ignoreInTotals: false
+      },
+      _sum: { amount: true }
+    })
+  ]);
 
   const currentBalanceValue = Number(currentBalance._sum.balance || 0);
-  const transactionsDelta = Number(transactionsLast30Days._sum.amount || 0);
+  const incomeLast30Days = Number(incomeLast30DaysTransactions._sum.amount || 0);
+  const expensesLast30Days = Number(expenseLast30DaysTransactions._sum.amount || 0);
+  const transactionsDelta = incomeLast30Days - expensesLast30Days;
   const balance30DaysAgo = currentBalanceValue - transactionsDelta;
   const balanceDelta = currentBalanceValue - balance30DaysAgo;
 
