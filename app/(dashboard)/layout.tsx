@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { validateRequest } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import DashboardLayoutClient from "@/components/layout/DashboardLayoutClient";
 import AIChatWidget from "@/components/chat/AIChatWidget";
 
@@ -20,10 +21,36 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  // Check if monthly check has been viewed for notification badge
+  let familyBadge = false;
+  try {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { householdId: true, role: true },
+    });
+
+    if (dbUser?.householdId && dbUser.role === "ADMIN") {
+      const now = new Date();
+      const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+      const viewExists = await prisma.monthlyCheckView.findFirst({
+        where: {
+          householdId: dbUser.householdId,
+          month: currentMonthStr,
+          userId: user.id,
+        },
+      });
+
+      familyBadge = !viewExists;
+    }
+  } catch {
+    // Non-critical - don't break layout
+  }
+
   const aiEnabled = !!process.env.GEMINI_API_KEY;
 
   return (
-    <DashboardLayoutClient userName={user.name}>
+    <DashboardLayoutClient userName={user.name} familyBadge={familyBadge}>
       {children}
       {aiEnabled && <AIChatWidget />}
     </DashboardLayoutClient>

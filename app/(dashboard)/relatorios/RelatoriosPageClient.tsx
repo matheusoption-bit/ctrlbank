@@ -17,11 +17,13 @@ interface Transaction {
   description: string | null; date: string;
   bankAccount: { name: string; color: string | null };
   category: { name: string; icon: string | null; color: string | null } | null;
+  user?: { id: string; name: string | null } | null;
   status: string;
   ignoreInTotals: boolean;
 }
 interface Category { id: string; name: string; icon: string | null; color: string | null; type: string }
 interface Account   { id: string; name: string; color: string | null }
+interface HouseholdMember { id: string; name: string | null; email: string }
 interface Evolution { month: string; income: number; expense: number; balance: number }
 
 interface Props {
@@ -29,6 +31,7 @@ interface Props {
   transactions: Transaction[];
   categories: Category[];
   accounts: Account[];
+  members: HouseholdMember[];
   currentMonth: number;
   currentYear: number;
 }
@@ -226,15 +229,21 @@ async function exportPDF(transactions: Transaction[], month: number, year: numbe
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function RelatoriosPageClient({ evolution, transactions, categories, accounts, currentMonth, currentYear }: Props) {
+export default function RelatoriosPageClient({ evolution, transactions, categories, accounts, members, currentMonth, currentYear }: Props) {
   const router   = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<"dre" | "graficos" | "exportar">("graficos");
   const [isExporting, setIsExporting] = useState(false);
+  const [selectedMemberId, setSelectedMemberId] = useState<string>("");
 
   const totalIncome  = evolution.reduce((s, e) => s + e.income,  0);
   const totalExpense = evolution.reduce((s, e) => s + e.expense, 0);
+
+  // Filter transactions by member if selected
+  const filteredTransactions = selectedMemberId
+    ? transactions.filter(tx => tx.user?.id === selectedMemberId)
+    : transactions;
 
   // ─── Navegação de mês ──────────────────────────────────────────────────────
   function navigate(deltaMonth: number) {
@@ -256,7 +265,7 @@ export default function RelatoriosPageClient({ evolution, transactions, categori
   }
 
   // Pie chart – categorias de despesa (mês selecionado – filtra pendentes e ignorados)
-  const monthTx = transactions.filter(tx => tx.status === "COMPLETED" && !tx.ignoreInTotals);
+  const monthTx = filteredTransactions.filter(tx => tx.status === "COMPLETED" && !tx.ignoreInTotals);
 
   const pieData = useMemo(() => {
     const map = new Map<string, { name: string; color: string | null; value: number }>();
@@ -318,6 +327,23 @@ export default function RelatoriosPageClient({ evolution, transactions, categori
             </select>
             <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" />
           </div>
+
+          {/* Filtro de Membro */}
+          {members.length > 0 && (
+            <div className="relative flex-1 min-w-[160px]">
+              <select
+                value={selectedMemberId}
+                onChange={(e) => setSelectedMemberId(e.target.value)}
+                className="input-c6-sm w-full appearance-none pr-8"
+              >
+                <option value="">Todos os membros</option>
+                {members.map(m => (
+                  <option key={m.id} value={m.id}>{m.name ?? m.email}</option>
+                ))}
+              </select>
+              <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" />
+            </div>
+          )}
         </div>
       </motion.header>
 
@@ -439,7 +465,7 @@ export default function RelatoriosPageClient({ evolution, transactions, categori
               <h2 className="font-bold">DRE – Demonstrativo</h2>
               <p className="text-xs text-secondary">{formatMonthYear(currentMonth, currentYear)}</p>
             </div>
-            <DRETable transactions={transactions} />
+            <DRETable transactions={filteredTransactions} />
           </div>
         </motion.div>
       )}
