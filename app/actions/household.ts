@@ -500,7 +500,8 @@ export async function markMonthlyCheckViewed(monthStr: string) {
 }
 
 /**
- * Verificar se o check mensal já foi visualizado por algum ADMIN.
+ * Verificar se o check mensal já foi visualizado por todos os ADMINs do household.
+ * Retorna true when all ADMIN users have viewed the check (ou se não há household).
  */
 export async function hasMonthlyCheckBeenViewed(monthStr: string) {
   const ctx = await getAuthContext();
