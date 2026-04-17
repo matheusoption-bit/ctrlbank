@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extractTextFromImageWithOcr, extractTextFromPdf, isImageMimeType, isPdfMimeType } from "@/lib/inbox/ocr";
-import { InboxSource, parseInboxRawInput } from "@/lib/inbox/parse";
+import { InboxChannel, InboxInputType, InboxDocumentKind, parseInboxRawInput } from "@/lib/inbox/parse";
 import { verifyPostmarkWebhook } from "@/lib/inbox/security";
 
 export const runtime = "nodejs";
@@ -52,22 +52,32 @@ export async function POST(req: NextRequest) {
     }
 
     let rawInput = "";
-    let source: InboxSource = "email_text";
+    let inputType: InboxInputType = "text";
+    let documentKind: InboxDocumentKind = "unknown";
 
     const attachment = payload.Attachments?.find((item) => {
       const mimeType = item.ContentType ?? "";
-      return isImageMimeType(mimeType) || isPdfMimeType(mimeType);
+      return isImageMimeType(mimeType) || isPdfMimeType(mimeType) || mimeType === "text/csv" || mimeType === "application/x-ofx" || item.Name?.toLowerCase().endsWith(".ofx") || item.Name?.toLowerCase().endsWith(".csv");
     });
 
     if (attachment?.Content && attachment.ContentType) {
       const buffer = Buffer.from(attachment.Content, "base64");
+      const name = attachment.Name?.toLowerCase() || "";
 
-      if (isImageMimeType(attachment.ContentType)) {
+      if (name.endsWith(".ofx") || attachment.ContentType === "application/x-ofx") {
+        rawInput = buffer.toString("utf-8");
+        inputType = "ofx";
+        documentKind = "statement";
+      } else if (name.endsWith(".csv") || attachment.ContentType === "text/csv") {
+        rawInput = buffer.toString("utf-8");
+        inputType = "csv";
+        documentKind = "statement";
+      } else if (isImageMimeType(attachment.ContentType)) {
         rawInput = await extractTextFromImageWithOcr(buffer.toString("base64"), attachment.ContentType);
-        source = "via_ocr";
+        inputType = "image";
       } else if (isPdfMimeType(attachment.ContentType)) {
         rawInput = await extractTextFromPdf(buffer);
-        source = "via_pdf";
+        inputType = "pdf";
       }
     }
 
@@ -83,7 +93,9 @@ export async function POST(req: NextRequest) {
       userId: user.id,
       householdId: user.householdId,
       rawInput,
-      source,
+      channel: "email",
+      inputType,
+      documentKind,
     });
 
     return NextResponse.json({ ok: true });

@@ -11,62 +11,67 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // ── Core (mantidos para compatibilidade) ──────────────────────────────
-        background:   "#0f0f0f",
-        foreground:   "#fafafa",
-        surface:      "#1a1a1a",
-        "surface-2":  "#242424",
-        secondary:    "#71717a",
-        border:       "rgba(255,255,255,0.08)",
+        // ── Core (Editorial Dark) ──────────────────────────────
+        background:   "#050505",
+        foreground:   "#f5f5f0",
+        surface:      "#0b0b0b",
+        "surface-2":  "#141414",
+        "surface-3":  "#1e1e1e",
+        secondary:    "#8a8a8a",
+        border:       "rgba(255,255,255,0.10)",
 
         // ── Design System Tokens Enterprise (6.1) ─────────────────────────────
-        "surface-primary":   "#0f0f0f",
-        "surface-secondary": "#1a1a1a",
-        "surface-card":      "#242424",
-        "border-subtle":     "rgba(255,255,255,0.08)",
-        "text-primary":      "#fafafa",
-        "text-muted":        "#71717a",
+        "surface-primary":   "#050505",
+        "surface-secondary": "#0b0b0b",
+        "surface-card":      "#141414",
+        "border-subtle":     "rgba(255,255,255,0.10)",
+        "text-primary":      "#f5f5f0",
+        "text-muted":        "#8a8a8a",
 
         // ── Accent Semântico ───────────────────────────────────────────────────
-        "accent-primary": "#22c55e",
+        "accent-primary": "#19FF63",
         "accent-warning": "#f59e0b",
         "accent-danger":  "#ef4444",
 
-        // ── Primary Brand (Rosa C6 — mantido) ─────────────────────────────────
+        // ── Primary Brand (Neon Green) ─────────────────────────────────
         primary: {
-          DEFAULT:    "#FF2D55",
-          50:         "#FFF0F3",
-          100:        "#FFE0E8",
-          200:        "#FFC2D1",
-          300:        "#FF99B3",
-          400:        "#FF6685",
-          500:        "#FF2D55",
-          600:        "#E6003D",
-          700:        "#CC0035",
-          800:        "#B3002E",
-          900:        "#8C0023",
-          foreground: "#FFFFFF",
+          DEFAULT:    "#19FF63",
+          50:         "#E6FFE6",
+          100:        "#CCFFCC",
+          200:        "#99FF99",
+          300:        "#66FF66",
+          400:        "#33FF33",
+          500:        "#19FF63",
+          600:        "#00E64D",
+          700:        "#00B33C",
+          800:        "#00802B",
+          900:        "#004D1A",
+          foreground: "#050505",
         },
         accent: {
-          DEFAULT:    "#FF2D55",
-          foreground: "#FFFFFF",
+          DEFAULT:    "#19FF63",
+          foreground: "#050505",
         },
 
-        // ── Aliases financeiros (mantidos para compatibilidade) ────────────────
-        positive:  "#22c55e",
+        // ── Aliases e Brand Secundários ────────────────
+        brand: {
+          cyan: "#00E5FF",
+          purple: "#D100FF",
+        },
+        positive:  "#19FF63",
         negative:  "#ef4444",
         warning:   "#f59e0b",
-        info:      "#0A84FF",
-        success:   "#22c55e",
+        info:      "#00E5FF",
+        success:   "#19FF63",
         danger:    "#ef4444",
 
         // ── shadcn/ui base tokens ──────────────────────────────────────────────
-        card:        { DEFAULT: "#242424", foreground: "#fafafa" },
-        popover:     { DEFAULT: "#1a1a1a", foreground: "#fafafa" },
-        muted:       { DEFAULT: "#242424", foreground: "#71717a" },
-        destructive: { DEFAULT: "#ef4444", foreground: "#FFFFFF" },
-        input:       "#2a2a2a",
-        ring:        "#FF2D55",
+        card:        { DEFAULT: "#0b0b0b", foreground: "#f5f5f0" },
+        popover:     { DEFAULT: "#141414", foreground: "#f5f5f0" },
+        muted:       { DEFAULT: "#1e1e1e", foreground: "#8a8a8a" },
+        destructive: { DEFAULT: "#ef4444", foreground: "#f5f5f0" },
+        input:       "#141414",
+        ring:        "#19FF63",
       },
       borderRadius: {
         "3xl":   "24px",

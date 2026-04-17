@@ -31,7 +31,7 @@ export type AIComposerTransactionDraft = {
     account: number;
     transactionType: number;
   };
-  source: "text" | "image" | "text+image" | "audio" | "pdf" | "csv";
+  source: "text" | "image" | "text+image" | "audio" | "pdf" | "csv" | "ofx" | "import";
 };
 
 export type AIComposerBatchDraftItem = {

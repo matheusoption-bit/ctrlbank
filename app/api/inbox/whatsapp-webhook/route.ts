@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extractTextFromImageWithOcr, extractTextFromPdf, isPdfMimeType } from "@/lib/inbox/ocr";
-import { InboxSource, parseInboxRawInput } from "@/lib/inbox/parse";
+import { InboxChannel, InboxInputType, InboxDocumentKind, parseInboxRawInput } from "@/lib/inbox/parse";
 import { verifyTwilioSignature } from "@/lib/inbox/security";
 
 export const runtime = "nodejs";
@@ -86,16 +86,17 @@ export async function POST(req: NextRequest) {
 
   try {
     let rawInput = body;
-    let source: InboxSource = "whatsapp_text";
+    let inputType: InboxInputType = "text";
+    let documentKind: InboxDocumentKind = "unknown";
 
     if (mediaUrl) {
       const media = await fetchMediaAsBase64(mediaUrl);
       if (isPdfMimeType(media.mimeType)) {
         rawInput = await extractTextFromPdf(media.buffer);
-        source = "via_pdf";
+        inputType = "pdf";
       } else {
         rawInput = await extractTextFromImageWithOcr(media.base64, media.mimeType);
-        source = "via_ocr";
+        inputType = "image";
       }
     }
 
@@ -107,7 +108,9 @@ export async function POST(req: NextRequest) {
       userId: user.id,
       householdId: user.householdId,
       rawInput,
-      source,
+      channel: "whatsapp",
+      inputType,
+      documentKind,
     });
 
     const draft = parsed.transactionDraft;

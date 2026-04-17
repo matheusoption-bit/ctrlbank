@@ -24,6 +24,7 @@ export default async function InboxPage() {
     select: {
       id: true,
       source: true,
+      inputType: true,
       createdAt: true,
       rawText: true,
       normalizedDraft: true,
