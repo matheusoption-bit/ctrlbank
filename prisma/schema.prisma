@@ -114,6 +114,8 @@ model HouseholdInvite {
   createdAt   DateTime @default(now())
 
   household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdBy User      @relation("InviteCreatedBy", fields: [createdById], references: [id])
+  usedBy    User?     @relation("InviteUsedBy", fields: [usedById], references: [id])
 
   @@index([householdId])
   @@index([token])
@@ -128,6 +130,7 @@ model MonthlyCheckView {
   viewedAt    DateTime @default(now())
 
   household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id])
 
   @@unique([householdId, month, userId])
   @@index([householdId])
@@ -160,6 +163,9 @@ model User {
   aiMessages        AiMessage[]
   financialPlans    FinancialPlan[]
   aiRecommendations AiRecommendation[]
+  invitesCreated    HouseholdInvite[]  @relation("InviteCreatedBy")
+  invitesUsed       HouseholdInvite[]  @relation("InviteUsedBy")
+  monthlyCheckViews MonthlyCheckView[]
 
   @@index([householdId])
 }

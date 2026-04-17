@@ -15,7 +15,6 @@ import {
   generateInviteLink, getMonthlySummary, markMonthlyCheckViewed,
 } from "@/app/actions/household";
 import { UserRole } from "@prisma/client";
-import { formatCurrency } from "@/lib/format";
 
 interface Member {
   id: string; name: string | null; email: string;
@@ -253,10 +252,11 @@ export default function FamiliaPageClient({ currentUser, members, household, inv
     }
   }
 
+  const fmtCurrency = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+
   function generateShareText(): string {
     if (!monthlySummary || !household) return "";
     const s = monthlySummary;
-    const fmtCurrency = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
     let text = `📊 Check do Mês — ${household.name}\n`;
     text += `📅 ${currentMonthLabel}\n\n`;
@@ -299,8 +299,6 @@ export default function FamiliaPageClient({ currentUser, members, household, inv
     navigator.clipboard.writeText(text);
     toast.success("Resumo copiado para a área de transferência!");
   }
-
-  const fmtCurrency = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
   return (
     <motion.div className="space-y-6" variants={container} initial="hidden" animate="show">
