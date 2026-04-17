@@ -1,19 +1,28 @@
-import { Activity } from "lucide-react";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { redirect } from "next/navigation";
+import { validateRequest } from "@/lib/auth";
+import { getHealthScore, getProjection, getConsolidatedBalance, getBurnRate } from "@/app/actions/health";
+import { getActiveRecommendations } from "@/app/actions/ai/recommendations";
+import SaudePageClient from "./SaudePageClient";
 
-export default function SaudePage() {
+export default async function SaudePage() {
+  const { user } = await validateRequest();
+  if (!user) redirect("/login");
+
+  const [healthScore, projection, balance, burnRate, recommendations] = await Promise.all([
+    getHealthScore(),
+    getProjection(),
+    getConsolidatedBalance(),
+    getBurnRate(),
+    getActiveRecommendations()
+  ]);
+
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-black tracking-tight">Saúde</h1>
-        <p className="text-secondary mt-1">Governança da saúde financeira familiar.</p>
-      </header>
-      
-      <EmptyState 
-        icon={Activity}
-        title="Diagnóstico em processamento"
-        description="Estamos analisando os dados da sua família para gerar o próximo diagnóstico de saúde."
-      />
-    </div>
+    <SaudePageClient
+      healthScore={healthScore}
+      projection={projection}
+      balance={balance}
+      burnRate={burnRate}
+      recommendations={recommendations}
+    />
   );
 }
