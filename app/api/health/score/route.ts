@@ -15,17 +15,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get householdId from query params or user's household
-    const { searchParams } = new URL(request.url);
-    let householdId = searchParams.get("householdId");
-
-    if (!householdId) {
-      const dbUser = await prisma.user.findUnique({
-        where: { id: user.id },
-        select: { householdId: true }
-      });
-      householdId = dbUser?.householdId || null;
-    }
+    // Always derive householdId from the authenticated user to prevent
+    // access to other households via query-string tampering.
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { householdId: true }
+    });
+    const householdId = dbUser?.householdId || null;
 
     if (!householdId) {
       return NextResponse.json(
