@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     template: "%s | CtrlBank — Saúde Financeira Familiar",
   },
   description: "O CtrlBank não registra gastos. Ele governa a saúde financeira da família.",
-  keywords: ["finanças", "controle financeiro", "família", "orçamento", "receitas", "despesas"],
+  keywords: ["saúde financeira", "governança familiar", "família", "planejamento", "receitas", "despesas"],
   authors: [{ name: "CtrlBank" }],
   creator: "CtrlBank",
   applicationName: "CtrlBank",

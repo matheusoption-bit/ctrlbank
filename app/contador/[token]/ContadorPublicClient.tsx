@@ -51,7 +51,7 @@ export default function ContadorPublicClient({ transactions, year }: { transacti
     
     doc.setFont("helvetica", "bold");
     doc.setFontSize(20);
-    doc.text("Relatório Contador", 20, 20);
+    doc.text("Diagnóstico do período", 20, 20);
     doc.setFontSize(12);
     doc.setFont("helvetica", "normal");
     doc.text(`Ano Calendário: ${year}`, 20, 30);
@@ -70,7 +70,7 @@ export default function ContadorPublicClient({ transactions, year }: { transacti
 
     let y = 100;
     doc.setFontSize(14);
-    doc.text("Extrato - Todas as Transações", 20, y);
+    doc.text("Extrato - Todos os Movimentos", 20, y);
     y += 10;
     
     doc.setFontSize(10);
@@ -127,7 +127,7 @@ export default function ContadorPublicClient({ transactions, year }: { transacti
     
     // Add sheets
     XLSX.utils.book_append_sheet(wb, wsDRE, "DRE Consolidadado");
-    XLSX.utils.book_append_sheet(wb, wsExtrato, "Extrato Anual");
+    XLSX.utils.book_append_sheet(wb, wsExtrato, "Movimentos Anuais");
 
     XLSX.writeFile(wb, `relatorio-contador-${year}.xlsx`);
   }

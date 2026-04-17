@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     const registry = new AIProviderRegistry();
 
-    const prompt = `Você é um assistente financeiro especializado em documentos brasileiros.
+    const prompt = `Você é um assistente de saúde financeira familiar especializado em documentos brasileiros.
 Analise esta imagem (pode ser comprovante PIX, nota fiscal, recibo, boleto, cupom fiscal ou qualquer documento de pagamento brasileiro).
 
 Extraia as informações e retorne APENAS um JSON válido, sem markdown, sem explicação, apenas o JSON:
@@ -35,7 +35,7 @@ Extraia as informações e retorne APENAS um JSON válido, sem markdown, sem exp
   "data": "<data no formato YYYY-MM-DD, se não encontrar use a data de hoje>",
   "estabelecimento": "<nome do estabelecimento, loja ou beneficiário>",
   "categoria": "<uma das opções: Alimentação, Transporte, Saúde, Lazer, Moradia, Educação, Vestuário, Serviços, Supermercado, Farmácia, Combustível, Outros>",
-  "descricao": "<descrição curta e objetiva da transação, máximo 60 caracteres>",
+  "descricao": "<descrição curta e objetiva do movimento, máximo 60 caracteres>",
   "tipo": "<EXPENSE ou INCOME>"
 }
 

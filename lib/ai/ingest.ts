@@ -12,8 +12,8 @@ import { formatCurrency } from "@/lib/format";
 const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
 const JSON_PROMPT_SINGLE = `
-Você é o AI Composer do CtrlBank, assistente financeiro premium inteligente.
-Analise a entrada e crie um rascunho de UMA única transação.
+Você é o AI Composer do CtrlBank, sistema de governança da saúde financeira familiar.
+Analise a entrada e crie um rascunho de UM único movimento financeiro.
 Extraia as informações e retorne APENAS um JSON válido.
 Formato:
 {
@@ -76,7 +76,7 @@ export async function processAiIngest(input: ProcessIngestInput): Promise<AIComp
   } else if (isChatMode) {
     finContext = await buildFinancialContext(input.userId, input.householdId);
     prompt = input.mode === "Planejar"
-      ? `Você é o CtrlBot, consultor financeiro premium do CtrlBank.
+      ? `Você é o CtrlBot, consultor de saúde financeira familiar do CtrlBank.
 Responda sempre em português, de forma objetiva, prática e acionável.
 Contexto financeiro (últimos 30 dias):
 ${finContext}
@@ -225,7 +225,7 @@ Responda à pergunta do usuário de forma clara. Se houver áudio, forneça um J
           if (parsed.plan) {
             return {
               intent: "saved_plan",
-              message: "Plano financeiro rascunhado para revisão.",
+              message: "Plano de saúde financeira rascunhado para revisão.",
               requiresReview: true,
               autoSaved: false,
               transactionDraft: parsed.plan, // reusing draft temporarily or returning raw plan block
@@ -278,7 +278,7 @@ Responda à pergunta do usuário de forma clara. Se houver áudio, forneça um J
     return {
       amount: parsed.amount ? Number(parsed.amount) : null,
       date: parsed.date ?? new Date().toISOString().split("T")[0],
-      description: parsed.description || "Transação Extraída",
+      description: parsed.description || "Movimento Extraído",
       transactionType: parsed.transactionType || "EXPENSE",
       categoryName: targetCategory.name,
       categoryId: targetCategory.id,
@@ -380,7 +380,7 @@ Responda à pergunta do usuário de forma clara. Se houver áudio, forneça um J
     });
     
     response.intent = "transaction_created";
-    response.message = "Transação registrada com sucesso.";
+    response.message = "Movimento registrado com sucesso.";
     response.requiresReview = false;
     response.autoSaved = true;
     response.createdTransactionId = tx.id;

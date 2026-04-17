@@ -28,7 +28,7 @@ export default async function PublicCounterPage({ params }: { params: Promise<{ 
       <div className="max-w-5xl mx-auto p-4 md:p-8">
         <header className="mb-8">
           <p className="section-label">Acesso Concedido por {res.householdName ?? "Família"}</p>
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight mt-1">{res.sessionLabel ?? "Relatório Financeiro"} – {res.year}</h1>
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight mt-1">{res.sessionLabel ?? "Diagnóstico do período"} – {res.year}</h1>
           <p className="text-sm text-secondary mt-2">
             Este relatório contém todas as movimentações consolidadas do ano-calendário {res.year}, organizadas para fechamento e declaração.
           </p>
