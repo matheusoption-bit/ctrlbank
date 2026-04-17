@@ -43,8 +43,10 @@ export async function extractTextFromImageWithOcr(imageBase64: string, mimeType 
 }
 
 export async function extractTextFromPdf(buffer: Buffer) {
-  const { default: pdfParse } = await import("pdf-parse");
-  const parsed = await pdfParse(buffer);
+  const { PDFParse } = await import("pdf-parse");
+  const parser = new PDFParse({ data: buffer });
+  const parsed = await parser.getText();
+  await parser.destroy();
   const text = parsed.text?.trim();
 
   if (!text) {
