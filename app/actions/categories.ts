@@ -23,11 +23,15 @@ async function getAuthContext() {
 
   const fullUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { id: true, householdId: true },
+    select: { id: true, householdId: true, role: true },
   });
   if (!fullUser) throw new Error("Usuário não encontrado");
 
   return fullUser;
+}
+
+function requireWriteRole(role: string) {
+  if (role === "VIEWER") throw new Error("Permissão negada: somente leitura");
 }
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
@@ -49,6 +53,7 @@ export async function getCategories(type?: TransactionType) {
 
 export async function createCategory(formData: unknown) {
   const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
   const parsed = CategorySchema.safeParse(formData);
 
   if (!parsed.success) {
@@ -73,6 +78,7 @@ export async function createCategory(formData: unknown) {
 
 export async function updateCategory(id: string, formData: unknown) {
   const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
   const parsed = CategorySchema.safeParse(formData);
 
   if (!parsed.success) {
@@ -103,6 +109,7 @@ export async function updateCategory(id: string, formData: unknown) {
 
 export async function deleteCategory(id: string) {
   const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
 
   const existing = await prisma.category.findFirst({
     where: {

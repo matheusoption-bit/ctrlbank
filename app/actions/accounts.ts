@@ -33,11 +33,15 @@ async function getAuthContext() {
 
   const fullUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { id: true, householdId: true },
+    select: { id: true, householdId: true, role: true },
   });
   if (!fullUser) throw new Error("Usuário não encontrado");
 
   return fullUser;
+}
+
+function requireWriteRole(role: string) {
+  if (role === "VIEWER") throw new Error("Permissão negada: somente leitura");
 }
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
@@ -62,6 +66,7 @@ export async function getAccounts() {
  */
 export async function createAccount(formData: unknown) {
   const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
   const parsed = CreateAccountSchema.safeParse(formData);
 
   if (!parsed.success) {
@@ -133,6 +138,7 @@ export async function createAccount(formData: unknown) {
  */
 export async function updateAccount(formData: unknown) {
   const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
   const parsed = UpdateAccountSchema.safeParse(formData);
 
   if (!parsed.success) {
@@ -215,6 +221,7 @@ export async function updateAccount(formData: unknown) {
  */
 export async function deleteAccount(id: string) {
   const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
 
   const existing = await prisma.bankAccount.findFirst({
     where: {
