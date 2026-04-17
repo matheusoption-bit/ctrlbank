@@ -168,8 +168,9 @@ function parsePrismaMigrateStatusOutput(output) {
   }
 
   if (
-    /Following migration(?:\(s\))? (?:has|have) not yet been applied/i.test(output) ||
-    /Following migrations (?:has|have) not yet been applied/i.test(output)
+    /Following migration(?:s|\(s\))? (?:has|have) not yet been applied/i.test(
+      output
+    )
   ) {
     return true;
   }
