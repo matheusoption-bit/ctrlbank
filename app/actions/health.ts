@@ -3,6 +3,7 @@
 import { validateRequest } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth, subDays, subMonths } from "date-fns";
+import { calculateHealthScore, calculateProjection } from "@/lib/finance/health";
 
 export async function getHealthScore() {
   const { user } = await validateRequest();
@@ -18,17 +19,7 @@ export async function getHealthScore() {
     return null;
   }
 
-  // Make internal API call
-  const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/health/score?householdId=${householdId}`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' }
-  });
-
-  if (!response.ok) {
-    return null;
-  }
-
-  return response.json();
+  return calculateHealthScore(householdId);
 }
 
 export async function getProjection() {
@@ -45,16 +36,7 @@ export async function getProjection() {
     return null;
   }
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/health/projection?householdId=${householdId}`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' }
-  });
-
-  if (!response.ok) {
-    return null;
-  }
-
-  return response.json();
+  return calculateProjection(householdId);
 }
 
 export async function getConsolidatedBalance() {
