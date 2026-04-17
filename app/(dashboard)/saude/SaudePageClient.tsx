@@ -42,7 +42,7 @@ interface Recommendation {
   type: string;
   message: string;
   score: number;
-  createdAt: string;
+  createdAt: Date;
 }
 
 interface SaudePageClientProps {
