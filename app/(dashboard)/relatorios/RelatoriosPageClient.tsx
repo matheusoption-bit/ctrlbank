@@ -403,10 +403,10 @@ export default function RelatoriosPageClient({ evolution, transactions, categori
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={evolution} margin={{ top: 5, right: 5, left: -28, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
-                  <XAxis dataKey="month" stroke="transparent" tick={ fontSize: 11, fill: "#71717a" } axisLine={false} tickLine={false} />
-                  <YAxis stroke="transparent" tick={ fontSize: 10, fill: "#71717a" } axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                  <XAxis dataKey="month" stroke="transparent" tick={{ fontSize: 11, fill: "#71717a" }} axisLine={false} tickLine={false} />
+                  <YAxis stroke="transparent" tick={{ fontSize: 10, fill: "#71717a" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                   <Tooltip
-                    contentStyle={ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12, color: "#fafafa" }
+                    contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12, color: "#fafafa" }}
                     formatter={(v: number, name: string) => [formatCurrency(v), name === "income" ? "Receita" : "Despesa"]}
                     labelStyle={{ color: "#fff", fontWeight: 700 }}
                   />
@@ -445,7 +445,7 @@ export default function RelatoriosPageClient({ evolution, transactions, categori
                       ))}
                     </Pie>
                     <Tooltip
-                      contentStyle={ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12, color: "#fafafa" }
+                      contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12, color: "#fafafa" }}
                       formatter={(v: number) => [formatCurrency(v), "Gasto"]}
                     />
                     <Legend
