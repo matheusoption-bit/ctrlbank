@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
     locale: "pt_BR",
   },
   robots: {
-    index: false, // app privado
+    index: false,
     follow: false,
   },
 };
@@ -45,7 +46,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#0A0A0A",
+  themeColor: "#0f0f0f",
   viewportFit: "cover",
 };
 
@@ -55,26 +56,29 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`dark scroll-smooth ${inter.variable}`}
+      className={`dark scroll-smooth ${inter.variable} ${GeistSans.variable}`}
       suppressHydrationWarning
     >
-      <body className="bg-background text-foreground antialiased overflow-x-hidden min-h-dvh" suppressHydrationWarning>
+      <body
+        className="bg-background text-foreground antialiased overflow-x-hidden min-h-dvh"
+        suppressHydrationWarning
+      >
         {children}
         <Toaster
           position="top-center"
           toastOptions={{
             style: {
-              background: "#1C1C1E",
-              border: "1px solid #3A3A3C",
-              color: "#FFFFFF",
-              borderRadius: "16px",
+              background: "#1a1a1a",
+              border: "1px solid rgba(255,255,255,0.08)",
+              color: "#fafafa",
+              borderRadius: "12px",
               fontSize: "14px",
               fontWeight: "500",
             },
             classNames: {
-              success: "!border-positive/30",
-              error: "!border-negative/30",
-              warning: "!border-warning/30",
+              success: "!border-accent-primary/30",
+              error:   "!border-accent-danger/30",
+              warning: "!border-accent-warning/30",
             },
           }}
         />

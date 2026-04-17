@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { type LucideIcon } from "lucide-react";
 import { motion } from "framer-motion";
@@ -15,29 +17,32 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon: Icon, title, description, action }: EmptyStateProps) {
   return (
-    <div className="card-c6 text-center py-14 space-y-4 w-full">
-      <motion.div 
-        initial={{ scale: 0.8, opacity: 0 }} 
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col items-center justify-center py-20 px-6 text-center bg-[#242424] border border-white/[0.08] rounded-[12px] w-full"
+    >
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="w-14 h-14 rounded-2xl bg-surface-2 flex items-center justify-center mx-auto border border-border"
+        transition={{ delay: 0.05 }}
+        className="w-14 h-14 rounded-[12px] bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-5"
       >
-        <Icon size={22} className="text-secondary" />
+        <Icon size={24} style={{ color: "#71717a" }} />
       </motion.div>
-      <div className="space-y-1">
-        <h3 className="font-bold text-white text-base">{title}</h3>
-        <p className="text-secondary text-sm max-w-sm mx-auto leading-relaxed">{description}</p>
-      </div>
+      <h3 className="text-base font-bold text-[#fafafa] mb-2">{title}</h3>
+      <p className="text-sm text-[#71717a] max-w-xs leading-relaxed">{description}</p>
       {action && (
-        <motion.button 
+        <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={action.onClick} 
-          className="btn-primary px-5 mx-auto w-fit text-sm mt-2"
+          onClick={action.onClick}
+          className="mt-6 flex items-center gap-2 px-5 py-2.5 rounded-[8px] bg-[#22c55e] text-black text-sm font-semibold hover:bg-[#16a34a] transition-colors"
         >
           {action.icon && <action.icon size={15} />}
           {action.label}
         </motion.button>
       )}
-    </div>
+    </motion.div>
   );
 }

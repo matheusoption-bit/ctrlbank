@@ -6,19 +6,20 @@
    CSS Custom Properties – Design System C6 Bank
    ───────────────────────────────────────────── */
 :root {
-  --background: #0A0A0A;
-  --foreground: #FFFFFF;
+  /* ── Design System Enterprise 6.1 ── */
+  --background: #0f0f0f;
+  --foreground: #fafafa;
   --primary: #FF2D55;
   --primary-rgb: 255, 45, 85;
-  --surface: #1C1C1E;
-  --surface-2: #2C2C2E;
-  --secondary: #8E8E93;
-  --border: #3A3A3C;
-  --positive: #34C759;
-  --positive-rgb: 52, 199, 89;
-  --negative: #FF3B30;
-  --negative-rgb: 255, 59, 48;
-  --warning: #FF9500;
+  --surface: #1a1a1a;
+  --surface-2: #242424;
+  --secondary: #71717a;
+  --border: rgba(255,255,255,0.08);
+  --positive: #22c55e;
+  --positive-rgb: 34, 197, 94;
+  --negative: #ef4444;
+  --negative-rgb: 239, 68, 68;
+  --warning: #f59e0b;
   --info: #0A84FF;
 
   /* Spacing */

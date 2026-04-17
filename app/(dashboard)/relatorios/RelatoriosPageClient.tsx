@@ -89,7 +89,9 @@ function DRETable({ transactions }: {
           <span className="font-black tabular-nums text-positive">{formatCurrency(totalIncome)}</span>
         </div>
         {incomeByCategory.length === 0 ? (
-          <p className="text-xs text-secondary text-center py-3">Nenhuma receita no mês</p>
+          <div className="flex flex-col items-center justify-center py-8 px-4 text-center bg-white/[0.02] rounded-[8px] border border-white/[0.06]">
+            <p className="text-xs text-[#71717a]">Nenhuma receita registrada no mês</p>
+          </div>
         ) : (
           <div className="space-y-1.5">
             {incomeByCategory.map((c) => (
@@ -115,7 +117,9 @@ function DRETable({ transactions }: {
           <span className="font-black tabular-nums text-negative">{formatCurrency(totalExpense)}</span>
         </div>
         {expenseByCategory.length === 0 ? (
-          <p className="text-xs text-secondary text-center py-3">Nenhuma despesa no mês</p>
+          <div className="flex flex-col items-center justify-center py-8 px-4 text-center bg-white/[0.02] rounded-[8px] border border-white/[0.06]">
+            <p className="text-xs text-[#71717a]">Nenhuma despesa registrada no mês</p>
+          </div>
         ) : (
           <div className="space-y-1.5">
             {expenseByCategory.map((c) => (
@@ -398,16 +402,16 @@ export default function RelatoriosPageClient({ evolution, transactions, categori
             <div className="h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={evolution} margin={{ top: 5, right: 5, left: -28, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3C" vertical={false} />
-                  <XAxis dataKey="month" stroke="#8E8E93" tick={{ fontSize: 11, fontWeight: 600 }} />
-                  <YAxis stroke="#8E8E93" tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
+                  <XAxis dataKey="month" stroke="transparent" tick={ fontSize: 11, fill: "#71717a" } axisLine={false} tickLine={false} />
+                  <YAxis stroke="transparent" tick={ fontSize: 10, fill: "#71717a" } axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: "#1C1C1E", border: "1px solid #3A3A3C", borderRadius: 12, fontSize: 12 }}
+                    contentStyle={ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12, color: "#fafafa" }
                     formatter={(v: number, name: string) => [formatCurrency(v), name === "income" ? "Receita" : "Despesa"]}
                     labelStyle={{ color: "#fff", fontWeight: 700 }}
                   />
-                  <Bar dataKey="income"  fill="#34C759" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="expense" fill="#FF3B30" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="income" isAnimationActive={false} fill="#22c55e" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="expense" isAnimationActive={false} fill="#ef4444" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -441,7 +445,7 @@ export default function RelatoriosPageClient({ evolution, transactions, categori
                       ))}
                     </Pie>
                     <Tooltip
-                      contentStyle={{ backgroundColor: "#1C1C1E", border: "1px solid #3A3A3C", borderRadius: 12, fontSize: 12 }}
+                      contentStyle={ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12, color: "#fafafa" }
                       formatter={(v: number) => [formatCurrency(v), "Gasto"]}
                     />
                     <Legend

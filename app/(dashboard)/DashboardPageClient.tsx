@@ -352,11 +352,11 @@ export default function DashboardPageClient({ user, summary, evolution, forecast
                     <stop offset="95%" stopColor="#0A84FF" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3C" vertical={false} />
-                <XAxis dataKey="day" stroke="#8E8E93" tick={{ fontSize: 11, fontWeight: 600 }} />
-                <YAxis stroke="#8E8E93" tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
+                <XAxis dataKey="day" stroke="transparent" tick={ fontSize: 11, fill: "#71717a" } axisLine={false} tickLine={false} />
+                <YAxis stroke="transparent" tick={ fontSize: 10, fill: "#71717a" } axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: "#1C1C1E", border: "1px solid #3A3A3C", borderRadius: 12, fontSize: 12 }}
+                  contentStyle={ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12, color: "#fafafa" }
                   formatter={(v: number, name: string) => [formatCurrency(v), name === "actual" ? "Realizado" : "Previsto"]}
                   labelStyle={{ color: "#fff", fontWeight: 700 }}
                 />
@@ -385,24 +385,24 @@ export default function DashboardPageClient({ user, summary, evolution, forecast
               <AreaChart data={evolution} margin={{ top: 5, right: 5, left: -28, bottom: 0 }}>
                 <defs>
                   <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#34C759" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#34C759" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#FF3B30" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#FF3B30" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3C" vertical={false} />
-                <XAxis dataKey="month" stroke="#8E8E93" tick={{ fontSize: 11, fontWeight: 600 }} />
-                <YAxis stroke="#8E8E93" tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
+                <XAxis dataKey="month" stroke="transparent" tick={ fontSize: 11, fill: "#71717a" } axisLine={false} tickLine={false} />
+                <YAxis stroke="transparent" tick={ fontSize: 10, fill: "#71717a" } axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: "#1C1C1E", border: "1px solid #3A3A3C", borderRadius: 12, fontSize: 12 }}
+                  contentStyle={ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12, color: "#fafafa" }
                   formatter={(v: number, name: string) => [formatCurrency(v), name === "income" ? "Receitas" : "Despesas"]}
                   labelStyle={{ color: "#fff", fontWeight: 700 }}
                 />
-                <Area type="monotone" dataKey="income" stroke="#34C759" strokeWidth={2} fill="url(#incomeGrad)" dot={{ r: 3, fill: "#34C759" }} />
-                <Area type="monotone" dataKey="expense" stroke="#FF3B30" strokeWidth={2} fill="url(#expenseGrad)" dot={{ r: 3, fill: "#FF3B30" }} />
+                <Area type="monotone" dataKey="income" animationDuration={400} stroke="#22c55e" strokeWidth={2} fill="url(#incomeGrad)" dot={{ r: 3, fill: "#34C759" }} />
+                <Area type="monotone" dataKey="expense" animationDuration={400} stroke="#ef4444" strokeWidth={2} fill="url(#expenseGrad)" dot={{ r: 3, fill: "#FF3B30" }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -419,20 +419,20 @@ export default function DashboardPageClient({ user, summary, evolution, forecast
           <div className="card-c6 p-4 h-[180px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={categoryBreakdown} margin={{ top: 5, right: 5, left: -28, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3C" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
                 <XAxis
                   dataKey="category.name"
                   stroke="#8E8E93"
                   tick={{ fontSize: 10 }}
                   tickFormatter={(v) => v?.slice(0, 6) ?? "Outros"}
                 />
-                <YAxis stroke="#8E8E93" tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <YAxis stroke="transparent" tick={ fontSize: 10, fill: "#71717a" } axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: "#1C1C1E", border: "1px solid #3A3A3C", borderRadius: 12, fontSize: 12 }}
+                  contentStyle={ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12, color: "#fafafa" }
                   formatter={(v: number) => [formatCurrency(v), "Gasto"]}
                   labelStyle={{ color: "#fff", fontWeight: 700 }}
                 />
-                <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
+                <Bar dataKey="amount" radius={[6, 6, 0, 0]} isAnimationActive={false}>
                   {categoryBreakdown.map((entry, i) => (
                     <Cell key={i} fill={entry.category?.color ?? "#FF2D55"} fillOpacity={0.85} />
                   ))}

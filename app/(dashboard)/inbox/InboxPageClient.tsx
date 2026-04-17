@@ -137,8 +137,14 @@ export default function InboxPageClient({ events }: Props) {
           })}
         </div>
       ) : (
-        <div className="rounded-2xl border border-border bg-surface p-5 text-secondary">
-          Nenhum evento na Inbox ainda.
+        <div className="flex flex-col items-center justify-center py-16 px-6 text-center bg-[#242424] border border-white/[0.08] rounded-[12px]">
+          <div className="w-12 h-12 rounded-[10px] bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.5 12 19.79 19.79 0 0 1 1.15 3.18 2 2 0 0 1 3.12 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.13 6.13l1.32-1.36a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </div>
+          <h2 className="text-base font-bold text-[#fafafa] mb-1">Inbox vazio</h2>
+          <p className="text-sm text-[#71717a] max-w-xs leading-relaxed">
+            Nenhum evento pendente. As notificações e lembretes financeiros aparecerão aqui.
+          </p>
         </div>
       )}
     </div>

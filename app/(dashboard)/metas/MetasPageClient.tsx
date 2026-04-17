@@ -328,16 +328,21 @@ export default function MetasPageClient({ goals, hasHouseholdId }: { goals: Goal
 
       {/* Lista de Metas */}
       {goals.length === 0 ? (
-        <motion.div variants={item} className="card-c6 text-center py-16 space-y-4">
-          <div className="w-14 h-14 rounded-2xl bg-surface-2 flex items-center justify-center mx-auto text-primary">
-            <Target size={24} />
+        <motion.div variants={item} className="flex flex-col items-center justify-center py-20 px-6 text-center bg-[#242424] border border-white/[0.08] rounded-[12px]">
+          <div className="w-14 h-14 rounded-[12px] bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-5">
+            <Target size={24} style={{ color: "#71717a" }} />
           </div>
-          <div>
-            <h3 className="font-bold text-lg">Nenhuma meta ainda</h3>
-            <p className="text-secondary text-sm mt-1 max-w-[250px] mx-auto">Defina objetivos financeiros para a família e acompanhe o progresso.</p>
-          </div>
-          <button onClick={() => setShowModal(true)} disabled={!hasHouseholdId} className="btn-primary px-6 mx-auto w-fit text-sm disabled:opacity-50">
-             Criar primeira meta
+          <h2 className="text-base font-bold text-[#fafafa] mb-2">Nenhuma meta ainda</h2>
+          <p className="text-sm text-[#71717a] max-w-xs leading-relaxed mb-6">
+            Defina objetivos financeiros para a família e acompanhe o progresso em tempo real.
+          </p>
+          <button
+            onClick={() => setShowModal(true)}
+            disabled={!hasHouseholdId}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-[8px] bg-[#22c55e] text-black text-sm font-semibold hover:bg-[#16a34a] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Target size={15} />
+            Criar primeira meta
           </button>
         </motion.div>
       ) : (

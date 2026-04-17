@@ -1,22 +1,16 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Activity, TrendingUp, TrendingDown, AlertTriangle, Target, X } from "lucide-react";
-import { dismissRecommendation } from "@/app/actions/health";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { TrendingUp, TrendingDown, AlertTriangle, Target, X } from "lucide-react";
+import { dismissRecommendation } from "@/app/actions/health";
+import { MoneyDisplay } from "@/components/ui/MoneyDisplay";
 
 interface HealthScoreData {
   score: number;
   classification: "Saudável" | "Atenção" | "Risco";
-  breakdown: {
-    spending: number;
-    growth: number;
-    commitments: number;
-    goals: number;
-  };
+  breakdown: { spending: number; growth: number; commitments: number; goals: number };
 }
-
 interface ProjectionData {
   currentBalance: number;
   projectedBalance30d: number;
@@ -24,34 +18,10 @@ interface ProjectionData {
   message: string;
   projectionPoints: Array<{ day: number; balance: number }>;
 }
-
-interface BalanceData {
-  current: number;
-  lastMonth: number;
-  change: number;
-}
-
-interface BurnRateData {
-  last30Days: number;
-  previous30Days: number;
-  changePercent: number;
-}
-
-interface Recommendation {
-  id: string;
-  type: string;
-  message: string;
-  score: number;
-  createdAt: Date;
-}
-
-interface MemberContribution {
-  id: string;
-  name: string;
-  amount: number;
-  percent: number;
-}
-
+interface BalanceData { current: number; lastMonth: number; change: number }
+interface BurnRateData { last30Days: number; previous30Days: number; changePercent: number }
+interface Recommendation { id: string; type: string; message: string; score: number; createdAt: Date }
+interface MemberContribution { id: string; name: string; amount: number; percent: number }
 interface SaudePageClientProps {
   healthScore: HealthScoreData | null;
   projection: ProjectionData | null;
@@ -62,14 +32,107 @@ interface SaudePageClientProps {
   userRole: string;
 }
 
+function getScoreAccent(c: string) {
+  if (c === "Saudável") return { ring: "#22c55e", badge: "bg-[#22c55e]/10 text-[#22c55e]" };
+  if (c === "Atenção")  return { ring: "#f59e0b", badge: "bg-[#f59e0b]/10 text-[#f59e0b]" };
+  if (c === "Risco")    return { ring: "#ef4444", badge: "bg-[#ef4444]/10 text-[#ef4444]" };
+  return { ring: "#71717a", badge: "bg-[#71717a]/10 text-[#71717a]" };
+}
+
+function HealthScoreRing({ score, classification }: { score: number; classification: string }) {
+  const { ring } = getScoreAccent(classification);
+  const radius = 80, strokeW = 8;
+  const nr = radius - strokeW / 2;
+  const circ = 2 * Math.PI * nr;
+  const targetOffset = circ - (score / 100) * circ;
+  const [offset, setOffset] = useState(circ);
+  const rafRef = useRef<number | null>(null);
+  const startRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    startRef.current = null;
+    const animate = (ts: number) => {
+      if (!startRef.current) startRef.current = ts;
+      const p = Math.min((ts - startRef.current) / 800, 1);
+      const e = 1 - Math.pow(1 - p, 3);
+      setOffset(circ - e * (circ - targetOffset));
+      if (p < 1) rafRef.current = requestAnimationFrame(animate);
+    };
+    rafRef.current = requestAnimationFrame(animate);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [score]);
+
+  return (
+    <svg width={radius * 2} height={radius * 2} className="rotate-[-90deg]">
+      <circle cx={radius} cy={radius} r={nr} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeW} />
+      <circle cx={radius} cy={radius} r={nr} fill="none" stroke={ring} strokeWidth={strokeW}
+        strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function MiniBar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
+  const pct = Math.min((value / max) * 100, 100);
+  return (
+    <div className="space-y-1">
+      <div className="flex justify-between items-center">
+        <span className="text-[11px] text-[#71717a]">{label}</span>
+        <span className="text-[11px] font-semibold tabular-nums text-[#fafafa]">
+          {value.toFixed(value % 1 === 0 ? 0 : 1)}/{max}
+        </span>
+      </div>
+      <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+        <div className="h-full rounded-full transition-all duration-700 ease-out"
+          style={{ width: `${pct}%`, backgroundColor: color }} />
+      </div>
+    </div>
+  );
+}
+
+function ECard({ children, className = "", span }: {
+  children: React.ReactNode; className?: string; span?: string;
+}) {
+  return (
+    <div className={[
+      "bg-[#242424] border border-white/[0.08] rounded-[12px] px-6 py-5 shadow-sm",
+      span ?? "", className,
+    ].join(" ")}>
+      {children}
+    </div>
+  );
+}
+
+function CardLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#71717a] mb-3">
+      {children}
+    </p>
+  );
+}
+
+function ProjectionChart({ points }: { points: Array<{ day: number; balance: number }> }) {
+  if (!points.length) return null;
+  const max = Math.max(...points.map(p => p.balance));
+  const min = Math.min(...points.map(p => p.balance));
+  const range = max - min || 1;
+  return (
+    <div className="flex items-end gap-[2px] h-12 mt-3">
+      {points.map((p, i) => {
+        const h = Math.max(((p.balance - min) / range) * 100, 4);
+        return (
+          <div key={i} className="flex-1 rounded-t"
+            style={{ height: `${h}%`,
+              backgroundColor: p.balance >= 0 ? "#22c55e" : "#ef4444", opacity: 0.65 }} />
+        );
+      })}
+    </div>
+  );
+}
+
 export default function SaudePageClient({
-  healthScore,
-  projection,
-  balance,
-  burnRate,
-  recommendations: initialRecommendations,
-  memberContributions,
-  userRole,
+  healthScore, projection, balance, burnRate,
+  recommendations: initialRecommendations, memberContributions, userRole,
 }: SaudePageClientProps) {
   const [recommendations, setRecommendations] = useState(initialRecommendations);
 
@@ -78,283 +141,148 @@ export default function SaudePageClient({
       await dismissRecommendation(id);
       setRecommendations(recommendations.filter(r => r.id !== id));
       toast.success("Alerta dispensado");
-    } catch (error) {
-      toast.error("Erro ao dispensar alerta");
-    }
+    } catch { toast.error("Erro ao dispensar alerta"); }
   };
 
-  const getClassificationColor = (classification: string) => {
-    switch (classification) {
-      case "Saudável":
-        return "text-green-600 bg-green-50";
-      case "Atenção":
-        return "text-yellow-600 bg-yellow-50";
-      case "Risco":
-        return "text-red-600 bg-red-50";
-      default:
-        return "text-gray-600 bg-gray-50";
-    }
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
+  const scoreAccent = healthScore ? getScoreAccent(healthScore.classification) : null;
 
   return (
     <div className="space-y-6">
       <header>
         <h1 className="text-3xl font-black tracking-tight">Saúde Financeira</h1>
-        <p className="text-secondary mt-1">Diagnóstico completo da saúde financeira familiar.</p>
+        <p className="text-[#71717a] mt-1 text-sm">Diagnóstico completo da saúde financeira familiar.</p>
       </header>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* BLOCK 1: Health Score */}
-        {healthScore && (
-          <Card className="md:col-span-2 lg:col-span-3">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                Score de Saúde Financeira
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-8">
-                <div className="flex flex-col items-center">
-                  <div className="text-6xl font-black mb-2">{healthScore.score}</div>
-                  <div className={`px-4 py-2 rounded-full text-sm font-semibold ${getClassificationColor(healthScore.classification)}`}>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+
+        {healthScore && scoreAccent && (
+          <ECard span="md:col-span-2 lg:col-span-3">
+            <CardLabel>Score de Saúde Financeira</CardLabel>
+            <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
+              <div className="relative flex-shrink-0 flex items-center justify-center" style={{ width: 160, height: 160 }}>
+                <HealthScoreRing score={healthScore.score} classification={healthScore.classification} />
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="font-black leading-none" style={{
+                    fontSize: "72px",
+                    fontFeatureSettings: '"tnum"',
+                    color: scoreAccent.ring,
+                    fontFamily: "var(--font-geist-sans), var(--font-inter), sans-serif",
+                  }}>
+                    {healthScore.score}
+                  </span>
+                  <span className={`mt-1.5 text-xs font-semibold px-3 py-1 rounded-full ${scoreAccent.badge}`}>
                     {healthScore.classification}
-                  </div>
-                </div>
-
-                <div className="flex-1 space-y-4">
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Controle de gastos</span>
-                      <span className="font-semibold">{healthScore.breakdown.spending}/40</span>
-                    </div>
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-blue-500 transition-all"
-                        style={{ width: `${(healthScore.breakdown.spending / 40) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Crescimento de saldo</span>
-                      <span className="font-semibold">{healthScore.breakdown.growth}/30</span>
-                    </div>
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-green-500 transition-all"
-                        style={{ width: `${(healthScore.breakdown.growth / 30) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Compromissos fixos</span>
-                      <span className="font-semibold">{healthScore.breakdown.commitments}/20</span>
-                    </div>
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-purple-500 transition-all"
-                        style={{ width: `${(healthScore.breakdown.commitments / 20) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Progresso em metas</span>
-                      <span className="font-semibold">{healthScore.breakdown.goals.toFixed(1)}/10</span>
-                    </div>
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-orange-500 transition-all"
-                        style={{ width: `${(healthScore.breakdown.goals / 10) * 100}%` }}
-                      />
-                    </div>
-                  </div>
+                  </span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+              <div className="flex-1 w-full space-y-3">
+                <MiniBar label="Controle de gastos" value={healthScore.breakdown.spending} max={40} color="#22c55e" />
+                <MiniBar label="Crescimento de saldo" value={healthScore.breakdown.growth} max={30} color="#22c55e" />
+                <MiniBar label="Compromissos fixos" value={healthScore.breakdown.commitments} max={20} color="#f59e0b" />
+                <MiniBar label="Progresso em metas" value={healthScore.breakdown.goals} max={10} color="#f59e0b" />
+              </div>
+            </div>
+          </ECard>
         )}
 
-        {/* BLOCK 2: Consolidated Balance */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Saldo Consolidado</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold mb-2">{formatCurrency(balance.current)}</div>
-            <div className="flex items-center gap-2 text-sm">
-              {balance.change >= 0 ? (
-                <>
-                  <TrendingUp className="h-4 w-4 text-green-600" />
-                  <span className="text-green-600">+{formatCurrency(balance.change)}</span>
-                </>
-              ) : (
-                <>
-                  <TrendingDown className="h-4 w-4 text-red-600" />
-                  <span className="text-red-600">{formatCurrency(balance.change)}</span>
-                </>
-              )}
-              <span className="text-muted-foreground">vs. mês anterior</span>
-            </div>
-          </CardContent>
-        </Card>
+        <ECard>
+          <CardLabel>Saldo Consolidado</CardLabel>
+          <MoneyDisplay amount={balance.current} size="lg" />
+          <div className="flex items-center gap-1.5 mt-3 text-xs">
+            {balance.change >= 0 ? (
+              <><TrendingUp size={12} style={{ color: "#22c55e" }} />
+              <MoneyDisplay amount={balance.change} size="sm" delta className="text-[#22c55e]" /></>
+            ) : (
+              <><TrendingDown size={12} style={{ color: "#ef4444" }} />
+              <MoneyDisplay amount={balance.change} size="sm" delta className="text-[#ef4444]" /></>
+            )}
+            <span className="text-[#71717a]">vs. mês anterior</span>
+          </div>
+        </ECard>
 
-        {/* BLOCK 3: Burn Rate */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Burn Rate</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold mb-2">{formatCurrency(burnRate.last30Days)}</div>
-            <div className="text-sm text-muted-foreground mb-2">Últimos 30 dias</div>
-            <div className="flex items-center gap-2 text-sm">
-              {burnRate.changePercent > 0 ? (
-                <>
-                  <TrendingUp className="h-4 w-4 text-red-600" />
-                  <span className="text-red-600">+{burnRate.changePercent.toFixed(1)}%</span>
-                </>
-              ) : burnRate.changePercent < 0 ? (
-                <>
-                  <TrendingDown className="h-4 w-4 text-green-600" />
-                  <span className="text-green-600">{burnRate.changePercent.toFixed(1)}%</span>
-                </>
-              ) : (
-                <span className="text-muted-foreground">Sem variação</span>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <ECard>
+          <CardLabel>Burn Rate</CardLabel>
+          <MoneyDisplay amount={burnRate.last30Days} size="lg" />
+          <p className="text-[#71717a] text-xs mt-1 mb-3">Últimos 30 dias</p>
+          <div className="flex items-center gap-1.5 text-xs">
+            {burnRate.changePercent > 0 ? (
+              <><TrendingUp size={12} style={{ color: "#ef4444" }} />
+              <span className="font-semibold" style={{ color: "#ef4444" }}>+{burnRate.changePercent.toFixed(1)}%</span></>
+            ) : burnRate.changePercent < 0 ? (
+              <><TrendingDown size={12} style={{ color: "#22c55e" }} />
+              <span className="font-semibold" style={{ color: "#22c55e" }}>{burnRate.changePercent.toFixed(1)}%</span></>
+            ) : (
+              <span className="text-[#71717a]">Sem variação</span>
+            )}
+          </div>
+        </ECard>
 
-        {/* BLOCK 4: Cash Flow Projection */}
         {projection && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Projeção de Caixa</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold mb-2">{formatCurrency(projection.projectedBalance30d)}</div>
-              <div className="text-sm text-muted-foreground mb-4">Em 30 dias</div>
-              <p className="text-sm mb-4">{projection.message}</p>
-
-              {/* Mini projection chart */}
-              <div className="flex items-end gap-1 h-16">
-                {projection.projectionPoints.map((point, idx) => {
-                  const maxBalance = Math.max(...projection.projectionPoints.map(p => p.balance));
-                  const minBalance = Math.min(...projection.projectionPoints.map(p => p.balance));
-                  const range = maxBalance - minBalance || 1;
-                  const height = ((point.balance - minBalance) / range) * 100;
-
-                  return (
-                    <div
-                      key={idx}
-                      className="flex-1 bg-blue-500 rounded-t"
-                      style={{ height: `${Math.max(height, 5)}%` }}
-                      title={`Dia ${point.day}: ${formatCurrency(point.balance)}`}
-                    />
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+          <ECard>
+            <CardLabel>Projeção de Caixa</CardLabel>
+            <MoneyDisplay amount={projection.projectedBalance30d} size="lg" semantic />
+            <p className="text-[#71717a] text-xs mt-1 mb-2">Em 30 dias</p>
+            <p className="text-xs text-white/60 leading-relaxed">{projection.message}</p>
+            <ProjectionChart points={projection.projectionPoints} />
+          </ECard>
         )}
 
-        {/* BLOCK 5: Active Alerts */}
         {recommendations.length > 0 && (
-          <Card className="md:col-span-2 lg:col-span-3">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5" />
-                Alertas Ativos
-              </CardTitle>
-              <CardDescription>
-                {recommendations.length} {recommendations.length === 1 ? 'recomendação ativa' : 'recomendações ativas'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {recommendations.map((rec) => (
-                  <div
-                    key={rec.id}
-                    className="flex items-start gap-3 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                  >
-                    <div className="mt-1">
-                      {rec.type === "ALERT" && <AlertTriangle className="h-5 w-5 text-red-500" />}
-                      {rec.type === "WARNING" && <AlertTriangle className="h-5 w-5 text-yellow-500" />}
-                      {rec.type === "SUGGESTION" && <Target className="h-5 w-5 text-blue-500" />}
+          <ECard span="md:col-span-2 lg:col-span-3">
+            <CardLabel>
+              Alertas Ativos · {recommendations.length}{" "}
+              {recommendations.length === 1 ? "recomendação" : "recomendações"}
+            </CardLabel>
+            <div className="space-y-2">
+              {recommendations.map((rec) => (
+                <div key={rec.id} className="flex items-start gap-3 p-3 rounded-[8px] border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
+                  <div className="mt-0.5 flex-shrink-0">
+                    {rec.type === "ALERT" && <AlertTriangle size={14} style={{ color: "#ef4444" }} />}
+                    {rec.type === "WARNING" && <AlertTriangle size={14} style={{ color: "#f59e0b" }} />}
+                    {rec.type === "SUGGESTION" && <Target size={14} style={{ color: "#71717a" }} />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-[#fafafa] leading-relaxed">{rec.message}</p>
+                    <p className="text-xs text-[#71717a] mt-1">{new Date(rec.createdAt).toLocaleDateString("pt-BR")}</p>
+                  </div>
+                  <button onClick={() => handleDismiss(rec.id)} className="p-1 rounded hover:bg-white/5 transition-colors flex-shrink-0" title="Dispensar">
+                    <X size={13} style={{ color: "#71717a" }} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </ECard>
+        )}
+
+        {userRole !== "VIEWER" && memberContributions.length > 0 && (
+          <ECard span="md:col-span-2 lg:col-span-3">
+            <CardLabel>Contribuição por Membro</CardLabel>
+            <div className="space-y-4">
+              {memberContributions.map((member) => (
+                <div key={member.id}>
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <div className="w-7 h-7 rounded-full bg-white/5 border border-white/[0.08] flex items-center justify-center text-xs font-bold text-[#71717a] flex-shrink-0">
+                      {member.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm">{rec.message}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(rec.createdAt).toLocaleDateString('pt-BR')}
-                      </p>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium text-[#fafafa]">{member.name}</span>
+                        <span className="text-xs text-[#71717a] tabular-nums">
+                          <MoneyDisplay amount={member.amount} size="sm" /> ({member.percent}%)
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-700"
+                          style={{ width: `${member.percent}%`, backgroundColor: "#22c55e" }} />
+                      </div>
                     </div>
-                    <button
-                      onClick={() => handleDismiss(rec.id)}
-                      className="p-1 hover:bg-accent rounded transition-colors"
-                      title="Dispensar"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+              ))}
+            </div>
+          </ECard>
         )}
 
-        {/* BLOCK 6: Member Contributions (only for ADMIN and MEMBER) */}
-        {userRole !== "VIEWER" && memberContributions.length > 0 && (
-          <Card className="md:col-span-2 lg:col-span-3">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                Contribuição por Membro
-              </CardTitle>
-              <CardDescription>
-                Gastos do mês por membro do grupo familiar
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {memberContributions.map((member) => (
-                  <div key={member.id}>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-sm font-bold text-blue-400 flex-shrink-0">
-                        {member.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="font-medium">{member.name}</span>
-                          <span className="font-semibold tabular-nums">
-                            {formatCurrency(member.amount)} ({member.percent}%)
-                          </span>
-                        </div>
-                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-blue-500 transition-all"
-                            style={{ width: `${member.percent}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );
