@@ -43,9 +43,16 @@ export async function extractTextFromImageWithOcr(imageBase64: string, mimeType 
 }
 
 export async function extractTextFromPdf(buffer: Buffer) {
-  const { default: pdfParse } = await import("pdf-parse");
-  const parsed = await pdfParse(buffer);
-  const text = parsed.text?.trim();
+  const { PDFParse } = await import("pdf-parse");
+  const parser = new PDFParse({ data: buffer });
+  let text = "";
+
+  try {
+    const parsed = await parser.getText();
+    text = parsed.text?.trim() ?? "";
+  } finally {
+    await parser.destroy();
+  }
 
   if (!text) {
     throw new Error("Falha ao extrair texto do PDF");
