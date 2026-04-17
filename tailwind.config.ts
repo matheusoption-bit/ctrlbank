@@ -55,8 +55,7 @@ const config: Config = {
 
         // ── Aliases e Brand Secundários ────────────────
         brand: {
-          cyan: "#00E5FF",
-          purple: "#D100FF",
+          primary: "#19FF63",
         },
         positive:  "#19FF63",
         negative:  "#ef4444",
@@ -85,8 +84,8 @@ const config: Config = {
         "soft-md":       "0 4px 20px rgba(0, 0, 0, 0.5)",
         "soft-lg":       "0 8px 32px rgba(0, 0, 0, 0.6)",
         "soft-xl":       "0 16px 48px rgba(0, 0, 0, 0.7)",
-        "glow-primary":  "0 0 20px rgba(255, 45, 85, 0.3)",
-        "glow-positive": "0 0 20px rgba(34, 197, 94, 0.3)",
+        "glow-primary":  "0 0 20px rgba(25, 255, 99, 0.3)",
+        "glow-positive": "0 0 20px rgba(25, 255, 99, 0.3)",
       },
       spacing: {
         "4.5":        "1.125rem",
@@ -119,8 +118,8 @@ const config: Config = {
           "100%": { opacity: "1", transform: "scale(1)" },
         },
         "pulse-glow": {
-          "0%, 100%": { boxShadow: "0 0 0 0 rgba(255, 45, 85, 0)" },
-          "50%":      { boxShadow: "0 0 0 8px rgba(255, 45, 85, 0.15)" },
+          "0%, 100%": { boxShadow: "0 0 0 0 rgba(25, 255, 99, 0)" },
+          "50%":      { boxShadow: "0 0 0 8px rgba(25, 255, 99, 0.15)" },
         },
         "count-up": {
           "0%":   { opacity: "0", transform: "translateY(4px)" },
