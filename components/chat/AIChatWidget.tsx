@@ -321,12 +321,12 @@ export default function AIChatWidget() {
     };
 
     const userMessageDisplay =
-      inputType === "audio" ? `🎤 Áudio Enviado (${formatAudioTime(Math.floor((audioDurationMs || 0)/1000))})` :
-      finalInput.trim() ||
-      (inputType === "pdf" && fileName ? `Arquivo PDF enviado: ${fileName}` : "") ||
-      (inputType === "csv" && fileName ? `Arquivo CSV enviado: ${fileName}` : "") ||
-      (finalBase64 && fileName ? `Imagem enviada: ${fileName}` : "") ||
-      (finalBase64 ? "Imagem enviada" : "");
+      inputType === "audio" ? `🎤 Áudio enviado (${formatAudioTime(Math.floor((audioDurationMs || 0)/1000))})` :
+      (inputType === "pdf" && fileName ? `📄 PDF enviado: ${fileName}` : "") ||
+      (inputType === "csv" && fileName ? `🧾 CSV enviado: ${fileName}` : "") ||
+      (finalBase64 && fileName ? `🖼️ Arquivo enviado: ${fileName}` : "") ||
+      (finalBase64 ? "🖼️ Arquivo enviado" : "") ||
+      (finalInput.trim().length > 120 ? `${finalInput.trim().slice(0, 120)}...` : finalInput.trim());
 
     appendMessage("user", userMessageDisplay, mode);
 

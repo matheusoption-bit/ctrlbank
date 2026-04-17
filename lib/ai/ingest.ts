@@ -59,6 +59,7 @@ export type ProcessIngestInput = {
   content?: string;
   imageBase64?: string;
   mimeType?: string; // image/jpeg, application/pdf, audio/webm etc.
+  disableAutoSave?: boolean;
 };
 
 export async function processAiIngest(input: ProcessIngestInput): Promise<AIComposerResponse> {
@@ -365,7 +366,7 @@ Responda à pergunta do usuário de forma clara. Se houver áudio, forneça um J
   } else if (draft.confidence.overall >= 0.55 && draft.confidence.overall < 0.85) {
     response.intent = "transaction_draft";
     response.message = "Fiz um rascunho, mas preciso da sua revisão.";
-  } else if (isAutoSave) {
+  } else if (isAutoSave && !input.disableAutoSave) {
     // AUTO-SAVE
     const tx = await createManagedTransaction({
       userId: input.userId,
@@ -386,6 +387,10 @@ Responda à pergunta do usuário de forma clara. Se houver áudio, forneça um J
     response.createdTransactionId = tx.id;
     response.undoAvailable = true;
     response.undoToken = `undo_${tx.id}`;
+  } else {
+    response.intent = "transaction_draft";
+    response.message = "Entrada pronta para salvar. Revise rapidamente antes de confirmar.";
+    response.requiresReview = true;
   }
 
   // Audit

@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extractTextFromImageWithOcr, extractTextFromPdf, isPdfMimeType } from "@/lib/inbox/ocr";
-import { InboxChannel, InboxInputType, InboxDocumentKind, parseInboxRawInput } from "@/lib/inbox/parse";
+import { InboxInputType, InboxDocumentKind } from "@/lib/inbox/parse";
+import { processCaptureBatch } from "@/lib/inbox/pipeline";
+import { AIComposerTransactionDraft } from "@/lib/ai/contracts";
 import { verifyTwilioSignature } from "@/lib/inbox/security";
 
 export const runtime = "nodejs";
@@ -104,16 +106,26 @@ export async function POST(req: NextRequest) {
       return twiml("⚠️ Não consegui identificar. Abra a Inbox no app para revisar.");
     }
 
-    const parsed = await parseInboxRawInput({
+    const batch = await processCaptureBatch({
       userId: user.id,
       householdId: user.householdId,
-      rawInput,
-      channel: "whatsapp",
-      inputType,
-      documentKind,
+      inputs: [{
+        rawInput,
+        channel: "whatsapp",
+        inputType,
+        documentKind,
+        fileName: null,
+      }],
     });
 
-    const draft = parsed.transactionDraft;
+    const firstItem = batch.items[0];
+    const parsedEvent = firstItem?.eventId
+      ? await prisma.aiCaptureEvent.findUnique({ where: { id: firstItem.eventId }, select: { normalizedDraft: true } })
+      : null;
+
+    const draft = parsedEvent?.normalizedDraft && typeof parsedEvent.normalizedDraft === "object"
+      ? (parsedEvent.normalizedDraft as AIComposerTransactionDraft)
+      : null;
     const amount = formatAmount(draft?.amount ?? null);
 
     if (draft?.description && amount && draft?.categoryName) {

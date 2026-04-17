@@ -15,12 +15,14 @@ import {
   Sparkles,
   Inbox,
   Users,
+  History,
 } from "lucide-react";
 
 const SIDEBAR_ITEMS = [
   { href: "/saude",         icon: LayoutDashboard, label: "Saúde"         },
   { href: "/caixa",         icon: Wallet,          label: "Caixa"         },
   { href: "/inbox",         icon: Inbox,           label: "Inbox"         },
+  { href: "/processamentos", icon: History,         label: "Histórico"     },
   { href: "/metas",         icon: Target,          label: "Metas"         },
   { href: "/relatorios",    icon: BookOpen,        label: "Relatórios"    },
   { href: "/familia",       icon: Users,           label: "Família"       },

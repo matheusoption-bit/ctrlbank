@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extractTextFromImageWithOcr, extractTextFromPdf, isImageMimeType, isPdfMimeType } from "@/lib/inbox/ocr";
-import { InboxChannel, InboxInputType, InboxDocumentKind, parseInboxRawInput } from "@/lib/inbox/parse";
+import { InboxInputType, InboxDocumentKind } from "@/lib/inbox/parse";
+import { processCaptureBatch } from "@/lib/inbox/pipeline";
 import { verifyPostmarkWebhook } from "@/lib/inbox/security";
 
 export const runtime = "nodejs";
@@ -89,13 +90,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    await parseInboxRawInput({
+    await processCaptureBatch({
       userId: user.id,
       householdId: user.householdId,
-      rawInput,
-      channel: "email",
-      inputType,
-      documentKind,
+      inputs: [{
+        rawInput,
+        channel: "email",
+        inputType,
+        documentKind,
+        fileName: attachment?.Name ?? null,
+      }],
     });
 
     return NextResponse.json({ ok: true });
