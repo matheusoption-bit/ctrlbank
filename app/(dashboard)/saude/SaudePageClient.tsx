@@ -33,10 +33,10 @@ interface SaudePageClientProps {
 }
 
 function getScoreAccent(c: string) {
-  if (c === "Saudável") return { ring: "#22c55e", badge: "bg-[#22c55e]/10 text-[#22c55e]" };
-  if (c === "Atenção")  return { ring: "#f59e0b", badge: "bg-[#f59e0b]/10 text-[#f59e0b]" };
-  if (c === "Risco")    return { ring: "#ef4444", badge: "bg-[#ef4444]/10 text-[#ef4444]" };
-  return { ring: "#71717a", badge: "bg-[#71717a]/10 text-[#71717a]" };
+  if (c === "Saudável") return { ring: "var(--positive)", badge: "bg-positive/10 text-positive" };
+  if (c === "Atenção")  return { ring: "var(--warning)", badge: "bg-warning/10 text-warning" };
+  if (c === "Risco")    return { ring: "var(--negative)", badge: "bg-negative/10 text-negative" };
+  return { ring: "var(--secondary)", badge: "bg-secondary/10 text-secondary" };
 }
 
 function HealthScoreRing({ score, classification }: { score: number; classification: string }) {
@@ -77,8 +77,8 @@ function MiniBar({ label, value, max, color }: { label: string; value: number; m
   return (
     <div className="space-y-1">
       <div className="flex justify-between items-center">
-        <span className="text-[11px] text-[#71717a]">{label}</span>
-        <span className="text-[11px] font-semibold tabular-nums text-[#fafafa]">
+        <span className="text-[11px] text-secondary">{label}</span>
+        <span className="text-[11px] font-semibold tabular-nums text-foreground">
           {value.toFixed(value % 1 === 0 ? 0 : 1)}/{max}
         </span>
       </div>
@@ -95,7 +95,7 @@ function ECard({ children, className = "", span }: {
 }) {
   return (
     <div className={[
-      "bg-[#242424] border border-white/[0.08] rounded-[12px] px-6 py-5 shadow-sm",
+      "bg-surface border border-white/10 rounded-[16px] px-6 py-5 shadow-sm hover:border-primary/20 hover:shadow-[0_0_15px_rgba(25,255,99,0.05)] transition-all duration-300",
       span ?? "", className,
     ].join(" ")}>
       {children}
@@ -105,7 +105,7 @@ function ECard({ children, className = "", span }: {
 
 function CardLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#71717a] mb-3">
+    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-secondary mb-3">
       {children}
     </p>
   );
@@ -123,7 +123,7 @@ function ProjectionChart({ points }: { points: Array<{ day: number; balance: num
         return (
           <div key={i} className="flex-1 rounded-t"
             style={{ height: `${h}%`,
-              backgroundColor: p.balance >= 0 ? "#22c55e" : "#ef4444", opacity: 0.65 }} />
+              backgroundColor: p.balance >= 0 ? "var(--positive)" : "var(--negative)", opacity: 0.65 }} />
         );
       })}
     </div>
@@ -150,7 +150,7 @@ export default function SaudePageClient({
     <div className="space-y-6">
       <header>
         <h1 className="text-3xl font-black tracking-tight">Saúde Financeira</h1>
-        <p className="text-[#71717a] mt-1 text-sm">Diagnóstico completo da saúde financeira familiar.</p>
+        <p className="text-secondary mt-1 text-sm">Diagnóstico completo da saúde financeira familiar.</p>
       </header>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -176,10 +176,10 @@ export default function SaudePageClient({
                 </div>
               </div>
               <div className="flex-1 w-full space-y-3">
-                <MiniBar label="Controle de gastos" value={healthScore.breakdown.spending} max={40} color="#22c55e" />
-                <MiniBar label="Crescimento de saldo" value={healthScore.breakdown.growth} max={30} color="#22c55e" />
-                <MiniBar label="Compromissos fixos" value={healthScore.breakdown.commitments} max={20} color="#f59e0b" />
-                <MiniBar label="Progresso em metas" value={healthScore.breakdown.goals} max={10} color="#f59e0b" />
+                <MiniBar label="Controle de gastos" value={healthScore.breakdown.spending} max={40} color="var(--positive)" />
+                <MiniBar label="Crescimento de saldo" value={healthScore.breakdown.growth} max={30} color="var(--positive)" />
+                <MiniBar label="Compromissos fixos" value={healthScore.breakdown.commitments} max={20} color="var(--warning)" />
+                <MiniBar label="Progresso em metas" value={healthScore.breakdown.goals} max={10} color="var(--warning)" />
               </div>
             </div>
           </ECard>
@@ -190,29 +190,29 @@ export default function SaudePageClient({
           <MoneyDisplay amount={balance.current} size="lg" />
           <div className="flex items-center gap-1.5 mt-3 text-xs">
             {balance.change >= 0 ? (
-              <><TrendingUp size={12} style={{ color: "#22c55e" }} />
-              <MoneyDisplay amount={balance.change} size="sm" delta className="text-[#22c55e]" /></>
+              <><TrendingUp size={12} className="text-positive" />
+              <MoneyDisplay amount={balance.change} size="sm" delta className="text-positive" /></>
             ) : (
-              <><TrendingDown size={12} style={{ color: "#ef4444" }} />
-              <MoneyDisplay amount={balance.change} size="sm" delta className="text-[#ef4444]" /></>
+              <><TrendingDown size={12} className="text-negative" />
+              <MoneyDisplay amount={balance.change} size="sm" delta className="text-negative" /></>
             )}
-            <span className="text-[#71717a]">vs. mês anterior</span>
+            <span className="text-secondary">vs. mês anterior</span>
           </div>
         </ECard>
 
         <ECard>
           <CardLabel>Burn Rate</CardLabel>
           <MoneyDisplay amount={burnRate.last30Days} size="lg" />
-          <p className="text-[#71717a] text-xs mt-1 mb-3">Últimos 30 dias</p>
+          <p className="text-secondary text-xs mt-1 mb-3">Últimos 30 dias</p>
           <div className="flex items-center gap-1.5 text-xs">
             {burnRate.changePercent > 0 ? (
-              <><TrendingUp size={12} style={{ color: "#ef4444" }} />
-              <span className="font-semibold" style={{ color: "#ef4444" }}>+{burnRate.changePercent.toFixed(1)}%</span></>
+              <><TrendingUp size={12} className="text-negative" />
+              <span className="font-semibold text-negative">+{burnRate.changePercent.toFixed(1)}%</span></>
             ) : burnRate.changePercent < 0 ? (
-              <><TrendingDown size={12} style={{ color: "#22c55e" }} />
-              <span className="font-semibold" style={{ color: "#22c55e" }}>{burnRate.changePercent.toFixed(1)}%</span></>
+              <><TrendingDown size={12} className="text-positive" />
+              <span className="font-semibold text-positive">{burnRate.changePercent.toFixed(1)}%</span></>
             ) : (
-              <span className="text-[#71717a]">Sem variação</span>
+              <span className="text-secondary">Sem variação</span>
             )}
           </div>
         </ECard>
@@ -221,7 +221,7 @@ export default function SaudePageClient({
           <ECard>
             <CardLabel>Projeção de Caixa</CardLabel>
             <MoneyDisplay amount={projection.projectedBalance30d} size="lg" semantic />
-            <p className="text-[#71717a] text-xs mt-1 mb-2">Em 30 dias</p>
+            <p className="text-secondary text-xs mt-1 mb-2">Em 30 dias</p>
             <p className="text-xs text-white/60 leading-relaxed">{projection.message}</p>
             <ProjectionChart points={projection.projectionPoints} />
           </ECard>
@@ -237,16 +237,16 @@ export default function SaudePageClient({
               {recommendations.map((rec) => (
                 <div key={rec.id} className="flex items-start gap-3 p-3 rounded-[8px] border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
                   <div className="mt-0.5 flex-shrink-0">
-                    {rec.type === "ALERT" && <AlertTriangle size={14} style={{ color: "#ef4444" }} />}
-                    {rec.type === "WARNING" && <AlertTriangle size={14} style={{ color: "#f59e0b" }} />}
-                    {rec.type === "SUGGESTION" && <Target size={14} style={{ color: "#71717a" }} />}
+                    {rec.type === "ALERT" && <AlertTriangle size={14} className="text-negative" />}
+                    {rec.type === "WARNING" && <AlertTriangle size={14} className="text-warning" />}
+                    {rec.type === "SUGGESTION" && <Target size={14} className="text-secondary" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-[#fafafa] leading-relaxed">{rec.message}</p>
-                    <p className="text-xs text-[#71717a] mt-1">{new Date(rec.createdAt).toLocaleDateString("pt-BR")}</p>
+                    <p className="text-sm text-foreground leading-relaxed">{rec.message}</p>
+                    <p className="text-xs text-secondary mt-1">{new Date(rec.createdAt).toLocaleDateString("pt-BR")}</p>
                   </div>
                   <button onClick={() => handleDismiss(rec.id)} className="p-1 rounded hover:bg-white/5 transition-colors flex-shrink-0" title="Dispensar">
-                    <X size={13} style={{ color: "#71717a" }} />
+                    <X size={13} className="text-secondary" />
                   </button>
                 </div>
               ))}
@@ -261,19 +261,19 @@ export default function SaudePageClient({
               {memberContributions.map((member) => (
                 <div key={member.id}>
                   <div className="flex items-center gap-3 mb-1.5">
-                    <div className="w-7 h-7 rounded-full bg-white/5 border border-white/[0.08] flex items-center justify-center text-xs font-bold text-[#71717a] flex-shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold text-secondary flex-shrink-0">
                       {member.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1">
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium text-[#fafafa]">{member.name}</span>
-                        <span className="text-xs text-[#71717a] tabular-nums">
+                        <span className="text-sm font-medium text-foreground">{member.name}</span>
+                        <span className="text-xs text-secondary tabular-nums">
                           <MoneyDisplay amount={member.amount} size="sm" /> ({member.percent}%)
                         </span>
                       </div>
                       <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                         <div className="h-full rounded-full transition-all duration-700"
-                          style={{ width: `${member.percent}%`, backgroundColor: "#22c55e" }} />
+                          style={{ width: `${member.percent}%`, backgroundColor: "var(--positive)" }} />
                       </div>
                     </div>
                   </div>

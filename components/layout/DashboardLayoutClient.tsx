@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 
 const SIDEBAR_ITEMS = [
-  { href: "/",              icon: LayoutDashboard, label: "Saúde"         },
+  { href: "/saude",         icon: LayoutDashboard, label: "Saúde"         },
   { href: "/caixa",         icon: Wallet,          label: "Caixa"         },
   { href: "/inbox",         icon: Inbox,           label: "Inbox"         },
   { href: "/metas",         icon: Target,          label: "Metas"         },
@@ -38,7 +38,7 @@ const SIDEBAR_ITEMS = [
 ];
 
 const MOBILE_NAV_ITEMS = [
-  { href: "/",          icon: LayoutDashboard, label: "Saúde"    },
+  { href: "/saude",     icon: LayoutDashboard, label: "Saúde"    },
   { href: "/caixa",     icon: Wallet,          label: "Caixa"    },
   { id: "composer",     icon: Sparkles,        label: "Composer" },
   { href: "/inbox",     icon: Inbox,           label: "Inbox"    },
@@ -59,7 +59,7 @@ export default function DashboardLayoutClient({
   const pathname = usePathname();
 
   const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href);
+    pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <div className="min-h-dvh bg-background">
@@ -94,7 +94,7 @@ export default function DashboardLayoutClient({
                 href={href}
                 className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
                   active
-                    ? "bg-primary/10 text-primary"
+                    ? "bg-transparent text-primary font-bold"
                     : "text-secondary hover:bg-white/5 hover:text-white"
                 }`}
               >
@@ -163,7 +163,7 @@ export default function DashboardLayoutClient({
                       // Dispara o evento pro AIChatWidget abrir
                       window.dispatchEvent(new Event("toggle-composer"));
                     }}
-                    className="relative -top-6 w-14 h-14 rounded-full bg-primary shadow-glow-primary flex items-center justify-center text-white transition-transform active:scale-95"
+                    className="relative -top-6 w-14 h-14 rounded-full bg-primary shadow-[0_0_20px_rgba(25,255,99,0.4)] flex items-center justify-center text-black transition-transform active:scale-95"
                     aria-label="Assistente IA"
                   >
                     <Icon size={24} fill="currentColor" />
@@ -185,7 +185,7 @@ export default function DashboardLayoutClient({
                 >
                   <div
                     className={`p-1.5 rounded-lg transition-all duration-150 ${
-                      active ? "bg-primary/10" : ""
+                      active ? "bg-transparent" : ""
                     }`}
                   >
                     <Icon size={20} className={active ? "text-primary" : ""} />

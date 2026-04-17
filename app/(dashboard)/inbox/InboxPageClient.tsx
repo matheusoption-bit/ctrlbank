@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 type InboxEvent = {
   id: string;
   source: string;
+  inputType: string;
   createdAt: string;
   rawText: string | null;
   normalizedDraft: any;
@@ -15,16 +16,22 @@ type Props = {
   events: InboxEvent[];
 };
 
-function sourceBadge(source: string) {
-  if (source === "via_ocr") return "via OCR";
-  if (source === "via_pdf") return "via PDF";
-  return null;
+function sourceBadge(channel: string, inputType: string) {
+  if (inputType === "ofx") return "via OFX";
+  if (inputType === "csv") return "via CSV";
+  if (inputType === "pdf") return "via PDF";
+  if (inputType === "image") return "via OCR";
+  if (channel === "whatsapp") return "via WhatsApp";
+  if (channel === "email") return "via Email";
+  if (channel === "import") return "via Importação";
+  return "Inclusão Manual";
 }
 
 export default function InboxPageClient({ events }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<"eventos" | "upload">("eventos");
   const [rawInput, setRawInput] = useState("");
+  const [documentKind, setDocumentKind] = useState("unknown");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -40,6 +47,8 @@ export default function InboxPageClient({ events }: Props) {
       const formData = new FormData();
       if (file) formData.append("file", file);
       if (rawInput.trim()) formData.append("rawInput", rawInput.trim());
+      formData.append("documentKind", documentKind);
+      formData.append("channel", file ? "import" : "manual");
 
       const response = await fetch("/api/inbox/parse", {
         method: "POST",
@@ -106,6 +115,20 @@ export default function InboxPageClient({ events }: Props) {
             />
           </div>
 
+          <div className="space-y-2">
+            <label className="text-sm font-semibold">Tipo de Documento</label>
+            <select
+              value={documentKind}
+              onChange={(e) => setDocumentKind(e.target.value)}
+              className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm"
+            >
+              <option value="unknown">Indefinido</option>
+              <option value="statement">Extrato (Statement)</option>
+              <option value="invoice">Fatura (Invoice)</option>
+              <option value="receipt">Recibo (Receipt)</option>
+            </select>
+          </div>
+
           <button
             disabled={loading || (!file && !rawInput.trim())}
             className="rounded-xl border border-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
@@ -118,7 +141,7 @@ export default function InboxPageClient({ events }: Props) {
       ) : hasEvents ? (
         <div className="space-y-3">
           {events.map((event) => {
-            const badge = sourceBadge(event.source);
+            const badge = sourceBadge(event.source, event.inputType);
             const draft = (event.normalizedDraft && typeof event.normalizedDraft === "object") ? event.normalizedDraft : null;
 
             return (
