@@ -1,31 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { validateRequest } from "@/lib/auth";
+import { getAuthorizedUser } from "@/lib/authorization";
 import { startOfMonth, endOfMonth, subMonths, subDays, addDays } from "date-fns";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
-    const { user } = await validateRequest();
-    if (!user) {
-      return NextResponse.json(
-        { message: "Não autorizado" },
-        { status: 401 }
-      );
-    }
+    const authUser = await getAuthorizedUser();
 
-    // Get householdId from query params or user's household
-    const { searchParams } = new URL(request.url);
-    let householdId = searchParams.get("householdId");
-
-    if (!householdId) {
-      const dbUser = await prisma.user.findUnique({
-        where: { id: user.id },
-        select: { householdId: true }
-      });
-      householdId = dbUser?.householdId || null;
-    }
+    // Always derive householdId from the authenticated user
+    const householdId = authUser.householdId;
 
     if (!householdId) {
       return NextResponse.json(
@@ -122,7 +107,7 @@ export async function POST(request: NextRequest) {
           return !recentRecommendations.some(rec => rec.message.includes(categoryId));
         })
         .map(({ categoryId, percentChange }) => ({
-          userId: user.id,
+          userId: authUser.id,
           householdId,
           type: "ALERT" as const,
           message: `Seu gasto com ${categoryNameMap.get(categoryId) || 'esta categoria'} subiu ${Math.round(percentChange)}% este mês`,
@@ -203,7 +188,7 @@ export async function POST(request: NextRequest) {
         if (!existing) {
           const rec = await prisma.aiRecommendation.create({
             data: {
-              userId: user.id,
+              userId: authUser.id,
               householdId,
               type: "WARNING",
               message: `Você pode ficar negativo em ${daysToNegative} dias no ritmo atual`,
@@ -256,7 +241,7 @@ export async function POST(request: NextRequest) {
           if (!existing) {
             const rec = await prisma.aiRecommendation.create({
               data: {
-                userId: user.id,
+                userId: authUser.id,
                 householdId,
                 type: "SUGGESTION",
                 message: `A assinatura ${sub.description} não gerou movimentação há mais de 45 dias — ainda está ativa?`,
@@ -306,7 +291,7 @@ export async function POST(request: NextRequest) {
         if (!existing) {
           const rec = await prisma.aiRecommendation.create({
             data: {
-              userId: user.id,
+              userId: authUser.id,
               householdId,
               type: "SUGGESTION",
               message: `A meta '${goal.name}' está em ${Math.round(progress)}% e o prazo se aproxima`,
@@ -325,7 +310,10 @@ export async function POST(request: NextRequest) {
       recommendations: createdRecommendations
     }, { status: 200 });
 
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message === "Não autenticado" || error?.message === "Usuário não encontrado") {
+      return NextResponse.json({ message: "Não autorizado" }, { status: 401 });
+    }
     console.error("Error generating recommendations:", error);
     return NextResponse.json(
       { message: "Erro ao gerar recomendações" },
