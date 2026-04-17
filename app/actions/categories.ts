@@ -69,7 +69,7 @@ export async function createCategory(formData: unknown) {
       },
     });
 
-    revalidatePath("/categorias");
+    revalidatePath("/configuracoes");
     return { success: true, data: category };
   } catch {
     return { error: "Erro ao criar categoria." };
@@ -100,7 +100,7 @@ export async function updateCategory(id: string, formData: unknown) {
       data: parsed.data,
     });
 
-    revalidatePath("/categorias");
+    revalidatePath("/configuracoes");
     return { success: true, data: category };
   } catch {
     return { error: "Erro ao atualizar categoria." };
@@ -122,7 +122,7 @@ export async function deleteCategory(id: string) {
 
   try {
     await prisma.category.delete({ where: { id } });
-    revalidatePath("/categorias");
+    revalidatePath("/configuracoes");
     return { success: true };
   } catch {
     return { error: "Erro ao excluir categoria. Verifique se não há transações vinculadas." };

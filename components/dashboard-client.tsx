@@ -131,7 +131,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
       <motion.section variants={item} className="space-y-3">
         <div className="flex justify-between items-center">
           <h2 className="font-semibold text-[15px]">Minhas Contas</h2>
-          <Link href="/contas" className="text-xs text-primary font-semibold flex items-center gap-0.5 hover:opacity-80 transition-opacity">
+          <Link href="/caixa" className="text-xs text-primary font-semibold flex items-center gap-0.5 hover:opacity-80 transition-opacity">
             Ver todas <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -164,7 +164,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
       <motion.section variants={item} className="space-y-3">
         <div className="flex justify-between items-center">
           <h2 className="font-semibold text-[15px]">Última Movimentação</h2>
-          <Link href="/transacoes" className="text-xs text-primary font-semibold flex items-center gap-0.5 hover:opacity-80 transition-opacity">
+          <Link href="/caixa" className="text-xs text-primary font-semibold flex items-center gap-0.5 hover:opacity-80 transition-opacity">
             Ver todas <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -205,7 +205,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
 
       {/* ── FAB (mobile) ── */}
       <Link
-        href="/transacoes"
+        href="/caixa"
         className="md:hidden fixed z-50 w-14 h-14 bg-primary text-white rounded-full shadow-glow-primary flex items-center justify-center active:scale-95 transition-transform"
         style={{ right: "1.25rem", bottom: "calc(6rem + env(safe-area-inset-bottom, 0px))" }}
         aria-label="Registrar movimento"

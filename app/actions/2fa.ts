@@ -43,7 +43,7 @@ export async function enable2FA(formData: FormData) {
     data:  { totpEnabled: true },
   });
 
-  revalidatePath("/perfil");
+  revalidatePath("/configuracoes");
   return { success: true };
 }
 
@@ -67,7 +67,7 @@ export async function disable2FA(formData: FormData) {
     data:  { totpSecret: null, totpEnabled: false },
   });
 
-  revalidatePath("/perfil");
+  revalidatePath("/configuracoes");
   return { success: true };
 }
 

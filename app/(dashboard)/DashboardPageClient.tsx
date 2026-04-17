@@ -192,7 +192,7 @@ export default function DashboardPageClient({ user, summary, evolution, forecast
           </h1>
         </div>
         <Link
-          href="/perfil"
+          href="/configuracoes"
           className="w-10 h-10 rounded-xl bg-surface-2 border border-border flex items-center justify-center hover:border-primary/30 transition-colors"
         >
           <span className="text-sm font-bold text-primary">
@@ -302,7 +302,7 @@ export default function DashboardPageClient({ user, summary, evolution, forecast
           <div className="flex items-center justify-between px-0.5">
             <h2 className="text-base font-bold">Contas</h2>
             <Link
-              href="/contas"
+              href="/caixa"
               className="flex items-center gap-1 text-xs text-primary font-semibold hover:opacity-80 transition-opacity"
             >
               Ver todas <ChevronRight size={14} />
@@ -447,7 +447,7 @@ export default function DashboardPageClient({ user, summary, evolution, forecast
       <motion.section variants={item} className="space-y-3">
         <div className="flex items-center justify-between px-0.5">
           <h2 className="text-base font-bold">Transações Recentes</h2>
-          <Link href="/transacoes" className="flex items-center gap-1 text-xs text-primary font-semibold hover:opacity-80 transition-opacity">
+          <Link href="/caixa" className="flex items-center gap-1 text-xs text-primary font-semibold hover:opacity-80 transition-opacity">
             Ver tudo <ChevronRight size={14} />
           </Link>
         </div>
@@ -458,7 +458,7 @@ export default function DashboardPageClient({ user, summary, evolution, forecast
               <ArrowLeftRight size={20} className="text-secondary" />
             </div>
             <p className="text-secondary text-sm">Nenhuma transação ainda.</p>
-            <Link href="/transacoes" className="btn-primary text-sm px-5 mx-auto w-fit">
+            <Link href="/caixa" className="btn-primary text-sm px-5 mx-auto w-fit">
               Registrar primeiro movimento
             </Link>
           </div>

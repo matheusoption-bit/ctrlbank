@@ -106,7 +106,7 @@ export async function upsertBudget(formData: unknown) {
       update: { amount },
     });
 
-    revalidatePath("/orcamentos");
+    revalidatePath("/metas");
     return { success: true };
   } catch {
     return { error: "Erro ao salvar orçamento." };
@@ -127,7 +127,7 @@ export async function deleteBudget(id: string) {
   if (!budget) return { error: "Orçamento não encontrado" };
 
   await prisma.budget.delete({ where: { id } });
-  revalidatePath("/orcamentos");
+  revalidatePath("/metas");
   return { success: true };
 }
 
