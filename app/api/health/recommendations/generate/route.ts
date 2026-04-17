@@ -77,41 +77,68 @@ export async function POST(request: NextRequest) {
       lastMonthByCategory.map(c => [c.categoryId!, Number(c._sum.amount || 0)])
     );
 
+    const increasedCategories: Array<{
+      categoryId: string;
+      percentChange: number;
+    }> = [];
+
     for (const [categoryId, currentAmount] of currentMap) {
       const lastAmount = lastMap.get(categoryId) || 0;
       if (lastAmount > 0) {
         const percentChange = ((currentAmount - lastAmount) / lastAmount) * 100;
         if (percentChange > 20) {
-          // Check if similar recommendation exists in last 7 days
-          const existing = await prisma.aiRecommendation.findFirst({
-            where: {
-              householdId,
-              type: "ALERT",
-              message: { contains: categoryId },
-              isDismissed: false,
-              createdAt: { gte: sevenDaysAgo }
-            }
-          });
-
-          if (!existing) {
-            const category = await prisma.category.findUnique({
-              where: { id: categoryId },
-              select: { name: true }
-            });
-
-            const rec = await prisma.aiRecommendation.create({
-              data: {
-                userId: user.id,
-                householdId,
-                type: "ALERT",
-                message: `Seu gasto com ${category?.name || 'esta categoria'} subiu ${Math.round(percentChange)}% este mês`,
-                score: 70,
-                isDismissed: false
-              }
-            });
-            createdRecommendations.push(rec);
-          }
+          increasedCategories.push({ categoryId, percentChange });
         }
+      }
+    }
+
+    if (increasedCategories.length > 0) {
+      const increasedCategoryIds = increasedCategories.map(({ categoryId }) => categoryId);
+
+      const [recentRecommendations, categories] = await Promise.all([
+        prisma.aiRecommendation.findMany({
+          where: {
+            householdId,
+            type: "ALERT",
+            isDismissed: false,
+            createdAt: { gte: sevenDaysAgo }
+          },
+          select: {
+            message: true
+          }
+        }),
+        prisma.category.findMany({
+          where: { id: { in: increasedCategoryIds } },
+          select: { id: true, name: true }
+        })
+      ]);
+
+      const categoryNameMap = new Map(
+        categories.map(category => [category.id, category.name])
+      );
+
+      const recommendationsToCreate = increasedCategories
+        .filter(({ categoryId }) => {
+          return !recentRecommendations.some(rec => rec.message.includes(categoryId));
+        })
+        .map(({ categoryId, percentChange }) => ({
+          userId: user.id,
+          householdId,
+          type: "ALERT" as const,
+          message: `Seu gasto com ${categoryNameMap.get(categoryId) || 'esta categoria'} subiu ${Math.round(percentChange)}% este mês`,
+          score: 70,
+          isDismissed: false
+        }));
+
+      if (recommendationsToCreate.length > 0) {
+        const newRecommendations = await Promise.all(
+          recommendationsToCreate.map(data =>
+            prisma.aiRecommendation.create({
+              data
+            })
+          )
+        );
+        createdRecommendations.push(...newRecommendations);
       }
     }
 
