@@ -7,28 +7,45 @@ export default async function InboxPage() {
   const { user } = await validateRequest();
   if (!user) redirect("/login");
 
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { householdId: true },
-  });
+  let events: Array<{
+    id: string;
+    source: string;
+    inputType: string;
+    createdAt: Date;
+    decision: string;
+    captureGroupId: string | null;
+    createdTransactionId: string | null;
+    normalizedDraft: unknown;
+  }> = [];
+  let eventsLoadError: string | null = null;
 
-  const scopeOr = [{ userId: user.id }, ...(dbUser?.householdId ? [{ householdId: dbUser.householdId }] : [])];
+  try {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { householdId: true },
+    });
 
-  const events = await prisma.aiCaptureEvent.findMany({
-    where: { OR: scopeOr },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    select: {
-      id: true,
-      source: true,
-      inputType: true,
-      createdAt: true,
-      decision: true,
-      captureGroupId: true,
-      createdTransactionId: true,
-      normalizedDraft: true,
-    },
-  });
+    const scopeOr = [{ userId: user.id }, ...(dbUser?.householdId ? [{ householdId: dbUser.householdId }] : [])];
+
+    events = await prisma.aiCaptureEvent.findMany({
+      where: { OR: scopeOr },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: {
+        id: true,
+        source: true,
+        inputType: true,
+        createdAt: true,
+        decision: true,
+        captureGroupId: true,
+        createdTransactionId: true,
+        normalizedDraft: true,
+      },
+    });
+  } catch (error) {
+    console.error("[inbox/page] failed to load events", error);
+    eventsLoadError = "Não foi possível carregar o histórico agora. Você ainda pode enviar novos arquivos.";
+  }
 
   return (
     <div className="space-y-6">
@@ -46,6 +63,7 @@ export default async function InboxPage() {
               ? (event.normalizedDraft as { description?: string; amount?: number; categoryName?: string })
               : null,
         }))}
+        eventsLoadError={eventsLoadError}
       />
     </div>
   );
