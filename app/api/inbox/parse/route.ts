@@ -46,6 +46,12 @@ async function prepareFromFile(file: File, forcedKind: InboxDocumentKind): Promi
   } else if (isPdfMimeType(mimeType)) {
     rawInput = await extractTextFromPdf(buffer);
     inputType = "pdf";
+  } else if (mimeType.startsWith("text/") || fileName.endsWith(".txt")) {
+    rawInput = buffer.toString("utf-8");
+    inputType = "text";
+  } else if (mimeType.startsWith("audio/")) {
+    rawInput = `[audio:${mimeType};base64,${buffer.toString("base64")}]`;
+    inputType = "audio";
   } else {
     throw new Error(`Formato não suportado: ${file.name}`);
   }
@@ -72,6 +78,7 @@ export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get("content-type") || "";
     const batchInputs: Array<PreparedInput & { channel: InboxChannel }> = [];
+    const filePreparationErrors: Array<{ fileName: string | null; message: string }> = [];
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
@@ -99,8 +106,15 @@ export async function POST(req: NextRequest) {
       }
 
       for (const file of files) {
-        const prepared = await prepareFromFile(file, providedKind);
-        batchInputs.push({ ...prepared, channel: "import" });
+        try {
+          const prepared = await prepareFromFile(file, providedKind);
+          batchInputs.push({ ...prepared, channel: "import" });
+        } catch (error: any) {
+          filePreparationErrors.push({
+            fileName: file.name ?? null,
+            message: error?.message || "Falha ao preparar arquivo",
+          });
+        }
       }
     } else {
       const body = await req.json();
@@ -116,25 +130,63 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (batchInputs.length === 0) {
+    if (batchInputs.length === 0 && filePreparationErrors.length === 0) {
       return NextResponse.json({ error: "Nenhum conteúdo para processar" }, { status: 400 });
     }
 
-    const result = await processCaptureBatch({
-      userId: user.id,
-      householdId: dbUser?.householdId ?? null,
-      inputs: batchInputs.map((item) => ({
-        rawInput: item.rawInput,
-        channel: item.channel,
-        inputType: item.inputType,
-        documentKind: item.documentKind,
-        fileName: item.fileName,
-      })),
-    });
+    const result =
+      batchInputs.length > 0
+        ? await processCaptureBatch({
+            userId: user.id,
+            householdId: dbUser?.householdId ?? null,
+            inputs: batchInputs.map((item) => ({
+              rawInput: item.rawInput,
+              channel: item.channel,
+              inputType: item.inputType,
+              documentKind: item.documentKind,
+              fileName: item.fileName,
+            })),
+          })
+        : {
+            batchId: "empty",
+            processed: 0,
+            possibleDuplicates: 0,
+            readyToSave: 0,
+            conflicts: 0,
+            detectedType: "bank_statement" as const,
+            source: "unknown" as const,
+            items: [],
+          };
+
+    const erroredItems = filePreparationErrors.map((item, idx) => ({
+      index: result.items.length + idx,
+      fileName: item.fileName,
+      detectedType: "bank_statement" as const,
+      source: "unknown" as const,
+      normalized: null,
+      status: "error" as const,
+      existingId: null,
+      message: item.message,
+      eventId: null,
+      createdTransactionId: null,
+    }));
+
+    const mergedItems = [...result.items, ...erroredItems];
+    const totalProcessed = mergedItems.length;
+    const totalDuplicates = mergedItems.filter((item) => item.status === "duplicate").length;
+    const totalReady = mergedItems.filter((item) => item.status === "new").length;
+    const totalConflicts = mergedItems.filter((item) => item.status === "error").length;
 
     return NextResponse.json({
-      message: `Lote processado: ${result.processed} itens, ${result.possibleDuplicates} possíveis duplicidades.`,
-      ...result,
+      message: `Reconheci ${totalProcessed} transações/eventos. ${totalDuplicates} já existem.`,
+      batchId: result.batchId,
+      processed: totalProcessed,
+      possibleDuplicates: totalDuplicates,
+      readyToSave: totalReady,
+      conflicts: totalConflicts,
+      detectedType: result.detectedType,
+      source: result.source,
+      items: mergedItems,
     });
   } catch (error: any) {
     console.error("[api/inbox/parse] erro:", error);

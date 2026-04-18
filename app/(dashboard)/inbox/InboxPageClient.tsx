@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type DraftLike = {
@@ -21,17 +21,26 @@ type InboxEvent = {
   normalizedDraft: DraftLike | null;
 };
 
-type BatchResult = {
+type ParseResponse = {
   batchId: string;
   processed: number;
   possibleDuplicates: number;
   readyToSave: number;
   conflicts: number;
   message: string;
+  detectedType: "bank_statement" | "receipt" | "invoice";
+  source: "nubank" | "itau" | "unknown";
+  items: Array<{
+    index: number;
+    fileName: string | null;
+    status: "new" | "duplicate" | "review" | "error";
+    message: string;
+  }>;
 };
 
 type Props = {
   events: InboxEvent[];
+  eventsLoadError?: string | null;
 };
 
 function sourceBadge(channel: string, inputType: string) {
@@ -39,20 +48,22 @@ function sourceBadge(channel: string, inputType: string) {
   if (inputType === "csv") return "via CSV";
   if (inputType === "pdf") return "via PDF";
   if (inputType === "image") return "via OCR";
+  if (inputType === "audio") return "via Áudio";
   if (channel === "whatsapp") return "via WhatsApp";
   if (channel === "email") return "via Email";
   if (channel === "import") return "via Importação";
   return "Inclusão Manual";
 }
 
-export default function InboxPageClient({ events }: Props) {
+export default function InboxPageClient({ events, eventsLoadError }: Props) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [rawInput, setRawInput] = useState("");
-  const [documentKind, setDocumentKind] = useState("unknown");
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [batchResult, setBatchResult] = useState<BatchResult | null>(null);
+  const [batchResult, setBatchResult] = useState<ParseResponse | null>(null);
+  const [dragActive, setDragActive] = useState(false);
 
   const hasEvents = useMemo(() => events.length > 0, [events]);
   const byDecision = useMemo(() => {
@@ -63,8 +74,15 @@ export default function InboxPageClient({ events }: Props) {
     };
   }, [events]);
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const previewNames = useMemo(() => files.slice(0, 5).map((file) => file.name), [files]);
+
+  function onAddFiles(nextFiles: FileList | File[] | null) {
+    if (!nextFiles) return;
+    setFiles((current) => [...current, ...Array.from(nextFiles)]);
+  }
+
+  async function sendForProcessing() {
+    if (files.length === 0 && !rawInput.trim()) return;
     setLoading(true);
     setMessage(null);
 
@@ -74,7 +92,6 @@ export default function InboxPageClient({ events }: Props) {
         formData.append("files", file);
       }
       if (rawInput.trim()) formData.append("rawInput", rawInput.trim());
-      formData.append("documentKind", documentKind);
       formData.append("channel", files.length > 0 ? "import" : "manual");
 
       const response = await fetch("/api/inbox/parse", {
@@ -87,15 +104,7 @@ export default function InboxPageClient({ events }: Props) {
         throw new Error(data?.error || "Falha ao processar lote na Inbox");
       }
 
-      setBatchResult({
-        batchId: data.batchId,
-        processed: data.processed,
-        possibleDuplicates: data.possibleDuplicates,
-        readyToSave: data.readyToSave,
-        conflicts: data.conflicts,
-        message: data.message,
-      });
-
+      setBatchResult(data as ParseResponse);
       setMessage(data?.message || "Lote processado com sucesso.");
       setRawInput("");
       setFiles([]);
@@ -112,70 +121,96 @@ export default function InboxPageClient({ events }: Props) {
       <section className="rounded-2xl border border-border bg-surface p-5 space-y-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-lg font-bold">Captura inteligente</h2>
-            <p className="text-sm text-secondary">Envie texto, áudio, imagem, PDF, CSV ou OFX. O CtrlBank classifica e decide o fluxo.</p>
+            <h2 className="text-lg font-bold">Inbox V2 · Ingestão automática</h2>
+            <p className="text-sm text-secondary">Você envia e o CtrlBank interpreta automaticamente. Sem formulário obrigatório.</p>
           </div>
-          <Link href="/processamentos" className="text-sm font-semibold text-primary hover:underline">
-            Ver histórico operacional
+          <Link href="/inbox/history" className="text-sm font-semibold text-primary hover:underline">
+            Histórico de uploads
           </Link>
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-semibold">Arquivos (multi-upload)</label>
-            <input
-              type="file"
-              multiple
-              accept="image/png,image/jpeg,image/jpg,application/pdf,text/csv,.csv,.ofx,application/x-ofx"
-              onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-              className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm"
-            />
-            {files.length > 0 && (
-              <p className="text-xs text-secondary">{files.length} arquivo(s) selecionado(s).</p>
-            )}
-          </div>
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragActive(true);
+          }}
+          onDragLeave={() => setDragActive(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragActive(false);
+            onAddFiles(e.dataTransfer.files);
+          }}
+          className={`rounded-2xl border-2 border-dashed p-5 transition ${dragActive ? "border-primary bg-primary/5" : "border-border bg-surface-2"}`}
+        >
+          <p className="text-sm font-semibold">Arraste arquivos ou toque em Enviar</p>
+          <p className="text-xs text-secondary mt-1">Suporta: imagem, PDF, CSV, OFX, texto e áudio.</p>
 
-          <div className="space-y-2">
-            <label className="text-sm font-semibold">Texto complementar (opcional)</label>
-            <textarea
-              value={rawInput}
-              onChange={(e) => setRawInput(e.target.value)}
-              rows={4}
-              className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm"
-              placeholder="Se quiser, descreva o contexto do envio"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-semibold">Tipo (opcional)</label>
-            <select
-              value={documentKind}
-              onChange={(e) => setDocumentKind(e.target.value)}
-              className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm"
+          <div className="mt-4 flex gap-3">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="rounded-xl border border-border px-4 py-2 text-sm font-semibold"
             >
-              <option value="unknown">Automático</option>
-              <option value="statement">Extrato</option>
-              <option value="invoice">Fatura</option>
-              <option value="receipt">Comprovante</option>
-            </select>
+              Enviar
+            </button>
+            <button
+              type="button"
+              disabled={loading || (files.length === 0 && !rawInput.trim())}
+              onClick={sendForProcessing}
+              className="rounded-xl border border-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
+            >
+              {loading ? "Processando..." : "Executar ingestão"}
+            </button>
           </div>
 
-          <button
-            disabled={loading || (files.length === 0 && !rawInput.trim())}
-            className="rounded-xl border border-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
-          >
-            {loading ? "Processando lote..." : "Enviar para captura"}
-          </button>
-        </form>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/png,image/jpeg,image/jpg,application/pdf,text/csv,.csv,.ofx,application/x-ofx,text/plain,.txt,audio/*"
+            onChange={(e) => onAddFiles(e.target.files)}
+            className="hidden"
+          />
+
+          {files.length > 0 && (
+            <div className="mt-3 rounded-xl border border-border bg-surface p-3">
+              <p className="text-xs font-semibold">{files.length} item(ns) pronto(s) para ingestão</p>
+              <ul className="mt-2 space-y-1 text-xs text-secondary">
+                {previewNames.map((name) => (
+                  <li key={name}>• {name}</li>
+                ))}
+                {files.length > previewNames.length && <li>• ...e mais {files.length - previewNames.length}</li>}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold">Entrada multimodal (texto ou transcrição)</label>
+          <textarea
+            value={rawInput}
+            onChange={(e) => setRawInput(e.target.value)}
+            rows={3}
+            className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm"
+            placeholder="Opcional: contexto adicional para a ingestão."
+          />
+        </div>
 
         {message && <p className="text-sm text-secondary">{message}</p>}
 
         {batchResult && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-            <div className="rounded-xl bg-surface-2 border border-border p-3"><p className="text-secondary text-xs">Processados</p><p className="font-bold">{batchResult.processed}</p></div>
-            <div className="rounded-xl bg-surface-2 border border-border p-3"><p className="text-secondary text-xs">Possíveis duplicidades</p><p className="font-bold">{batchResult.possibleDuplicates}</p></div>
-            <div className="rounded-xl bg-surface-2 border border-border p-3"><p className="text-secondary text-xs">Prontos para salvar</p><p className="font-bold">{batchResult.readyToSave}</p></div>
-            <div className="rounded-xl bg-surface-2 border border-border p-3"><p className="text-secondary text-xs">Conflitos/erros</p><p className="font-bold">{batchResult.conflicts}</p></div>
+          <div className="rounded-2xl border border-border bg-surface-2 p-4 space-y-3">
+            <p className="text-sm font-semibold">
+              Reconheci {batchResult.processed} transações/eventos. {batchResult.possibleDuplicates} já existem (não serão duplicadas).
+            </p>
+            <div className="flex flex-wrap gap-2 text-xs text-secondary">
+              <span className="rounded-full border border-border px-2 py-1">Origem: {batchResult.source}</span>
+              <span className="rounded-full border border-border px-2 py-1">Tipo detectado: {batchResult.detectedType}</span>
+            </div>
+            <div className="flex gap-2">
+              <button className="rounded-xl border border-border px-4 py-2 text-sm font-semibold">Confirmar tudo</button>
+              <button className="rounded-xl border border-border px-4 py-2 text-sm font-semibold">Revisar</button>
+            </div>
           </div>
         )}
       </section>
@@ -187,6 +222,10 @@ export default function InboxPageClient({ events }: Props) {
             {byDecision.saved} salvos · {byDecision.review} em revisão · {byDecision.duplicates} possíveis duplicidades
           </p>
         </div>
+
+        {eventsLoadError && (
+          <p className="rounded-xl border border-amber-300 bg-amber-100/60 px-3 py-2 text-xs text-amber-900">{eventsLoadError}</p>
+        )}
 
         {hasEvents ? (
           <div className="space-y-3">

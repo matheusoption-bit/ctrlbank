@@ -5,7 +5,7 @@ import { logAiCaptureEvent } from "@/lib/ai/composer";
 import { randomUUID } from "crypto";
 
 export type InboxChannel = "manual" | "email" | "whatsapp" | "import";
-export type InboxInputType = "text" | "image" | "pdf" | "csv" | "ofx";
+export type InboxInputType = "text" | "image" | "pdf" | "csv" | "ofx" | "audio";
 export type InboxDocumentKind = "statement" | "invoice" | "receipt" | "unknown";
 
 function buildRawTextEnvelope(rawInput: string, documentKind: InboxDocumentKind, inputHash?: string) {
@@ -82,7 +82,7 @@ export async function parseInboxRawInput({
     userId,
     householdId,
     mode: "Registrar",
-    inputType: inputType === "pdf" ? "pdf" : "text",
+    inputType: inputType === "pdf" ? "pdf" : inputType === "audio" ? "audio" : "text",
     content: rawInput,
     disableAutoSave: true,
   });
@@ -109,6 +109,7 @@ export function getInboxSourceBadge(channel: string, inputType: string) {
   if (inputType === "csv") return "via CSV";
   if (inputType === "pdf") return "via PDF";
   if (inputType === "image") return "via OCR";
+  if (inputType === "audio") return "via Áudio";
   if (channel === "whatsapp") return "via WhatsApp";
   if (channel === "email") return "via Email";
   if (channel === "import") return "via Importação";
