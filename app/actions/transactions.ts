@@ -232,6 +232,63 @@ export async function createTransaction(formData: unknown) {
   }
 }
 
+
+export type CreateTransactionBatchInput = {
+  date: Date;
+  amount: number;
+  description: string;
+  type: "expense" | "income";
+};
+
+export async function createTransactionBatch(items: CreateTransactionBatchInput[]) {
+  const ctx = await getAuthContext();
+  requireWriteRole(ctx.role);
+
+  if (!Array.isArray(items) || items.length === 0) {
+    return { error: "Nenhuma transação para salvar." };
+  }
+
+  const accounts = await prisma.bankAccount.findMany({
+    where: {
+      OR: [{ userId: ctx.id }, { householdId: ctx.householdId ?? "" }],
+    },
+    select: { id: true, isDefault: true },
+    orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
+  });
+
+  const bankAccountId = accounts.find((account) => account.isDefault)?.id ?? accounts[0]?.id;
+  if (!bankAccountId) {
+    return { error: "Nenhuma conta encontrada para salvar as transações." };
+  }
+
+  let saved = 0;
+
+  for (const item of items) {
+    if (!item?.description || !item?.date || !item?.amount) continue;
+
+    try {
+      await createManagedTransaction({
+        userId: ctx.id,
+        householdId: ctx.householdId,
+        bankAccountId,
+        type: item.type === "income" ? "INCOME" : "EXPENSE",
+        status: "COMPLETED",
+        amount: Math.abs(Number(item.amount)),
+        description: item.description,
+        date: item.date,
+      });
+      saved += 1;
+    } catch (error) {
+      console.error("createTransactionBatch item error", error);
+    }
+  }
+
+  revalidatePath("/inbox");
+  revalidatePath("/caixa");
+
+  return { success: true, saved };
+}
+
 /**
  * Atualizar transação existente.
  * Reverte o saldo anterior e aplica o novo.
