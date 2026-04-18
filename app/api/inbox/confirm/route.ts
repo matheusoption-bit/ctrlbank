@@ -31,9 +31,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
+    if (!result?.saved) {
+      return NextResponse.json({ error: "Não consegui interpretar. Tente outro arquivo." }, { status: 422 });
+    }
+
     return NextResponse.json({
-      saved: result.saved ?? 0,
-      message: `Confirmei ${result.saved ?? 0} transação(ões).`,
+      saved: result.saved,
+      message: `Confirmei ${result.saved} transação(ões).`,
     });
   } catch (error) {
     console.error("[api/inbox/confirm] erro:", error);
