@@ -94,6 +94,7 @@ model Household {
   counterSessions       CounterSession[]
   AiCaptureEvent        AiCaptureEvent[]
   merchantMemories      MerchantMemory[]
+  categoryLearningRules CategoryLearningRule[]
 
   aiConversations       AiConversation[]
   financialPlans        FinancialPlan[]
@@ -167,6 +168,7 @@ model User {
   aiMessages        AiMessage[]
   financialPlans    FinancialPlan[]
   aiRecommendations AiRecommendation[]
+  categoryLearningRules CategoryLearningRule[]
   invitesCreated    HouseholdInvite[]  @relation("InviteCreatedBy")
   invitesUsed       HouseholdInvite[]  @relation("InviteUsedBy")
   monthlyCheckViews MonthlyCheckView[]
@@ -174,6 +176,25 @@ model User {
   @@index([householdId])
   @@index([phone])
   @@index([whatsappLinkToken])
+}
+
+
+model CategoryLearningRule {
+  id                 String   @id @default(cuid())
+  userId             String
+  householdId        String?
+  descriptionPattern String
+  categoryName       String
+  usageCount         Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([householdId])
+  @@unique([userId, descriptionPattern, categoryName])
 }
 
 model ProductFeedback {

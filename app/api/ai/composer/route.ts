@@ -3,7 +3,8 @@ import { validateRequest } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { processAiIngest } from "@/lib/ai/ingest";
-import { AIComposerMode } from "@/lib/ai/contracts";
+import { AIComposerMode, AIComposerResponse } from "@/lib/ai/contracts";
+import { runFinanceIntelligence, buildFinanceContextReply } from "@/lib/finance/intelligence";
 
 const BodySchema = z.object({
   mode: z.enum(["Registrar", "Revisar", "Perguntar", "Planejar", "Sugerir"]).default("Registrar"),
@@ -32,10 +33,6 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      return NextResponse.json({ error: "IA não configurada" }, { status: 503 });
-    }
-
     const { getOrCreateConversation, saveAiMessage, createFinancialPlan, createProductFeedback } = await import("@/lib/ai/composer");
 
     const conversationId = await getOrCreateConversation(user.id, dbUser?.householdId ?? null, body.conversationId);
@@ -53,15 +50,47 @@ export async function POST(req: NextRequest) {
         : { inputType: body.inputType, audioDurationMs: body.audioDurationMs }
     });
 
-    const response = await processAiIngest({
-      userId: user.id,
-      householdId: dbUser?.householdId ?? null,
-      mode: body.mode as AIComposerMode,
-      inputType: body.inputType as any,
-      content: body.content,
-      imageBase64: body.imageBase64,
-      mimeType: body.mimeType,
-    });
+    let response: AIComposerResponse;
+    if (body.mode === "Perguntar") {
+      const finance = await runFinanceIntelligence(user.id, dbUser?.householdId ?? null);
+      const contextualReply = buildFinanceContextReply({
+        question: body.content ?? "",
+        monthlyTotal: finance.monthly.total,
+        topCategories: finance.topCategories,
+        average: finance.average,
+        alerts: finance.alerts,
+        recommendations: finance.recommendations,
+      });
+
+      response = {
+        intent: "chat_reply",
+        message: contextualReply,
+        requiresReview: false,
+        autoSaved: false,
+        transactionDraft: null,
+        createdTransactionId: null,
+        undoAvailable: false,
+        undoToken: null,
+        eventId: null,
+        captureGroupId: null,
+        conversationId,
+        missingFields: [],
+      };
+    } else {
+      if (!process.env.GEMINI_API_KEY) {
+        return NextResponse.json({ error: "IA não configurada" }, { status: 503 });
+      }
+
+      response = await processAiIngest({
+        userId: user.id,
+        householdId: dbUser?.householdId ?? null,
+        mode: body.mode as AIComposerMode,
+        inputType: body.inputType as any,
+        content: body.content,
+        imageBase64: body.imageBase64,
+        mimeType: body.mimeType,
+      });
+    }
 
     response.conversationId = conversationId;
 
