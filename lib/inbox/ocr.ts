@@ -43,21 +43,41 @@ export async function extractTextFromImageWithOcr(imageBase64: string, mimeType 
 }
 
 export async function extractTextFromPdf(buffer: Buffer) {
-  try {
-    if (typeof globalThis.DOMMatrix === "undefined") {
-      class DOMMatrixFallback {
-        multiply() {
-          return this;
-        }
-        translate() {
-          return this;
-        }
-        scale() {
-          return this;
-        }
-      }
-      (globalThis as any).DOMMatrix = DOMMatrixFallback;
+  const ensureDomMatrixFallback = () => {
+    if (typeof globalThis === "undefined" || typeof (globalThis as any).DOMMatrix !== "undefined") {
+      return;
     }
+
+    class DOMMatrixFallback {
+      a = 1;
+      b = 0;
+      c = 0;
+      d = 1;
+      e = 0;
+      f = 0;
+
+      multiply() {
+        return this;
+      }
+      preMultiplySelf() {
+        return this;
+      }
+      translate() {
+        return this;
+      }
+      scale() {
+        return this;
+      }
+      invertSelf() {
+        return this;
+      }
+    }
+
+    (globalThis as any).DOMMatrix = DOMMatrixFallback;
+  };
+
+  try {
+    ensureDomMatrixFallback();
 
     const { PDFParse } = await import("pdf-parse");
     const parser = new PDFParse({ data: buffer });

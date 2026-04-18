@@ -35,6 +35,8 @@ type ParseResponse = {
     fileName: string | null;
     status: "new" | "duplicate" | "review" | "error";
     message: string;
+    eventId: string | null;
+    existingId: string | null;
   }>;
 };
 
@@ -64,6 +66,7 @@ export default function InboxPageClient({ events, eventsLoadError }: Props) {
   const [message, setMessage] = useState<string | null>(null);
   const [batchResult, setBatchResult] = useState<ParseResponse | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   const hasEvents = useMemo(() => events.length > 0, [events]);
   const byDecision = useMemo(() => {
@@ -113,6 +116,35 @@ export default function InboxPageClient({ events, eventsLoadError }: Props) {
       setMessage(error?.message || "Falha ao processar entrada");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function confirmBatch() {
+    if (!batchResult) return;
+    setConfirming(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch("/api/inbox/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          batchId: batchResult.batchId,
+          eventIds: batchResult.items.filter((item) => item.status === "new" || item.status === "review").map((item) => item.eventId),
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || "Falha ao confirmar o lote");
+      }
+
+      setMessage(data?.message || "Lote confirmado com sucesso.");
+      router.refresh();
+    } catch (error: any) {
+      setMessage(error?.message || "Não foi possível confirmar o lote.");
+    } finally {
+      setConfirming(false);
     }
   }
 
@@ -207,9 +239,34 @@ export default function InboxPageClient({ events, eventsLoadError }: Props) {
               <span className="rounded-full border border-border px-2 py-1">Origem: {batchResult.source}</span>
               <span className="rounded-full border border-border px-2 py-1">Tipo detectado: {batchResult.detectedType}</span>
             </div>
-            <div className="flex gap-2">
-              <button className="rounded-xl border border-border px-4 py-2 text-sm font-semibold">Confirmar tudo</button>
-              <button className="rounded-xl border border-border px-4 py-2 text-sm font-semibold">Revisar</button>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={confirming}
+                  onClick={confirmBatch}
+                  className="rounded-xl border border-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                >
+                  {confirming ? "Confirmando..." : "Confirmar tudo"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => document.getElementById("inbox-review")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                  className="rounded-xl border border-border px-4 py-2 text-sm font-semibold"
+                >
+                  Revisar
+                </button>
+              </div>
+              <div id="inbox-review" className="rounded-xl border border-border bg-surface p-3 text-xs">
+                <p className="font-semibold mb-2">Modo revisão</p>
+                <ul className="space-y-1 text-secondary">
+                  {batchResult.items.map((item) => (
+                    <li key={`${item.index}-${item.eventId ?? "no-event"}`}>
+                      • Item {item.index + 1}: <strong>{item.status}</strong> — {item.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
         )}
