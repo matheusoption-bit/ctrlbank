@@ -2,9 +2,11 @@
 
 import { validateRequest } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { startOfMonth, endOfMonth, subDays, subMonths } from "date-fns";
+import { subDays } from "date-fns";
 import { calculateHealthScore, calculateProjection } from "@/lib/finance/health";
 import { captureDecisionFeedback } from "@/lib/quality/feedback";
+import { getCurrentMonthBoundsUtc, getMonthBoundsUtc } from "@/lib/finance/period";
+import { scopeWhere } from "@/lib/security/scope";
 
 export async function getHealthScore() {
   const { user } = await validateRequest();
@@ -55,33 +57,38 @@ export async function getConsolidatedBalance() {
   }
 
   const now = new Date();
-  const lastMonthStart = startOfMonth(subMonths(now, 1));
-  const lastMonthEnd = endOfMonth(subMonths(now, 1));
+  const current = getCurrentMonthBoundsUtc(now);
+  const previous = getMonthBoundsUtc(
+    current.start.getUTCMonth() === 0 ? current.start.getUTCFullYear() - 1 : current.start.getUTCFullYear(),
+    current.start.getUTCMonth() === 0 ? 12 : current.start.getUTCMonth()
+  );
 
-  const [currentBalance, lastMonthTransactions] = await Promise.all([
+  const [currentBalance, previousFlow] = await Promise.all([
     prisma.bankAccount.aggregate({
       where: { householdId },
       _sum: { balance: true }
     }),
-    prisma.transaction.aggregate({
+    prisma.transaction.findMany({
       where: {
-        householdId,
-        date: { gte: lastMonthStart, lte: lastMonthEnd },
-        ignoreInTotals: false
+        ...scopeWhere({ userId: user.id, householdId }),
+        date: { gte: previous.start, lt: previous.endExclusive },
+        status: "COMPLETED",
+        ignoreInTotals: false,
       },
-      _sum: { amount: true }
+      select: { amount: true, type: true },
     })
   ]);
 
-  const current = Number(currentBalance._sum.balance || 0);
-  const lastMonthDelta = Number(lastMonthTransactions._sum.amount || 0);
-  const lastMonth = current - lastMonthDelta;
-  const change = current - lastMonth;
+  const currentValue = Number(currentBalance._sum.balance || 0);
+  const previousIncome = previousFlow.filter((tx) => tx.type === "INCOME").reduce((sum, tx) => sum + Number(tx.amount), 0);
+  const previousExpense = previousFlow.filter((tx) => tx.type === "EXPENSE").reduce((sum, tx) => sum + Number(tx.amount), 0);
+  const previousNet = previousIncome - previousExpense;
+  const lastMonth = currentValue - previousNet;
 
   return {
-    current,
+    current: currentValue,
     lastMonth,
-    change
+    change: previousNet
   };
 }
 
@@ -172,15 +179,10 @@ export async function dismissRecommendation(id: string) {
     select: { householdId: true }
   });
 
-  const ownershipScope: ({ userId: string } | { householdId: string })[] = [{ userId: user.id }];
-  if (dbUser?.householdId) {
-    ownershipScope.push({ householdId: dbUser.householdId });
-  }
-
   const result = await prisma.aiRecommendation.updateMany({
     where: {
       id,
-      OR: ownershipScope
+      ...scopeWhere({ userId: user.id, householdId: dbUser?.householdId ?? null }),
     },
     data: { isDismissed: true }
   });

@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { validateRequest } from "@/lib/auth";
+import { computeCanonicalTotals, FINANCE_POLICY } from "@/lib/finance/kernel";
 
 async function getAuthContext() {
   const { user } = await validateRequest();
@@ -35,17 +36,18 @@ export async function getCashboxOverview() {
     orderBy: { createdAt: "asc" },
   });
 
-  const totalBalance = accounts.reduce((acc, account) => {
-    // Para cartões de crédito, o balance pode significar fatura aberta, então precisa tratar a lógica.
-    // Assumindo que saldo de cc é negativo ou não conta pro total dependendo da regra.
-    // Simplificado:
-    if (account.type === "CREDIT") return acc - Math.abs(Number(account.balance));
-    return acc + Number(account.balance);
-  }, 0);
+  const totals = computeCanonicalTotals(
+    accounts.map((account) => ({
+      balance: Number(account.balance),
+      type: account.type,
+    }))
+  );
 
   return {
     accounts,
-    totalBalance,
+    totalBalance: totals.accountingBalance,
+    netPosition: totals.netPosition,
+    policy: FINANCE_POLICY,
   };
 }
 

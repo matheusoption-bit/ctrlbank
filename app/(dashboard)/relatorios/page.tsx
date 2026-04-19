@@ -5,6 +5,7 @@ import { getCategories } from "@/app/actions/categories";
 import { getAccounts } from "@/app/actions/accounts";
 import { getHouseholdMembers } from "@/app/actions/household";
 import RelatoriosPageClient from "./RelatoriosPageClient";
+import { getMonthBoundsUtc } from "@/lib/finance/period";
 
 export const metadata = { title: "Relatórios" };
 
@@ -21,9 +22,8 @@ export default async function RelatoriosPage({
   const year  = Number(searchParams.year  ?? now.getFullYear());
   const bankAccountId = searchParams.bankAccountId;
 
-  // Full month window
-  const startDate = new Date(year, month - 1, 1);
-  const endDate   = new Date(year, month, 0, 23, 59, 59);
+  const { start: startDate, endExclusive } = getMonthBoundsUtc(year, month);
+  const endDate = new Date(endExclusive.getTime() - 1);
 
   const [evolution, txResult, categories, accounts, { members }] = await Promise.all([
     getMonthlyEvolution(),
