@@ -41,7 +41,7 @@ describe("household quota enforcement", () => {
 
     const result = await enforceHouseholdQuota({ householdId: "h1", capability: "ai_chat", provider: null });
     expect(result.status).toBe("OK");
-    if ("report" in result) {
+    if (result.status !== "NO_HOUSEHOLD") {
       expect(result.report.usage.tokensIn).toBe(0);
       expect(result.report.usage.tokensOut).toBe(0);
     }
