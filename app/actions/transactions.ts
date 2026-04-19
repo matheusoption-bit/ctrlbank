@@ -9,6 +9,8 @@ import { saveUserLearningRule } from "@/lib/finance/learning";
 import { runFinanceIntelligence } from "@/lib/finance/intelligence";
 import { requireWriteContext, ServiceUnavailableError } from "@/lib/security/auth-context";
 import { scopeWhere } from "@/lib/security/scope";
+import { getCurrentMonthBoundsUtc, getMonthBoundsUtc } from "@/lib/finance/period";
+import { computeCanonicalTotals, computeCanonicalFlow } from "@/lib/finance/kernel";
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
@@ -143,6 +145,10 @@ export async function createManagedTransaction(params: ManagedTransactionParams)
 
   if (!account) {
     throw new Error("Conta não encontrada ou sem permissão");
+  }
+
+  if (params.type === "TRANSFER") {
+    throw new Error("TRANSFER desabilitado temporariamente: utilize transações de débito/crédito explícitas até o modelo de transferência dupla ser concluído.");
   }
 
   // Calcular delta do saldo
@@ -468,15 +474,13 @@ export async function deleteTransaction(id: string) {
 export async function getDashboardSummary() {
   const ctx = await getAuthContext();
 
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const endOfMonth   = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+  const { start, endExclusive } = getCurrentMonthBoundsUtc();
 
   const where = {
     ...scopeWhere({ userId: ctx.id, householdId: ctx.householdId }),
     status: "COMPLETED" as const,
     ignoreInTotals: false,
-    date: { gte: startOfMonth, lte: endOfMonth },
+    date: { gte: start, lt: endExclusive },
   };
 
   const [income, expense, accounts, recentTransactions, categoryBreakdown] =
@@ -527,12 +531,17 @@ export async function getDashboardSummary() {
       })
     : [];
 
-  const totalBalance = accounts.reduce((sum, a) => sum + Number(a.balance), 0);
+  const totals = computeCanonicalTotals(accounts.map((a) => ({ balance: Number(a.balance), type: a.type })));
+  const flow = computeCanonicalFlow([
+    { amount: Number(income._sum.amount ?? 0), type: "INCOME", status: "COMPLETED", ignoreInTotals: false },
+    { amount: Number(expense._sum.amount ?? 0), type: "EXPENSE", status: "COMPLETED", ignoreInTotals: false },
+  ]);
 
   return {
-    totalBalance,
-    monthIncome:   Number(income._sum.amount   ?? 0),
-    monthExpense:  Number(expense._sum.amount  ?? 0),
+    totalBalance: totals.accountingBalance,
+    netPosition: totals.netPosition,
+    monthIncome: flow.income,
+    monthExpense: flow.expense,
     accounts: accounts.map((a) => ({
       id: a.id, name: a.name, type: a.type,
       balance: Number(a.balance),
@@ -563,11 +572,11 @@ export async function getMonthlyEvolution() {
   const months: { month: string; income: number; expense: number; balance: number }[] = [];
 
   for (let i = 5; i >= 0; i--) {
-    const d    = new Date();
-    const year = d.getFullYear();
-    const month = d.getMonth() - i;
-    const start = new Date(year, month, 1);
-    const end   = new Date(year, month + 1, 0, 23, 59, 59);
+    const d = new Date();
+    const base = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - i, 1));
+    const year = base.getUTCFullYear();
+    const month = base.getUTCMonth() + 1;
+    const { start, endExclusive } = getMonthBoundsUtc(year, month);
 
     const [inc, exp] = await prisma.$transaction([
       prisma.transaction.aggregate({
@@ -576,7 +585,7 @@ export async function getMonthlyEvolution() {
           type: "INCOME",
           status: "COMPLETED",
           ignoreInTotals: false,
-          date: { gte: start, lte: end },
+          date: { gte: start, lt: endExclusive },
         },
         _sum: { amount: true },
       }),
@@ -586,7 +595,7 @@ export async function getMonthlyEvolution() {
           type: "EXPENSE",
           status: "COMPLETED",
           ignoreInTotals: false,
-          date: { gte: start, lte: end },
+          date: { gte: start, lt: endExclusive },
         },
         _sum: { amount: true },
       }),
@@ -596,7 +605,7 @@ export async function getMonthlyEvolution() {
     const expense = Number(exp._sum.amount ?? 0);
 
     months.push({
-      month: new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(start),
+      month: new Intl.DateTimeFormat("pt-BR", { month: "short", timeZone: "UTC" }).format(start),
       income,
       expense,
       balance: income - expense,

@@ -141,6 +141,10 @@ export async function updateAccount(formData: unknown) {
   const { id, name, type, balance, color, icon, creditLimit, invoiceClosingDay, invoiceDueDay, createSetupBalance, isDefault } =
     parsed.data;
 
+  if (Number(balance) !== 0 && !createSetupBalance) {
+    return { error: "Saldo não é editável diretamente. Marque 'registrar ajuste' para lançar evidência contábil." };
+  }
+
   // Verificar ownership
   const existing = await prisma.bankAccount.findFirst({
     where: {
@@ -160,7 +164,6 @@ export async function updateAccount(formData: unknown) {
         data: {
           name,
           type,
-          balance,
           color,
           icon,
           creditLimit:       type === BankAccountType.CREDIT ? creditLimit : null,
@@ -194,6 +197,7 @@ export async function updateAccount(formData: unknown) {
             status: "COMPLETED",
           }
         });
+        await tx.bankAccount.update({ where: { id: acc.id }, data: { balance: { increment: diff } } });
       }
 
       return acc;
@@ -220,7 +224,7 @@ export async function deleteAccount(id: string) {
   const existing = await prisma.bankAccount.findFirst({
     where: {
       id,
-      OR: [{ userId: ctx.id }, { householdId: ctx.householdId ?? "" }],
+      ...scopeWhere({ userId: ctx.id, householdId: ctx.householdId }),
     },
   });
 
