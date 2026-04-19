@@ -54,8 +54,8 @@ export default async function ProcessamentosPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-black tracking-tight">Histórico operacional</h1>
-        <p className="text-secondary mt-1">Lotes processados, conflitos e itens prontos para revisão/salvamento.</p>
+        <h1 className="text-3xl font-black tracking-tight">Atividade · Processamentos</h1>
+        <p className="text-secondary mt-1">Histórico operacional com lotes processados, conflitos e itens prontos para revisão.</p>
       </header>
 
       <div className="rounded-2xl border border-border bg-surface overflow-hidden">
