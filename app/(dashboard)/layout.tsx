@@ -23,11 +23,19 @@ export default async function DashboardLayout({
 
   // Check if monthly check has been viewed for notification badge
   let familyBadge = false;
+  let hasHouseholdTeam = false;
   try {
     const dbUser = await prisma.user.findUnique({
       where: { id: user.id },
       select: { householdId: true, role: true },
     });
+
+    if (dbUser?.householdId) {
+      const householdMembersCount = await prisma.user.count({
+        where: { householdId: dbUser.householdId },
+      });
+      hasHouseholdTeam = householdMembersCount > 1;
+    }
 
     if (dbUser?.householdId && dbUser.role === "ADMIN") {
       const now = new Date();
@@ -50,7 +58,11 @@ export default async function DashboardLayout({
   const aiEnabled = !!process.env.GEMINI_API_KEY;
 
   return (
-    <DashboardLayoutClient userName={user.name} familyBadge={familyBadge}>
+    <DashboardLayoutClient
+      userName={user.name}
+      familyBadge={familyBadge}
+      hasHouseholdTeam={hasHouseholdTeam}
+    >
       {children}
       {aiEnabled && <AIChatWidget />}
     </DashboardLayoutClient>

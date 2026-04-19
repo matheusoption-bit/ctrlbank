@@ -33,6 +33,18 @@ export default async function ConfiguracoesPage() {
             Gerenciar contas
           </Link>
         </div>
+        <div id="convidar" className="rounded-xl bg-surface-2 px-4 py-3 border border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="font-semibold">Convidar membro</p>
+            <p className="text-sm text-secondary">Convide alguém para compartilhar a gestão financeira familiar.</p>
+          </div>
+          <Link
+            href="/familia"
+            className="inline-flex items-center justify-center rounded-xl border border-border px-3 py-2 text-sm font-semibold hover:bg-white/5"
+          >
+            Abrir área da família
+          </Link>
+        </div>
       </section>
 
       <section className="rounded-2xl border border-border bg-surface p-5 space-y-4">
