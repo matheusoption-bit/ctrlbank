@@ -1,0 +1,59 @@
+
+> ctrlbank@0.1.0 build
+> node scripts/build.mjs
+
+[build] Missing database URL for migration. Skipping Prisma migrate deploy. Set one of: DIRECT_URL, DATABASE_URL_UNPOOLED, POSTGRES_URL_NON_POOLING, POSTGRES_PRISMA_URL, DATABASE_URL, POSTGRES_URL.
+[build] Missing database URL for runtime. Continuing Next.js build without DATABASE_URL. Set one of: POSTGRES_PRISMA_URL, DATABASE_URL, POSTGRES_URL, DATABASE_URL_UNPOOLED, DIRECT_URL, POSTGRES_URL_NON_POOLING.
+npm warn exec The following package was not found and will be installed: next@16.2.4
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+▲ Next.js 16.2.4 (Turbopack)
+- Experiments (use with caution):
+  · optimizePackageImports
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 1 errors:
+./app
+Error: Next.js inferred your workspace root, but it may not be correct.
+    We couldn't find the Next.js package (next/package.json) from the project directory: /home/runner/work/ctrlbank/ctrlbank/app
+     To fix this, set turbopack.root in your Next.js config, or ensure the Next.js package is resolvable from this directory.
+    Note: For security and performance reasons, files outside of the project directory will not be compiled.
+    See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+
+    at ignore-listed frames
+[build] Failed to prepare Prisma database URL. Error: npx next build exited with code 1.
+    at ChildProcess.<anonymous> (file:///home/runner/work/ctrlbank/ctrlbank/scripts/build.mjs:129:21)
+    at ChildProcess.emit (node:events:508:28)
+    at ChildProcess._handle.onexit (node:internal/child_process:294:12) {
+  stdout: '⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache\n' +
+    'Attention: Next.js now collects completely anonymous telemetry regarding usage.\n' +
+    "This information is used to shape Next.js' roadmap and prioritize features.\n" +
+    "You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:\n" +
+    'https://nextjs.org/telemetry\n' +
+    '\n' +
+    '▲ Next.js 16.2.4 (Turbopack)\n' +
+    '- Experiments (use with caution):\n' +
+    '  · optimizePackageImports\n' +
+    '\n' +
+    '  Creating an optimized production build ...\n',
+  stderr: 'npm warn exec The following package was not found and will be installed: next@16.2.4\n' +
+    '⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy\n' +
+    '\n' +
+    '> Build error occurred\n' +
+    'Error: Turbopack build failed with 1 errors:\n' +
+    './app\n' +
+    'Error: Next.js inferred your workspace root, but it may not be correct.\n' +
+    "    We couldn't find the Next.js package (next/package.json) from the project directory: /home/runner/work/ctrlbank/ctrlbank/app\n" +
+    '     To fix this, set turbopack.root in your Next.js config, or ensure the Next.js package is resolvable from this directory.\n' +
+    '    Note: For security and performance reasons, files outside of the project directory will not be compiled.\n' +
+    '    See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.\n' +
+    '\n' +
+    '    at ignore-listed frames\n'
+}

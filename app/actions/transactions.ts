@@ -5,6 +5,9 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { validateRequest } from "@/lib/auth";
 import { TransactionType, TransactionStatus } from "@prisma/client";
+import { resolveTransactionCategoryId } from "@/lib/finance/categorize";
+import { saveUserLearningRule } from "@/lib/finance/learning";
+import { runFinanceIntelligence } from "@/lib/finance/intelligence";
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
@@ -130,6 +133,7 @@ export type ManagedTransactionParams = {
   totalInstallments?: number | null;
   ignoreInTotals?: boolean;
   aiEventId?: string | null;
+  runIntelligence?: boolean;
 };
 
 /**
@@ -159,13 +163,21 @@ export async function createManagedTransaction(params: ManagedTransactionParams)
         : 0
       : 0;
 
+  const inferredCategoryId = params.categoryId
+    ?? await resolveTransactionCategoryId({
+      userId: params.userId,
+      householdId: params.householdId,
+      description: params.description ?? "",
+      type: params.type,
+    });
+
   const [transaction] = await prisma.$transaction([
     prisma.transaction.create({
       data: {
         userId:       params.userId,
         householdId:  params.householdId,
         bankAccountId: params.bankAccountId,
-        categoryId:   params.categoryId ?? null,
+        categoryId:   inferredCategoryId ?? null,
         type: params.type,
         status: params.status,
         amount: params.amount,
@@ -197,6 +209,12 @@ export async function createManagedTransaction(params: ManagedTransactionParams)
       },
       data: { createdTransactionId: transaction.id },
     }).catch(console.error);
+  }
+
+  if (params.runIntelligence !== false) {
+    await runFinanceIntelligence(params.userId, params.householdId).catch((error) => {
+      console.error("[finance/intelligence] failed after createManagedTransaction", error);
+    });
   }
 
   return transaction;
@@ -276,6 +294,7 @@ export async function createTransactionBatch(items: CreateTransactionBatchInput[
         amount: Math.abs(Number(item.amount)),
         description: item.description,
         date: item.date,
+        runIntelligence: false,
       });
       saved += 1;
     } catch (error) {
@@ -285,6 +304,9 @@ export async function createTransactionBatch(items: CreateTransactionBatchInput[
 
   revalidatePath("/inbox");
   revalidatePath("/caixa");
+  await runFinanceIntelligence(ctx.id, ctx.householdId).catch((error) => {
+    console.error("[finance/intelligence] failed after createTransactionBatch", error);
+  });
 
   return { success: true, saved };
 }
@@ -335,6 +357,22 @@ export async function updateTransaction(formData: unknown) {
       : 0;
 
   try {
+    if (description && categoryId && existing.categoryId !== categoryId) {
+      const category = await prisma.category.findUnique({
+        where: { id: categoryId },
+        select: { name: true },
+      });
+
+      if (category?.name) {
+        await saveUserLearningRule({
+          userId: ctx.id,
+          householdId: ctx.householdId,
+          description,
+          categoryName: category.name.toLowerCase(),
+        });
+      }
+    }
+
     await prisma.$transaction([
       // Reverter saldo antigo
       ...(oldDelta !== 0
@@ -372,6 +410,9 @@ export async function updateTransaction(formData: unknown) {
     revalidatePath("/");
     revalidatePath("/caixa");
     revalidatePath("/caixa");
+    await runFinanceIntelligence(ctx.id, ctx.householdId).catch((error) => {
+      console.error("[finance/intelligence] failed after updateTransaction", error);
+    });
     return { success: true };
   } catch (err) {
     console.error("updateTransaction error:", err);

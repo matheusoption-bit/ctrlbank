@@ -23,6 +23,13 @@ interface BalanceData { current: number; lastMonth: number; change: number }
 interface BurnRateData { last30Days: number; previous30Days: number; changePercent: number }
 interface Recommendation { id: string; type: string; message: string; score: number; createdAt: Date }
 interface MemberContribution { id: string; name: string; amount: number; percent: number }
+interface FinanceInsights {
+  totalMonth: number;
+  topCategories: Array<{ category: string; amount: number }>;
+  alert: { type: "warning"; message: string } | null;
+  recommendation: { message: string; impact: number } | null;
+  average: number;
+}
 interface SaudePageClientProps {
   healthScore: HealthScoreData | null;
   projection: ProjectionData | null;
@@ -31,6 +38,7 @@ interface SaudePageClientProps {
   recommendations: Recommendation[];
   memberContributions: MemberContribution[];
   userRole: string;
+  financeInsights: FinanceInsights;
 }
 
 /* ── Helpers ──────────────────────────────────────────── */
@@ -157,7 +165,7 @@ function Label({ children }: { children: React.ReactNode }) {
 /* ── Main Component ───────────────────────────────────── */
 export default function SaudePageClient({
   healthScore, projection, balance, burnRate,
-  recommendations: initialRecommendations, memberContributions, userRole,
+  recommendations: initialRecommendations, memberContributions, userRole, financeInsights,
 }: SaudePageClientProps) {
   const [recommendations, setRecommendations] = useState(initialRecommendations);
 
@@ -180,6 +188,39 @@ export default function SaudePageClient({
           Diagnóstico completo da saúde financeira familiar.
         </p>
       </header>
+
+      <Card span="w-full">
+        <Label>Resumo Inteligente do Mês</Label>
+        <div className="space-y-2 text-sm">
+          <p>
+            Total gasto no mês: <span className="font-bold"><MoneyDisplay amount={financeInsights.totalMonth} size="sm" /></span>
+          </p>
+          <p className="text-[11px] text-[#666]">
+            Média recente: <MoneyDisplay amount={financeInsights.average} size="sm" />
+          </p>
+          <div>
+            <p className="text-xs font-semibold mb-1">Top 3 categorias</p>
+            <ul className="space-y-1 text-xs text-[#b3b3b3]">
+              {financeInsights.topCategories.map((item) => (
+                <li key={item.category} className="flex justify-between">
+                  <span>{item.category}</span>
+                  <span className="tabular-nums">R$ {item.amount.toFixed(2)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          {financeInsights.alert && (
+            <p className="text-warning text-xs inline-flex items-center gap-1">
+              <AlertTriangle size={12} /> {financeInsights.alert.message}
+            </p>
+          )}
+          {financeInsights.recommendation && (
+            <p className="text-info text-xs">
+              Recomendação: {financeInsights.recommendation.message}
+            </p>
+          )}
+        </div>
+      </Card>
 
       {/* ── Hero: Score ──────────────────────────────────── */}
       {healthScore && (
