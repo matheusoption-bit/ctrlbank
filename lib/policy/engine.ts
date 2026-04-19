@@ -1,5 +1,11 @@
-import { PolicyStatus, Prisma } from "@prisma/client";
+import type { PolicyStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+
+const POLICY_STATUS = {
+  ACTIVE: "ACTIVE",
+  RETIRED: "RETIRED",
+  ROLLED_BACK: "ROLLED_BACK",
+} as const satisfies Record<string, PolicyStatus>;
 
 type JsonObject = Record<string, unknown>;
 
@@ -15,7 +21,7 @@ const DEFAULT_POLICIES: Record<string, JsonObject> = {
 export async function resolveActivePolicy(policyType: string, householdId?: string | null) {
   const where: Prisma.PolicyVersionWhereInput = {
     policyType,
-    status: PolicyStatus.ACTIVE,
+    status: POLICY_STATUS.ACTIVE,
     OR: householdId ? [{ householdId }, { householdId: null }] : [{ householdId: null }],
   };
 
@@ -45,16 +51,16 @@ export async function activatePolicyVersion(input: {
       where: {
         householdId: target.householdId,
         policyType: target.policyType,
-        status: PolicyStatus.ACTIVE,
+        status: POLICY_STATUS.ACTIVE,
         NOT: { id: target.id },
       },
-      data: { status: PolicyStatus.RETIRED, retiredAt: new Date() },
+      data: { status: POLICY_STATUS.RETIRED, retiredAt: new Date() },
     });
 
     return tx.policyVersion.update({
       where: { id: target.id },
       data: {
-        status: PolicyStatus.ACTIVE,
+        status: POLICY_STATUS.ACTIVE,
         activatedAt: new Date(),
         description: target.description ?? `Activated by ${input.actorUserId ?? "system"}`,
       },
@@ -64,7 +70,7 @@ export async function activatePolicyVersion(input: {
 
 export async function rollbackPolicy(policyType: string, householdId?: string | null) {
   const current = await prisma.policyVersion.findFirst({
-    where: { policyType, householdId: householdId ?? null, status: PolicyStatus.ACTIVE },
+    where: { policyType, householdId: householdId ?? null, status: POLICY_STATUS.ACTIVE },
     orderBy: { activatedAt: "desc" },
   });
 
@@ -72,7 +78,7 @@ export async function rollbackPolicy(policyType: string, householdId?: string | 
     where: {
       policyType,
       householdId: householdId ?? null,
-      status: { in: [PolicyStatus.RETIRED, PolicyStatus.ROLLED_BACK] },
+      status: { in: [POLICY_STATUS.RETIRED, POLICY_STATUS.ROLLED_BACK] },
       id: { not: current?.id },
     },
     orderBy: [{ activatedAt: "desc" }, { createdAt: "desc" }],
@@ -82,8 +88,8 @@ export async function rollbackPolicy(policyType: string, householdId?: string | 
 
   return prisma.$transaction(async (tx) => {
     if (current) {
-      await tx.policyVersion.update({ where: { id: current.id }, data: { status: PolicyStatus.ROLLED_BACK, retiredAt: new Date() } });
+      await tx.policyVersion.update({ where: { id: current.id }, data: { status: POLICY_STATUS.ROLLED_BACK, retiredAt: new Date() } });
     }
-    return tx.policyVersion.update({ where: { id: previous.id }, data: { status: PolicyStatus.ACTIVE, activatedAt: new Date() } });
+    return tx.policyVersion.update({ where: { id: previous.id }, data: { status: POLICY_STATUS.ACTIVE, activatedAt: new Date() } });
   });
 }

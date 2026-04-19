@@ -103,14 +103,12 @@ export default function DashboardLayoutClient({
         { href: "/configuracoes", label: "Configurações", icon: Settings },
       ],
     },
-    ...(hasHouseholdTeam
-      ? [
-          {
-            title: "Família",
-            items: [{ href: "/familia", label: "Família", icon: Users }],
-          },
-        ]
-      : []),
+    {
+      title: "Família",
+      items: hasHouseholdTeam
+        ? [{ href: "/familia", label: "Família", icon: Users }]
+        : [{ href: "/configuracoes#convidar", label: "Convidar família", icon: Users }],
+    },
   ];
 
   return (

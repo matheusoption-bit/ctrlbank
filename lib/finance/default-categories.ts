@@ -18,7 +18,7 @@ export const DEFAULT_CATEGORIES_PT_BR: ReadonlyArray<{
   { name: "Impostos & Taxas", type: "EXPENSE", icon: "🏛️", color: "#B0B0B0" },
   { name: "Dívidas", type: "EXPENSE", icon: "⚠️", color: "#EF4444" },
   { name: "Outros", type: "EXPENSE", icon: "◻️", color: "#3A3A3A" },
-  { name: "Salário", type: "INCOME", icon: "💼", color: "#19FF63" },
+  { name: "Salário", type: "INCOME", icon: "💼", color: "#2ECC71" },
   { name: "Freelance", type: "INCOME", icon: "🧑‍💻", color: "#7FFF8A" },
   { name: "Rendimentos", type: "INCOME", icon: "📈", color: "#B5FF3C" },
   { name: "Reembolso", type: "INCOME", icon: "↩️", color: "#A0A0A0" },

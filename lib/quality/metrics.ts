@@ -1,6 +1,10 @@
-import { MetricPeriodType } from "@prisma/client";
+import type { MetricPeriodType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { deterministicQualityScore } from "@/lib/quality/evaluation";
+
+const METRIC_PERIOD_TYPE = {
+  DAILY: "DAILY",
+} as const satisfies Record<string, MetricPeriodType>;
 
 type MetricRow = { metricCode: string; metricValue: number; dimensions?: Record<string, unknown> };
 
@@ -54,7 +58,7 @@ export async function persistQualityMetricSnapshots(input: {
 
   await prisma.productQualityMetricSnapshot.createMany({
     data: metrics.map((metric) => ({
-      periodType: input.periodType ?? MetricPeriodType.DAILY,
+      periodType: input.periodType ?? METRIC_PERIOD_TYPE.DAILY,
       periodStart: input.periodStart,
       periodEnd: input.periodEnd,
       householdId: input.householdId,
@@ -62,7 +66,7 @@ export async function persistQualityMetricSnapshots(input: {
       scopeId: input.scopeId ?? null,
       metricCode: metric.metricCode,
       metricValue: metric.metricValue,
-      dimensions: (metric.dimensions ?? undefined) as any,
+      dimensions: (metric.dimensions as Prisma.InputJsonValue | undefined) ?? undefined,
       computedAt,
     })),
   });

@@ -1,6 +1,15 @@
-import { CalibrationMode, PolicyStatus } from "@prisma/client";
+import type { CalibrationMode, PolicyStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getPolicyConfig } from "@/lib/policy/engine";
+
+const CALIBRATION_MODE = {
+  RECOMMEND_ONLY: "RECOMMEND_ONLY",
+  APPLY_WITH_GUARDRAILS: "APPLY_WITH_GUARDRAILS",
+} as const satisfies Record<string, CalibrationMode>;
+
+const POLICY_STATUS = {
+  EXPERIMENTAL: "EXPERIMENTAL",
+} as const satisfies Record<string, PolicyStatus>;
 
 type CalibrationInput = {
   householdId: string;
@@ -12,7 +21,7 @@ type CalibrationInput = {
 };
 
 export async function runCalibration(input: CalibrationInput) {
-  const mode = input.mode ?? CalibrationMode.RECOMMEND_ONLY;
+  const mode = input.mode ?? CALIBRATION_MODE.RECOMMEND_ONLY;
   const minSample = input.minSampleSize ?? 25;
   const maxStepPct = input.maxStepPct ?? 0.2;
   const cooldownHours = input.cooldownHours ?? 24;
@@ -72,7 +81,7 @@ export async function runCalibration(input: CalibrationInput) {
   let policyVersionId: string | undefined;
   let reason = "recommendation_generated";
 
-  if (mode === CalibrationMode.APPLY_WITH_GUARDRAILS && boundedDelta !== 0) {
+  if (mode === CALIBRATION_MODE.APPLY_WITH_GUARDRAILS && boundedDelta !== 0) {
     const latestVersion = await prisma.policyVersion.findFirst({
       where: { householdId: input.householdId, policyType: input.policyType },
       orderBy: { version: "desc" },
@@ -83,7 +92,7 @@ export async function runCalibration(input: CalibrationInput) {
         householdId: input.householdId,
         policyType: input.policyType,
         version: (latestVersion?.version ?? 0) + 1,
-        status: PolicyStatus.EXPERIMENTAL,
+        status: POLICY_STATUS.EXPERIMENTAL,
         parentPolicyVersionId: latestVersion?.id,
         config: { ...current, riskScoreThreshold: candidateThreshold },
         description: "Auto-calibrated by Wave 5 engine",
