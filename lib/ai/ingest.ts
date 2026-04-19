@@ -1,15 +1,19 @@
 import { prisma } from "@/lib/prisma";
-import { createManagedTransaction } from "@/app/actions/transactions";
 import { AIProviderRegistry } from "./providers/registry";
 import { AICapability, AIGenerationOptions } from "./providers/types";
-import { extractJsonFromModelOutput } from "./providers/utils";
 import { randomUUID } from "crypto";
-import { AIComposerTransactionDraft, AIComposerResponse, AIComposerMode, AIComposerBatchDraftItem } from "@/lib/ai/contracts";
-import { resolveTargetAccount, resolveCategory, shouldAutoSave, logAiCaptureEvent } from "@/lib/ai/composer";
+import { AIComposerResponse, AIComposerMode, AIComposerBatchDraftItem } from "@/lib/ai/contracts";
+import { logAiCaptureEvent } from "@/lib/ai/composer";
 import { parseCSVForAI } from "./csv-pdf-parser";
 import { formatCurrency } from "@/lib/format";
+import { runPromptGuard } from "@/lib/ai/prompt-guard";
+import { routeAIRequest } from "@/lib/ai/router";
+import { extractWithProvider } from "@/lib/ai/review-protocol/extractor";
+import { resolveDraft } from "@/lib/ai/review-protocol/resolver";
+import { reviewDraft } from "@/lib/ai/review-protocol/reviewer";
+import { commitDraft } from "@/lib/ai/review-protocol/committer";
+import { evaluateTransactionQuality } from "@/lib/finance/quality";
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
 const JSON_PROMPT_SINGLE = `
 Você é o AI Composer do CtrlBank, sistema de governança da saúde financeira familiar.
@@ -117,37 +121,54 @@ Responda à pergunta do usuário de forma clara. Se houver áudio, forneça um J
   else if (isChatMode) capability = "conversation";
 
   const isJsonExpected = capability !== "conversation" || input.inputType === "audio";
-  const opts: AIGenerationOptions = { responseFormat: isJsonExpected ? "json_object" : "text" };
 
-  let parsedItems: any = null;
-  let rawTextResponse = "";
-
-  if (input.inputType === "text" || input.inputType === "csv") {
-    let processedContent = input.content;
-    if (input.inputType === "csv" && input.content) {
-      processedContent = parseCSVForAI(input.content);
-    }
-    
-    const textPrompt = processedContent ? `${prompt}\n\nEntrada:\n${processedContent}` : prompt;
-    if (isJsonExpected) {
-      parsedItems = await registry.generateStructured(capability, textPrompt, undefined, opts);
-    } else {
-      rawTextResponse = await registry.generateText(capability, textPrompt, opts);
-    }
-  } else {
-    // image, text+image, pdf, audio
-    const textPrompt = input.content ? `${prompt}\n\nEntrada do Usuário: "${input.content}"` : prompt;
-    const media = {
-      base64: input.imageBase64!,
-      mimeType: input.mimeType || (input.inputType === "audio" ? "audio/webm" : "image/jpeg")
-    };
-    const multResult = await registry.generateMultimodal(capability, textPrompt, media, opts);
-    if (isJsonExpected) {
-      parsedItems = multResult;
-    } else {
-      rawTextResponse = multResult;
-    }
+  let processedContent = input.content;
+  if (input.inputType === "csv" && input.content) {
+    processedContent = parseCSVForAI(input.content);
   }
+
+  const payloadText = processedContent ?? input.content ?? "";
+  const guard = runPromptGuard({
+    text: payloadText,
+    sourceChannel: input.mode === "Revisar" ? "composer" : "manual",
+    inputType: input.inputType,
+    strict: input.mode === "Revisar" || input.mode === "Registrar",
+  });
+
+  const promptWithInput = (input.inputType === "text" || input.inputType === "csv")
+    ? (processedContent ? `${prompt}
+
+Entrada:
+${processedContent}` : prompt)
+    : (input.content ? `${prompt}
+
+Entrada do Usuário: "${input.content}"` : prompt);
+
+  const route = routeAIRequest({
+    capability,
+    inputType: input.inputType,
+    textLength: promptWithInput.length,
+    taintLevel: guard.taintLevel,
+  });
+
+  const opts: AIGenerationOptions = {
+    responseFormat: isJsonExpected ? "json_object" : "text",
+    providerHint: route.providerHint,
+    allowFallback: route.allowFallback,
+  };
+
+  const extraction = await extractWithProvider({
+    registry,
+    capability,
+    prompt: promptWithInput,
+    inputType: input.inputType,
+    imageBase64: input.imageBase64,
+    mimeType: input.mimeType,
+    opts,
+  });
+
+  let parsedItems: any = extraction.parsedItems;
+  let rawTextResponse = extraction.rawTextResponse;
 
   // extract JSON / reply
   let parsedJson: any = null;
@@ -243,7 +264,7 @@ Responda à pergunta do usuário de forma clara. Se houver áudio, forneça um J
              rawTextResponse = parsed.chatReply;
           }
         }
-      } catch (e) {
+      } catch {
          // fallback
       }
     } else if (parsedItems && parsedItems.chatReply) {
@@ -271,27 +292,9 @@ Responda à pergunta do usuário de forma clara. Se houver áudio, forneça um J
   if (!parsedItems) {
     throw new Error("A IA não retornou um formato JSON rastreável.");
   }
-  const processDraft = async (parsed: any): Promise<AIComposerTransactionDraft> => {
-    if (parsed.amount && isNaN(Number(parsed.amount))) parsed.amount = null;
-    const targetAccount = await resolveTargetAccount(input.userId, input.householdId, parsed.accountName, parsed.description);
-    const targetCategory = await resolveCategory(input.userId, input.householdId, parsed.categoryName || "Outros", parsed.transactionType || "EXPENSE", parsed.description);
-
-    return {
-      amount: parsed.amount ? Number(parsed.amount) : null,
-      date: parsed.date ?? new Date().toISOString().split("T")[0],
-      description: parsed.description || "Movimento Extraído",
-      transactionType: parsed.transactionType || "EXPENSE",
-      categoryName: targetCategory.name,
-      categoryId: targetCategory.id,
-      accountId: targetAccount?.id ?? null,
-      accountName: targetAccount?.name ?? null,
-      confidence: parsed.confidence || { overall: 0, amount: 0, date: 0, description: 0, category: 0, account: 0, transactionType: 0 },
-      source: input.inputType,
-    };
-  };
 
   if (isBatch) {
-    const drafts = await Promise.all((parsedItems as any[]).map(item => processDraft(item)));
+    const drafts = await Promise.all((parsedItems as any[]).map(async (item) => (await resolveDraft({ parsed: item, userId: input.userId, householdId: input.householdId, source: input.inputType })).draft));
     const batchDrafts: AIComposerBatchDraftItem[] = await Promise.all(
       drafts.map(async (draft) => {
         const aiEvent = await logAiCaptureEvent({
@@ -332,18 +335,37 @@ Responda à pergunta do usuário de forma clara. Se houver áudio, forneça um J
   }
 
   // Single Item
-  const draft = await processDraft(parsedItems);
-  const missingFields: Array<"amount" | "date" | "description" | "category" | "account" | "transactionType"> = [];
-  if (!draft.amount) missingFields.push("amount");
-  if (!draft.date) missingFields.push("date");
-  if (!draft.description) missingFields.push("description");
-  if (!draft.accountId) missingFields.push("account");
-  if (!draft.transactionType) missingFields.push("transactionType");
+  const { draft, missingFields } = await resolveDraft({
+    parsed: parsedItems,
+    userId: input.userId,
+    householdId: input.householdId,
+    source: input.inputType,
+  });
+
+  const quality = await evaluateTransactionQuality({
+    userId: input.userId,
+    householdId: input.householdId,
+    draft,
+  });
+
+  const forcedSecurityReview = guard.shouldEscalateToReview;
+  const forcedQualityReview = quality.requiresReview;
+  const forceReview = forcedSecurityReview || forcedQualityReview;
+
+  const decision = reviewDraft({
+    draft,
+    missingFields,
+    disableAutoSave: input.disableAutoSave,
+    forceReview,
+    forceReason: forcedSecurityReview
+      ? "Entrada sinalizada para revisão de segurança."
+      : "Entrada sinalizada por heurísticas de qualidade.",
+  });
 
   const response: AIComposerResponse = {
-    intent: "clarification_needed",
-    message: "Verifique os dados.",
-    requiresReview: true,
+    intent: decision.intent,
+    message: decision.message,
+    requiresReview: decision.requiresReview,
     autoSaved: false,
     transactionDraft: draft,
     createdTransactionId: null,
@@ -356,30 +378,13 @@ Responda à pergunta do usuário de forma clara. Se houver áudio, forneça um J
     userTranscript: parsedItems.userTranscript ?? undefined,
   };
 
-  const isAutoSave = shouldAutoSave(draft, missingFields as any[]);
-
-  if (draft.confidence.overall < 0.55 || missingFields.length > 0) {
-    response.intent = "clarification_needed";
-    response.message = missingFields.includes("account") 
-      ? "Não encontrei a conta padrão, onde devo registrar isso?" 
-      : "Preciso de mais informações para registrar.";
-  } else if (draft.confidence.overall >= 0.55 && draft.confidence.overall < 0.85) {
-    response.intent = "transaction_draft";
-    response.message = "Fiz um rascunho, mas preciso da sua revisão.";
-  } else if (isAutoSave && !input.disableAutoSave) {
-    // AUTO-SAVE
-    const tx = await createManagedTransaction({
+  if (decision.canCommit) {
+    const tx = await commitDraft({
+      draft,
       userId: input.userId,
       householdId: input.householdId,
-      bankAccountId: draft.accountId!,
-      categoryId: draft.categoryId,
-      type: draft.transactionType,
-      status: "COMPLETED",
-      amount: Math.abs(draft.amount!),
-      description: draft.description,
-      date: new Date(draft.date!),
     });
-    
+
     response.intent = "transaction_created";
     response.message = "Movimento registrado com sucesso.";
     response.requiresReview = false;
@@ -387,10 +392,6 @@ Responda à pergunta do usuário de forma clara. Se houver áudio, forneça um J
     response.createdTransactionId = tx.id;
     response.undoAvailable = true;
     response.undoToken = `undo_${tx.id}`;
-  } else {
-    response.intent = "transaction_draft";
-    response.message = "Entrada pronta para salvar. Revise rapidamente antes de confirmar.";
-    response.requiresReview = true;
   }
 
   // Audit
@@ -401,7 +402,7 @@ Responda à pergunta do usuário de forma clara. Se houver áudio, forneça um J
     source: input.inputType,
     inputType: "composer",
     rawText: input.content ?? null,
-    normalizedDraft: draft,
+    normalizedDraft: { draft, qualitySignals: quality.signals, taint: guard.taintLevel },
     confidenceOverall: draft.confidence.overall,
     decision: response.intent,
     createdTransactionId: response.createdTransactionId,
