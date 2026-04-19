@@ -24,68 +24,36 @@ import {
   History,
 } from "lucide-react";
 
-const SIDEBAR_ITEMS = [
-  { href: "/",             icon: Home,            label: "Início"        },
-  { href: "/saude",         icon: LayoutDashboard, label: "Saúde"         },
-  { href: "/caixa",         icon: Wallet,          label: "Caixa"         },
-  { href: "/inbox",         icon: Inbox,           label: "Inbox"         },
-  { href: "/processamentos", icon: History,         label: "Histórico"     },
-  { href: "/metas",         icon: Target,          label: "Metas"         },
-  { href: "/relatorios",    icon: BookOpen,        label: "Relatórios"    },
-  { href: "/familia",       icon: Users,           label: "Família"       },
-  { href: "/configuracoes", icon: Settings,        label: "Configurações" },
-];
-
 const MOBILE_NAV_ITEMS = [
-  { href: "/saude",     icon: LayoutDashboard, label: "Saúde"    },
+  { href: "/",          icon: Home,            label: "Início"   },
   { href: "/caixa",     icon: Wallet,          label: "Caixa"    },
   { id: "composer",     icon: Sparkles,        label: "Composer" },
   { href: "/inbox",     icon: Inbox,           label: "Inbox"    },
-  { href: "/metas",     icon: Target,          label: "Metas"    },
-];
-
-const MOBILE_DRAWER_SECTIONS = [
-  {
-    title: "Operação",
-    items: [
-      { href: "/", label: "Início", icon: Home },
-      { href: "/saude", label: "Saúde", icon: LayoutDashboard },
-      { href: "/caixa", label: "Caixa", icon: Wallet },
-      { href: "/inbox", label: "Inbox", icon: Inbox },
-      { href: "/processamentos", label: "Processamentos", icon: History },
-      { href: "/metas", label: "Metas", icon: Target },
-    ],
-  },
-  {
-    title: "Gestão",
-    items: [
-      { href: "/relatorios", label: "Relatórios", icon: BookOpen },
-      { href: "/familia", label: "Família", icon: Users },
-      { href: "/contas", label: "Contas", icon: Wallet },
-    ],
-  },
-  {
-    title: "Sistema",
-    items: [{ href: "/configuracoes", label: "Configurações", icon: Settings }],
-  },
+  { href: "/saude",     icon: LayoutDashboard, label: "Saúde"    },
 ];
 
 interface DashboardLayoutClientProps {
   children: React.ReactNode;
   userName: string | null;
   familyBadge?: boolean;
+  hasHouseholdTeam?: boolean;
 }
 
 export default function DashboardLayoutClient({
   children,
   userName,
   familyBadge = false,
+  hasHouseholdTeam = false,
 }: DashboardLayoutClientProps) {
   const pathname = usePathname();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+  const isActive = (href: string) => {
+    const normalizedHref = href.split("#")[0]?.split("?")[0] ?? href;
+    return normalizedHref === "/"
+      ? pathname === "/"
+      : pathname === normalizedHref || pathname.startsWith(`${normalizedHref}/`);
+  };
 
   const initials = userName
     ? userName
@@ -96,13 +64,58 @@ export default function DashboardLayoutClient({
         .toUpperCase()
     : "?";
 
+  const sidebarItems = [
+    { href: "/", icon: Home, label: "Início" },
+    { href: "/saude", icon: LayoutDashboard, label: "Saúde" },
+    { href: "/caixa", icon: Wallet, label: "Caixa" },
+    { href: "/inbox", icon: Inbox, label: "Inbox" },
+    { href: "/processamentos", icon: History, label: "Histórico" },
+    { href: "/metas", icon: Target, label: "Metas" },
+    { href: "/relatorios", icon: BookOpen, label: "Relatórios" },
+    hasHouseholdTeam
+      ? { href: "/familia", icon: Users, label: "Família" }
+      : { href: "/configuracoes#convidar", icon: Users, label: "Convidar família" },
+    { href: "/configuracoes", icon: Settings, label: "Configurações" },
+  ];
+
+  const mobileDrawerSections = [
+    {
+      title: "Operação",
+      items: [
+        { href: "/", label: "Início", icon: Home },
+        { href: "/saude", label: "Saúde", icon: LayoutDashboard },
+        { href: "/caixa", label: "Caixa", icon: Wallet },
+        { href: "/inbox", label: "Inbox", icon: Inbox },
+        { href: "/processamentos", label: "Processamentos", icon: History },
+        { href: "/metas", label: "Metas", icon: Target },
+        { href: "/relatorios", label: "Relatórios", icon: BookOpen },
+      ],
+    },
+    {
+      title: "Configuração",
+      items: [
+        { href: "/contas", label: "Contas", icon: Wallet },
+        { href: "/categorias", label: "Categorias", icon: Target },
+        { href: "/configuracoes", label: "Configurações", icon: Settings },
+      ],
+    },
+    ...(hasHouseholdTeam
+      ? [
+          {
+            title: "Família",
+            items: [{ href: "/familia", label: "Família", icon: Users }],
+          },
+        ]
+      : []),
+  ];
+
   return (
     <div className="min-h-dvh bg-background">
       {/* ── Sidebar (desktop) ─────────────────────────────────── */}
       <aside className="hidden md:flex flex-col w-[260px] min-h-dvh bg-[#030303] border-r border-white/[0.06] fixed top-0 left-0 z-40">
         {/* Brand */}
         <div className="px-7 pt-8 pb-6">
-          <Link href="/" className="inline-flex items-baseline gap-0.5">
+          <Link href="/" aria-label="CtrlBank Início" className="inline-flex items-baseline gap-0.5">
             <span className="text-lg font-black tracking-[-0.04em] text-primary">Ctrl</span>
             <span className="text-lg font-black tracking-[-0.04em] text-foreground">Bank</span>
           </Link>
@@ -110,13 +123,14 @@ export default function DashboardLayoutClient({
 
         {/* Nav */}
         <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
-          {SIDEBAR_ITEMS.map(({ href, icon: Icon, label }) => {
+          {sidebarItems.map(({ href, icon: Icon, label }) => {
             const active = isActive(href);
             const showBadge = href === "/familia" && familyBadge;
             return (
               <Link
-                key={href}
+                key={`${href}-${label}`}
                 href={href}
+                aria-label={label}
                 className={`relative flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150 group ${
                   active
                     ? "text-primary"
@@ -256,6 +270,7 @@ export default function DashboardLayoutClient({
                 <Link
                   key={href}
                   href={href}
+                  aria-label={item.label}
                   className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all duration-150 min-w-0 ${
                     active ? "text-primary" : "text-[#555]"
                   }`}
@@ -304,7 +319,7 @@ export default function DashboardLayoutClient({
               </div>
 
               <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
-                {MOBILE_DRAWER_SECTIONS.map((section) => (
+                {mobileDrawerSections.map((section) => (
                   <section key={section.title} className="space-y-1.5">
                     <h2 className="px-2 text-[11px] uppercase tracking-[0.12em] text-[#727272] font-semibold">
                       {section.title}
@@ -315,6 +330,7 @@ export default function DashboardLayoutClient({
                         <Link
                           key={href}
                           href={href}
+                          aria-label={label}
                           onClick={() => setIsDrawerOpen(false)}
                           className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors ${
                             active
