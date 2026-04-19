@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { validateRequest } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { COPY } from "@/lib/copy/ctrlbank";
 import InboxPageClient from "./InboxPageClient";
 
 export default async function InboxPage() {
@@ -50,8 +51,8 @@ export default async function InboxPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-black tracking-tight">Inbox</h1>
-        <p className="text-secondary mt-1">Solte comprovantes, extratos e faturas. A IA lê, organiza e propõe — você aprova.</p>
+        <h1 className="text-3xl font-black tracking-tight">{COPY.inbox.title}</h1>
+        <p className="text-secondary mt-1">{COPY.inbox.subtitle}</p>
       </header>
 
       <InboxPageClient

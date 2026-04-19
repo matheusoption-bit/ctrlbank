@@ -245,7 +245,7 @@ export default function MetasPageClient({ goals, hasHouseholdId }: { goals: Goal
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Goal | undefined>();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   const totalTarget = goals.reduce((s, g) => s + g.targetAmount, 0);
   const totalSaved  = goals.reduce((s, g) => s + g.currentAmount, 0);

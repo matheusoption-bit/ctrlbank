@@ -12,15 +12,16 @@ export const metadata = { title: "Relatórios" };
 export default async function RelatoriosPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | undefined };
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
   const { user } = await validateRequest();
   if (!user) redirect("/login");
 
+  const params = await searchParams;
   const now = new Date();
-  const month = Number(searchParams.month ?? now.getMonth() + 1);
-  const year  = Number(searchParams.year  ?? now.getFullYear());
-  const bankAccountId = searchParams.bankAccountId;
+  const month = Number(params.month ?? now.getMonth() + 1);
+  const year  = Number(params.year  ?? now.getFullYear());
+  const bankAccountId = params.bankAccountId;
 
   const { start: startDate, endExclusive } = getMonthBoundsUtc(year, month);
   const endDate = new Date(endExclusive.getTime() - 1);

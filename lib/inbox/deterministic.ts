@@ -1,4 +1,4 @@
-import { AIComposerBatchDraftItem, AIComposerTransactionDraft } from "@/lib/ai/contracts";
+import { AIComposerTransactionDraft } from "@/lib/ai/contracts";
 import { resolveCategory, resolveTargetAccount } from "@/lib/ai/composer";
 import Papa from "papaparse";
 

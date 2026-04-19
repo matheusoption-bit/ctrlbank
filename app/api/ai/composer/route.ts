@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       provider: "gemini",
     });
 
-    const { getOrCreateConversation, saveAiMessage, createFinancialPlan, createProductFeedback } = await import("@/lib/ai/composer");
+    const { getOrCreateConversation, saveAiMessage, createFinancialPlan } = await import("@/lib/ai/composer");
 
     const conversationId = await getOrCreateConversation(user.id, dbUser?.householdId ?? null, body.conversationId);
 

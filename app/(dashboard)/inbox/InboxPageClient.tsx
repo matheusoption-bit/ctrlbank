@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { COPY } from "@/lib/copy/ctrlbank";
 
 type DraftLike = {
   description?: string;
@@ -83,16 +84,16 @@ export default function InboxPageClient({ events, eventsLoadError }: Props) {
 
       const data = (await response.json()) as ParseResponse & { error?: string };
       if (!response.ok) {
-        throw new Error(data?.error || "Não consegui interpretar. Tente outro arquivo.");
+        throw new Error(data?.error || COPY.inbox.errorGeneric);
       }
 
       const items = Array.isArray(data.items) ? data.items : [];
       setParsedItems(items);
       setCaptureEventId(data.captureEventId ?? null);
       const hasFlags = Array.isArray(data.qualityFlags) && data.qualityFlags.length > 0;
-      setMessage(hasFlags ? `Processado com ${data.qualityFlags?.length} flag(s) de qualidade.` : items.length > 0 ? null : "Não consegui interpretar. Tente outro arquivo.");
+      setMessage(hasFlags ? `Processado com ${data.qualityFlags?.length} flag(s) de qualidade.` : items.length > 0 ? null : COPY.inbox.errorGeneric);
     } catch (error: any) {
-      setMessage(error?.message || "Não consegui interpretar. Tente outro arquivo.");
+      setMessage(error?.message || COPY.inbox.errorGeneric);
       setParsedItems([]);
     } finally {
       setLoading(false);
@@ -113,7 +114,7 @@ export default function InboxPageClient({ events, eventsLoadError }: Props) {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data?.error || "Não foi possível confirmar o lote.");
+        throw new Error(data?.error || COPY.inbox.errorConfirm);
       }
 
       setMessage(data?.message || "Transações confirmadas com sucesso.");
@@ -124,7 +125,7 @@ export default function InboxPageClient({ events, eventsLoadError }: Props) {
       if (fileInputRef.current) fileInputRef.current.value = "";
       router.refresh();
     } catch (error: any) {
-      setMessage(error?.message || "Não foi possível confirmar o lote.");
+      setMessage(error?.message || COPY.inbox.errorConfirm);
     } finally {
       setConfirming(false);
     }

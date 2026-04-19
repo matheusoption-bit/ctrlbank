@@ -4,7 +4,7 @@ import React, { useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Wallet, CreditCard, PiggyBank, TrendingUp,
-  MoreVertical, Pencil, Trash2, X, Check,
+  Pencil, Trash2, X, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/format";
@@ -214,8 +214,8 @@ const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transiti
 export default function ContasPageClient({ accounts }: { accounts: BankAccount[] }) {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<BankAccount | undefined>();
-  const [menuOpen, setMenuOpen] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [, setMenuOpen] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
   const totalBalance = accounts.reduce((s, a) => s + Number(a.balance), 0);
 

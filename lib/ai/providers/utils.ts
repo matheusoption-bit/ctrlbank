@@ -17,7 +17,7 @@ export function extractJsonFromModelOutput(output: string): any {
   // Let's attempt to isolate { ... } or [ ... ]
   try {
     return JSON.parse(potentialJson);
-  } catch (e) {
+  } catch {
     // If exact parsing fails, scan for the outermost brackets/braces
     const firstBrace = potentialJson.indexOf('{');
     const lastBrace = potentialJson.lastIndexOf('}');
@@ -32,7 +32,7 @@ export function extractJsonFromModelOutput(output: string): any {
 
     try {
       return JSON.parse(potentialJson);
-    } catch (finalError) {
+    } catch {
       console.error("[JSON Extraction] Failed:", potentialJson);
       throw new Error("A IA não retornou um formato JSON rastreável.");
     }

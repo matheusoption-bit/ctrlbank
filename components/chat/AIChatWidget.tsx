@@ -234,7 +234,7 @@ export default function AIChatWidget() {
       timerIntervalRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
-    } catch (err) {
+    } catch {
       toast.error("Não foi possível acessar o microfone.");
     }
   };
@@ -493,7 +493,7 @@ export default function AIChatWidget() {
                          
                          {message.metadata?.intent === "saved_plan" && message.metadata.planData && (
                             <div className="mt-2 text-left">
-                               <SavedPlanCard planId={message.metadata.savedPlanId} planData={message.metadata.planData} />
+                               <SavedPlanCard planData={message.metadata.planData} />
                             </div>
                          )}
                          {message.metadata?.intent === "product_feedback_logged" && message.metadata.normalizedFeedback && (

@@ -215,7 +215,7 @@ export function NextBestActionCard({
   );
 }
 
-export function SavedPlanCard({ planId, planData }: { planId?: string, planData: any }) {
+export function SavedPlanCard({ planData }: { planData: any }) {
   return (
     <div className="card-c6 border border-primary/20 bg-surface space-y-3 relative overflow-hidden mt-2">
       <div className="absolute top-0 left-0 w-1 h-full bg-primary/80"></div>

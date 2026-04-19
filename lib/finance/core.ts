@@ -1,4 +1,4 @@
-import { TransactionType, TransactionStatus } from "@prisma/client";
+import { TransactionStatus } from "@prisma/client";
 
 export interface AuthContext {
   id: string;
