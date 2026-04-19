@@ -14,6 +14,8 @@ export interface AIGenerationOptions {
   systemPrompt?: string;
   responseFormat?: "json_object" | "text";
   temperature?: number;
+  providerHint?: "gemini" | "openai" | "nvidia";
+  allowFallback?: boolean;
 }
 
 export interface AIMediaFile {
@@ -34,3 +36,4 @@ export interface AIProvider {
   
   generateMultimodal(prompt: string, media: AIMediaFile, opts?: AIGenerationOptions): Promise<any>;
 }
+

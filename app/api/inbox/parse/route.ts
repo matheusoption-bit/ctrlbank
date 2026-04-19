@@ -9,6 +9,7 @@ import { appendIngestionLog, createQualityFlag, sanitizeErrorMessage } from "@/l
 import { canonicalizeTextPayload, computeSha256, sealCapturePayload } from "@/lib/security/checksum";
 import { scopeWhere } from "@/lib/security/scope";
 import { shouldRequireReview } from "@/lib/inbox/processing-state";
+import { runPromptGuard } from "@/lib/ai/prompt-guard";
 
 export const runtime = "nodejs";
 
@@ -100,6 +101,12 @@ export async function POST(req: NextRequest) {
     }
 
     const canonicalInput = canonicalizeTextPayload(rawInput);
+    const guard = runPromptGuard({
+      text: canonicalInput,
+      sourceChannel,
+      inputType,
+      strict: true,
+    });
     const sha256 = computeSha256(canonicalInput);
     const contentHash = computeSha256(`${inputType}:${canonicalInput.toLowerCase()}`);
     const householdId = dbUser?.householdId ?? null;
@@ -134,7 +141,7 @@ export async function POST(req: NextRequest) {
             contentHash,
             extractionMethod: inputType === "image" ? "ocr" : inputType === "pdf" ? "pdf_extract" : "direct_text",
             parserVersion: PARSER_VERSION,
-            taintLevel: "LOW",
+            taintLevel: guard.taintLevel,
           },
         });
 
@@ -169,7 +176,7 @@ export async function POST(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    const reviewRequired = shouldRequireReview({ normalizedCount: normalized.length, hasCommittedDuplicate: Boolean(duplicateCommitted) });
+    const reviewRequired = shouldRequireReview({ normalizedCount: normalized.length, hasCommittedDuplicate: Boolean(duplicateCommitted) }) || guard.shouldEscalateToReview;
 
     const payload = {
       items: normalized,
@@ -195,8 +202,8 @@ export async function POST(req: NextRequest) {
         decision: reviewRequired ? "clarification_needed" : "transaction_draft",
         processingStage: reviewRequired ? IngestionStage.REVIEW_REQUIRED : IngestionStage.NORMALIZED,
         reviewState: reviewRequired ? ReviewState.REQUIRED : ReviewState.NOT_REQUIRED,
-        decisionReason: reviewRequired ? "Itens vazios ou entrada duplicada" : "Draft normalizado com staging seguro",
-        taintLevel: "LOW",
+        decisionReason: reviewRequired ? (guard.shouldEscalateToReview ? "Entrada sinalizada por prompt guard" : "Itens vazios ou entrada duplicada") : "Draft normalizado com staging seguro",
+        taintLevel: guard.taintLevel,
         parserVersion: PARSER_VERSION,
         normalizerVersion: NORMALIZER_VERSION,
         sealedPayload: sealed.sealedPayload,
@@ -247,6 +254,17 @@ export async function POST(req: NextRequest) {
         metadata: { reason: "no_candidates" },
       });
       qualityFlags.push({ code: QualityFlagCode.REVIEW_REQUIRED, severity: QualityFlagSeverity.MEDIUM });
+    }
+
+    if (guard.shouldEscalateToReview) {
+      await createQualityFlag({
+        code: QualityFlagCode.REVIEW_REQUIRED,
+        severity: QualityFlagSeverity.HIGH,
+        aiCaptureEventId: event.id,
+        sourceDocumentId: sourceDocument.id,
+        metadata: { reason: "prompt_guard", suspiciousPatterns: guard.suspiciousPatterns, outOfDomain: guard.outOfDomain },
+      });
+      qualityFlags.push({ code: QualityFlagCode.REVIEW_REQUIRED, severity: QualityFlagSeverity.HIGH });
     }
 
     return NextResponse.json({

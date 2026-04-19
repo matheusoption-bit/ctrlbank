@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
         average: finance.average,
         alerts: finance.alerts,
         recommendations: finance.recommendations,
+        signals: finance.signals,
       });
 
       response = {
