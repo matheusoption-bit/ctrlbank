@@ -144,11 +144,12 @@ ${processedContent}` : prompt)
 
 Entrada do Usuário: "${input.content}"` : prompt);
 
-  const route = routeAIRequest({
+  const route = await routeAIRequest({
     capability,
     inputType: input.inputType,
     textLength: promptWithInput.length,
     taintLevel: guard.taintLevel,
+    householdId: input.householdId,
   });
 
   const opts: AIGenerationOptions = {

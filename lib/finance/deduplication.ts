@@ -1,5 +1,6 @@
 import { TransactionType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getPolicyConfig } from "@/lib/policy/engine";
 
 export type NormalizedIngestedTransaction = {
   date: Date;
@@ -53,10 +54,13 @@ function jaccardSimilarity(a: string, b: string) {
 }
 
 export async function detectDuplicateTransaction({ userId, householdId, item }: DedupInput): Promise<DeduplicationResult> {
+  const dedupPolicy = await getPolicyConfig<{ similarityThreshold?: number; dateWindowDays?: number }>("dedup_heuristics", householdId);
+  const windowDays = Number(dedupPolicy.dateWindowDays ?? 1);
+  const similarityThreshold = Number(dedupPolicy.similarityThreshold ?? 0.4);
   const from = new Date(item.date);
-  from.setDate(from.getDate() - 1);
+  from.setDate(from.getDate() - windowDays);
   const to = new Date(item.date);
-  to.setDate(to.getDate() + 1);
+  to.setDate(to.getDate() + windowDays);
 
   const txType: TransactionType = item.type === "income" ? "INCOME" : "EXPENSE";
 
@@ -75,7 +79,7 @@ export async function detectDuplicateTransaction({ userId, householdId, item }: 
     orderBy: { date: "desc" },
   });
 
-  const duplicate = candidates.find((candidate) => jaccardSimilarity(candidate.description ?? "", item.description ?? "") >= 0.4);
+  const duplicate = candidates.find((candidate) => jaccardSimilarity(candidate.description ?? "", item.description ?? "") >= similarityThreshold);
 
   if (!duplicate) {
     return { status: "new" };
