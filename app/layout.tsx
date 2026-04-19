@@ -5,10 +5,10 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "CtrlBank — Saúde Financeira Familiar",
-    template: "%s | CtrlBank — Saúde Financeira Familiar",
+    default: "CtrlBank — Seu dinheiro, sob comando.",
+    template: "%s | CtrlBank",
   },
-  description: "O CtrlBank não registra gastos. Ele governa a saúde financeira da família.",
+  description: "Centralizador financeiro inteligente. Transforme caos em clareza, organização e decisão.",
   keywords: ["saúde financeira", "governança familiar", "família", "planejamento", "receitas", "despesas"],
   authors: [{ name: "CtrlBank" }],
   creator: "CtrlBank",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "CtrlBank",
-    description: "O CtrlBank não registra gastos. Ele governa a saúde financeira da família.",
+    description: "Centralizador financeiro inteligente. Transforme caos em clareza, organização e decisão.",
     type: "website",
     locale: "pt_BR",
   },

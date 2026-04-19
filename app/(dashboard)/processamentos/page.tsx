@@ -87,7 +87,7 @@ export default async function ProcessamentosPage() {
     <div className="space-y-6">
       <header>
         <h1 className="text-3xl font-black tracking-tight">Atividade · Processamentos</h1>
-        <p className="text-secondary mt-1">Histórico operacional auditável: documento de origem, timeline, flags e resultado de commit.</p>
+        <p className="text-secondary mt-1">Tudo que o sistema fez e quando. Evidência, timeline e controle.</p>
       </header>
 
       <div className="rounded-2xl border border-border bg-surface overflow-hidden">

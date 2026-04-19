@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
 import * as XLSX from "xlsx";
 import { Download, FileText, Table } from "lucide-react";
 
@@ -88,9 +88,8 @@ export default function ContadorPublicClient({ transactions, year }: { transacti
       const c = tx.category?.name ?? "Sem categoria";
       const v = formatCurrency(tx.amount);
 
-      tx.type === "INCOME"
-        ? doc.setTextColor(34, 197, 94)
-        : doc.setTextColor(239, 68, 68);
+      if (tx.type === "INCOME") doc.setTextColor(34, 197, 94);
+      else doc.setTextColor(239, 68, 68);
 
       doc.text(d, 20, y);
       doc.setTextColor(0, 0, 0);

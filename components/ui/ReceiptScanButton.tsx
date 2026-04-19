@@ -123,6 +123,7 @@ export default function ReceiptScanButton({
             exit={{ opacity: 0, height: 0 }}
             className="relative rounded-xl overflow-hidden border border-white/10"
           >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={preview}
               alt="Comprovante escaneado"
