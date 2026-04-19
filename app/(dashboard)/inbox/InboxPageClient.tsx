@@ -30,6 +30,10 @@ type ParsedItem = {
 
 type ParseResponse = {
   items: ParsedItem[];
+  captureEventId?: string;
+  correlationId?: string;
+  reviewRequired?: boolean;
+  qualityFlags?: Array<{ code: string; severity: string }>;
 };
 
 type Props = {
@@ -58,6 +62,7 @@ export default function InboxPageClient({ events, eventsLoadError }: Props) {
   const [message, setMessage] = useState<string | null>(null);
   const [parsedItems, setParsedItems] = useState<ParsedItem[]>([]);
   const [confirming, setConfirming] = useState(false);
+  const [captureEventId, setCaptureEventId] = useState<string | null>(null);
 
   const hasEvents = useMemo(() => events.length > 0, [events]);
 
@@ -83,7 +88,9 @@ export default function InboxPageClient({ events, eventsLoadError }: Props) {
 
       const items = Array.isArray(data.items) ? data.items : [];
       setParsedItems(items);
-      setMessage(items.length > 0 ? null : "Não consegui interpretar. Tente outro arquivo.");
+      setCaptureEventId(data.captureEventId ?? null);
+      const hasFlags = Array.isArray(data.qualityFlags) && data.qualityFlags.length > 0;
+      setMessage(hasFlags ? `Processado com ${data.qualityFlags?.length} flag(s) de qualidade.` : items.length > 0 ? null : "Não consegui interpretar. Tente outro arquivo.");
     } catch (error: any) {
       setMessage(error?.message || "Não consegui interpretar. Tente outro arquivo.");
       setParsedItems([]);
@@ -93,7 +100,7 @@ export default function InboxPageClient({ events, eventsLoadError }: Props) {
   }
 
   async function confirmBatch() {
-    if (parsedItems.length === 0) return;
+    if (parsedItems.length === 0 || !captureEventId) return;
     setConfirming(true);
     setMessage(null);
 
@@ -101,7 +108,7 @@ export default function InboxPageClient({ events, eventsLoadError }: Props) {
       const response = await fetch("/api/inbox/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: parsedItems }),
+        body: JSON.stringify({ captureEventId }),
       });
 
       const data = await response.json();
@@ -113,6 +120,7 @@ export default function InboxPageClient({ events, eventsLoadError }: Props) {
       setParsedItems([]);
       setRawInput("");
       setSelectedFile(null);
+      setCaptureEventId(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       router.refresh();
     } catch (error: any) {
@@ -198,7 +206,7 @@ export default function InboxPageClient({ events, eventsLoadError }: Props) {
             </ul>
             <button
               type="button"
-              disabled={confirming}
+              disabled={confirming || !captureEventId}
               onClick={confirmBatch}
               className="rounded-xl border border-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
             >
