@@ -3,8 +3,9 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { validateRequest } from "@/lib/auth";
 import { BankAccountType } from "@prisma/client";
+import { requireWriteContext, ServiceUnavailableError } from "@/lib/security/auth-context";
+import { scopeWhere } from "@/lib/security/scope";
 
 // ─── Schemas ────────────────────────────────────────────────────────────────
 
@@ -28,16 +29,7 @@ const UpdateAccountSchema = CreateAccountSchema.extend({
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function getAuthContext() {
-  const { user } = await validateRequest();
-  if (!user) throw new Error("Não autenticado");
-
-  const fullUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { id: true, householdId: true, role: true },
-  });
-  if (!fullUser) throw new Error("Usuário não encontrado");
-
-  return fullUser;
+  return requireWriteContext();
 }
 
 function requireWriteRole(role: string) {
@@ -54,7 +46,7 @@ export async function getAccounts() {
   const ctx = await getAuthContext();
 
   const accounts = await prisma.bankAccount.findMany({
-    where: { householdId: ctx.householdId ?? undefined, userId: ctx.id },
+    where: scopeWhere({ userId: ctx.id, householdId: ctx.householdId }),
     orderBy: { createdAt: "asc" },
   });
 
@@ -99,7 +91,7 @@ export async function createAccount(formData: unknown) {
         await tx.bankAccount.updateMany({
           where: {
             id: { not: acc.id },
-            OR: [{ userId: ctx.id }, { householdId: ctx.householdId ?? "" }],
+            ...scopeWhere({ userId: ctx.id, householdId: ctx.householdId }),
           },
           data: { isDefault: false },
         });
@@ -127,6 +119,7 @@ export async function createAccount(formData: unknown) {
     revalidatePath("/");
     return { success: true, data: account };
   } catch (err) {
+    if (err instanceof ServiceUnavailableError) return { error: "Serviço temporariamente indisponível", status: 503 };
     console.error("createAccount error:", err);
     return { error: "Erro ao criar conta. Tente novamente." };
   }
@@ -152,7 +145,7 @@ export async function updateAccount(formData: unknown) {
   const existing = await prisma.bankAccount.findFirst({
     where: {
       id,
-      OR: [{ userId: ctx.id }, { householdId: ctx.householdId ?? "" }],
+      ...scopeWhere({ userId: ctx.id, householdId: ctx.householdId }),
     },
   });
 
@@ -181,7 +174,7 @@ export async function updateAccount(formData: unknown) {
         await tx.bankAccount.updateMany({
           where: {
             id: { not: acc.id },
-            OR: [{ userId: ctx.id }, { householdId: ctx.householdId ?? "" }],
+            ...scopeWhere({ userId: ctx.id, householdId: ctx.householdId }),
           },
           data: { isDefault: false },
         });
@@ -210,6 +203,7 @@ export async function updateAccount(formData: unknown) {
     revalidatePath("/");
     return { success: true, data: account };
   } catch (err) {
+    if (err instanceof ServiceUnavailableError) return { error: "Serviço temporariamente indisponível", status: 503 };
     console.error("updateAccount error:", err);
     return { error: "Erro ao atualizar conta." };
   }
@@ -240,6 +234,7 @@ export async function deleteAccount(id: string) {
     revalidatePath("/");
     return { success: true };
   } catch (err) {
+    if (err instanceof ServiceUnavailableError) return { error: "Serviço temporariamente indisponível", status: 503 };
     console.error("deleteAccount error:", err);
     return { error: "Erro ao excluir conta." };
   }

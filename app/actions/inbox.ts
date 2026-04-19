@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { validateRequest } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 function toSlug(value: string) {
   return value
@@ -98,6 +99,14 @@ export async function saveWhatsappPhone(formData: FormData) {
 export async function generateWhatsappToken() {
   const user = await getCurrentUserConfig();
   if (!user) throw new Error("Usuário não encontrado");
+  const limit = await enforceRateLimit({
+    key: `whatsapp:token:${user.id}`,
+    limit: 10,
+    windowSeconds: 60 * 60,
+  });
+  if (!limit.allowed) {
+    throw new Error("Muitas solicitações de código. Aguarde antes de tentar novamente.");
+  }
 
   const token = generateLinkToken();
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);

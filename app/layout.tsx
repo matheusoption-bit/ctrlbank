@@ -1,15 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
 import { GeistSans } from "geist/font/sans";
 import { Toaster } from "sonner";
 import "./globals.css";
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-inter",
-  weight: ["400", "500", "600", "700", "800", "900"],
-});
 
 export const metadata: Metadata = {
   title: {
@@ -56,7 +48,7 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`dark scroll-smooth ${inter.variable} ${GeistSans.variable}`}
+      className={`dark scroll-smooth ${GeistSans.variable}`}
       suppressHydrationWarning
     >
       <body

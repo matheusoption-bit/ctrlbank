@@ -163,13 +163,19 @@ async function runPrismaMigrateDeploy() {
 }
 
 async function hasPendingPrismaMigrations() {
-  const result = await run(npxCommand, [
-    "prisma",
-    "migrate",
-    "status",
-    "--schema",
-    "prisma/schema.prisma",
-  ]);
+  let result;
+  try {
+    result = await run(npxCommand, [
+      "prisma",
+      "migrate",
+      "status",
+      "--schema",
+      "prisma/schema.prisma",
+    ]);
+  } catch (error) {
+    console.warn("[build] Unable to check Prisma migration status. Skipping migrations.", error?.message ?? error);
+    return false;
+  }
   const output = `${result.stdout}\n${result.stderr}`;
 
   if (output.includes("Database schema is up to date!")) {
@@ -221,6 +227,8 @@ async function main() {
     console.warn(
       `[build] Missing database URL for runtime. Continuing Next.js build without DATABASE_URL. Set one of: ${runtimeDatabaseUrlKeys.join(", ")}.`
     );
+    process.env.DATABASE_URL = "postgresql://placeholder:placeholder@127.0.0.1:5432/ctrlbank";
+    console.warn("[build] Injected placeholder DATABASE_URL for static build-time imports.");
   }
 
   await run(npxCommand, ["next", "build"]);

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyTwilioSignature } from "@/lib/inbox/security";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -42,6 +43,15 @@ export async function POST(req: NextRequest) {
   const from = normalizeWhatsappNumber(params.From ?? null);
   const body = (params.Body ?? "").trim();
   const token = extractLinkToken(body);
+
+  const rate = await enforceRateLimit({
+    key: `whatsapp:link:${from ?? "unknown"}:${token ?? "invalid"}`,
+    limit: 20,
+    windowSeconds: 60 * 30,
+  });
+  if (!rate.allowed) {
+    return twiml("⚠️ Muitas tentativas. Aguarde alguns minutos e tente novamente.", 429);
+  }
 
   if (!from || !token) {
     return twiml("⚠️ Código inválido. Envie no formato CTRL-XXXXXX.");

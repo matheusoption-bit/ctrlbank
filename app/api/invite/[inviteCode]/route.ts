@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateRequest } from "@/lib/auth";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 export async function GET(
   req: NextRequest,
@@ -8,6 +9,15 @@ export async function GET(
 ) {
   const { inviteCode } = await params;
   const code = inviteCode.toUpperCase();
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const limit = await enforceRateLimit({
+    key: `invite:route:${ip}:${code}`,
+    limit: 30,
+    windowSeconds: 60 * 30,
+  });
+  if (!limit.allowed) {
+    return NextResponse.redirect(new URL("/?error=rate_limited", req.url));
+  }
   
   // Verifica se o código é válido
   const household = await prisma.household.findUnique({
