@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { createRecommendation } from "./composer";
+import { generateFinancialPlanSnapshotArtifact } from "@/lib/artifacts/service";
 
 export async function syncFinancialPlan(planId: string) {
   const plan = await prisma.financialPlan.findUnique({
@@ -99,6 +100,8 @@ export async function syncFinancialPlan(planId: string) {
           isOnTrack,
         }
       });
+
+  await generateFinancialPlanSnapshotArtifact({ planId: plan.id, actorUserId: plan.userId });
 
   // Generate Recommendation if off-track and no recent rec exists
   if (!isOnTrack) {

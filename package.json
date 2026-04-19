@@ -10,7 +10,8 @@
     "test": "vitest run",
     "postinstall": "prisma generate",
     "backlog:export": "tsx scripts/generate-backlog.ts",
-    "backfill:totp": "tsx scripts/backfill-totp-secrets.ts"
+    "backfill:totp": "tsx scripts/backfill-totp-secrets.ts",
+    "ctrlbank": "tsx scripts/cli/ctrlbank.ts"
   },
   "dependencies": {
     "@google/genai": "^1.50.1",
