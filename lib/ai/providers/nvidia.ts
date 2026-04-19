@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { AICapability, AIGenerationOptions, AIMediaFile, AIProvider } from "./types";
+import { AICapability, AIGenerationOptions, AIProvider } from "./types";
 import { extractJsonFromModelOutput } from "./utils";
 
 export class NvidiaProvider implements AIProvider {
@@ -72,7 +72,7 @@ export class NvidiaProvider implements AIProvider {
     return extractJsonFromModelOutput(output);
   }
 
-  async generateMultimodal(prompt: string, media: AIMediaFile, opts?: AIGenerationOptions): Promise<any> {
+  async generateMultimodal(): Promise<any> {
     // Explicitly thrown as this should be intercepted by supports()
     throw new Error("NVIDIA Provider: Multimodal generating is intentionally disabled for this iteration.");
   }

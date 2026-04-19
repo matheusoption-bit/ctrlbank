@@ -15,7 +15,7 @@ export function parseCSVForAI(csvString: string): string {
   const compactLines = parsed.data.map((row: any, i: number) => {
     // Keep only truthy values to save tokens
     const pairs = Object.entries(row)
-      .filter(([_, v]) => v !== "" && v !== null && v !== undefined)
+      .filter(([, v]) => v !== "" && v !== null && v !== undefined)
       .map(([k, v]) => `${k}: ${v}`);
     return `Row ${i + 1}: ${pairs.join(", ")}`;
   });

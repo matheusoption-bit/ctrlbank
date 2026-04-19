@@ -66,20 +66,6 @@ function loadLocalEnvFiles() {
   loadEnvFile(".env.production.local");
 }
 
-function resolveDatabaseUrl(keys, purpose) {
-  for (const key of keys) {
-    const value = process.env[key]?.trim();
-
-    if (value) {
-      return { key, url: value };
-    }
-  }
-
-  throw new Error(
-    `Missing database URL for ${purpose}. Set one of: ${keys.join(", ")}.`
-  );
-}
-
 function tryResolveDatabaseUrl(keys) {
   for (const key of keys) {
     const value = process.env[key]?.trim();

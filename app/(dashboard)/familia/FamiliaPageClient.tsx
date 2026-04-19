@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Users, Copy, RefreshCw, Link2, UserPlus, Shield,
   Eye, Crown, UserMinus, X, Check, Plus, Building2,
-  Calendar, Share2, TrendingUp, TrendingDown, Target,
+  Calendar, TrendingUp, TrendingDown, Target,
   AlertTriangle, ChevronDown, Clipboard,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -154,7 +154,6 @@ export default function FamiliaPageClient({ currentUser, members, household, inv
   const [checkViewed, setCheckViewed] = useState(monthlyCheckViewed);
 
   const isAdmin = currentUser.role === UserRole.ADMIN;
-  const canWrite = currentUser.role !== UserRole.VIEWER;
 
   const now = new Date();
   const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;

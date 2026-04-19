@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getAuthorizedUser } from "@/lib/authorization";
 import { calculateProjection } from "@/lib/finance/health";
 
 export const runtime = "nodejs";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const authUser = await getAuthorizedUser();
     const householdId = authUser.householdId;

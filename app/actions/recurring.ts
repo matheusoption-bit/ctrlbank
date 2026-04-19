@@ -100,7 +100,7 @@ export async function upsertRecurringTransaction(formData: FormData) {
     }
     revalidatePath("/configuracoes");
     return { success: true };
-  } catch (err) {
+  } catch {
     return { error: "Erro ao salvar transação recorrente" };
   }
 }
@@ -150,7 +150,7 @@ export async function autoDetectRecurring() {
   }
 
   const suggestions: { description: string, amount: number, occurrences: number }[] = [];
-  for (const [desc, txs] of map.entries()) {
+  for (const [, txs] of map.entries()) {
     if (txs.length >= 3) {
       suggestions.push({
         description: txs[0].description!,

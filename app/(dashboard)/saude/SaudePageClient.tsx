@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { TrendingUp, TrendingDown, AlertTriangle, Target, X, Activity, Flame, ArrowRight } from "lucide-react";
+import { TrendingUp, TrendingDown, AlertTriangle, Target, X, Activity, Flame } from "lucide-react";
 import { dismissRecommendation } from "@/app/actions/health";
 import { MoneyDisplay } from "@/components/ui/MoneyDisplay";
 

@@ -1,6 +1,5 @@
 "use server";
 
-import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { validateRequest } from "@/lib/auth";
@@ -42,7 +41,7 @@ export async function createCounterSession(formData: FormData) {
     });
     revalidatePath("/contador");
     return { success: true, token: rawToken, id: session.id };
-  } catch (err) {
+  } catch {
     return { error: "Erro ao criar sessão de contador." };
   }
 }
@@ -63,7 +62,7 @@ export async function revokeCounterSession(id: string) {
     });
     revalidatePath("/contador");
     return { success: true };
-  } catch (err) {
+  } catch {
     return { error: "Erro ao revogar sessão de contador." };
   }
 }

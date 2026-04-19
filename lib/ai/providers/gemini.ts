@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { AICapability, AIGenerationOptions, AIMediaFile, AIProvider } from "./types";
+import { AIGenerationOptions, AIMediaFile, AIProvider } from "./types";
 import { extractJsonFromModelOutput } from "./utils";
 
 export class GeminiProvider implements AIProvider {
@@ -12,9 +12,9 @@ export class GeminiProvider implements AIProvider {
     this.client = new GoogleGenAI({ apiKey });
   }
 
-  supports(capability: AICapability, hasMedia: boolean): boolean {
+  supports(): boolean {
     // Gemini supports everything and is the primary for all modalities
-    return true; 
+    return true;
   }
 
   async generateText(prompt: string, opts?: AIGenerationOptions): Promise<string> {

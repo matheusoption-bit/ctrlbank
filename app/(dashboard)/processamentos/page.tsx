@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { scopeWhere } from "@/lib/security/scope";
 import { getQuotaUsage } from "@/lib/quotas/service";
 import { disableExperiment, rollbackActivePolicy } from "@/app/actions/governance";
+import { COPY } from "@/lib/copy/ctrlbank";
 
 export default async function ProcessamentosPage() {
   const { user } = await validateRequest();
@@ -86,8 +87,8 @@ export default async function ProcessamentosPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-black tracking-tight">Atividade · Processamentos</h1>
-        <p className="text-secondary mt-1">Tudo que o sistema fez e quando. Evidência, timeline e controle.</p>
+        <h1 className="text-3xl font-black tracking-tight">{COPY.processing.title}</h1>
+        <p className="text-secondary mt-1">{COPY.processing.subtitle}</p>
       </header>
 
       <div className="rounded-2xl border border-border bg-surface overflow-hidden">
@@ -153,7 +154,7 @@ export default async function ProcessamentosPage() {
 
       <section className="grid lg:grid-cols-3 gap-4">
         <div className="rounded-2xl border border-border bg-surface p-4 space-y-3 lg:col-span-2">
-          <h2 className="font-semibold">Evidências assinadas</h2>
+          <h2 className="font-semibold">{COPY.processing.signedArtifacts}</h2>
           <div className="space-y-2 text-sm">
             {artifacts.map((artifact) => (
               <div key={artifact.id} className="border border-border rounded-xl p-3">
@@ -164,12 +165,12 @@ export default async function ProcessamentosPage() {
                 </a>
               </div>
             ))}
-            {artifacts.length === 0 ? <p className="text-secondary">Nenhum artefato assinado ainda.</p> : null}
+            {artifacts.length === 0 ? <p className="text-secondary">{COPY.processing.signedEmpty}</p> : null}
           </div>
         </div>
 
         <div className="rounded-2xl border border-border bg-surface p-4 space-y-3">
-          <h2 className="font-semibold">Quotas</h2>
+          <h2 className="font-semibold">{COPY.processing.quotas}</h2>
           <div className="space-y-2 text-xs">
             {quotaUsage.map((row) => (
               <div key={row.quota.id} className="rounded-lg border border-border p-2">
@@ -179,13 +180,13 @@ export default async function ProcessamentosPage() {
                 <p>uso: {row.usage.usagePct.toFixed(1)}%</p>
               </div>
             ))}
-            {quotaUsage.length === 0 ? <p className="text-secondary">Sem políticas de quota configuradas.</p> : null}
+            {quotaUsage.length === 0 ? <p className="text-secondary">{COPY.processing.quotasEmpty}</p> : null}
           </div>
         </div>
       </section>
 
       <section className="rounded-2xl border border-border bg-surface p-4 space-y-2">
-        <h2 className="font-semibold">Saúde das automações</h2>
+        <h2 className="font-semibold">{COPY.processing.automations}</h2>
         <div className="grid md:grid-cols-2 gap-2 text-xs">
           {jobs.map((job) => (
             <div key={job.id} className="rounded-lg border border-border p-2">

@@ -1,4 +1,69 @@
 export const COPY = {
+  brand: {
+    name: "CtrlBank",
+    tagline: "Seu dinheiro, sob comando.",
+    description:
+      "Centralizador financeiro inteligente. Transforme caos em clareza, organização e decisão.",
+  },
+  home: {
+    greetingMorning: "Bom dia",
+    greetingAfternoon: "Boa tarde",
+    greetingEvening: "Boa noite",
+    subtitle: "Onde o seu dinheiro está agora — e para onde está indo.",
+    balanceLabel: "Saldo consolidado",
+    healthLabel: "Saúde em foco",
+    healthCta: "Ver saúde",
+    attentionsLabel: "Atenções",
+    upcomingLabel: "Próximas cobranças",
+    upcomingEmpty: "Nenhuma cobrança mapeada nos próximos dias.",
+    recentLabel: "Movimentos recentes",
+    recentEmpty: "Sem movimentos registrados no mês. Comece pelo Inbox ou pelo Composer.",
+    seeAll: "Ver tudo",
+  },
+  search: {
+    title: "Buscar",
+    subtitle: "Encontre qualquer movimento, conta ou evidência em um só lugar.",
+    placeholder: "Buscar transação, conta, merchant ou documento",
+    hint: "Busca global. Em breve inclui histórico operacional completo.",
+  },
+  inbox: {
+    title: "Inbox",
+    subtitle: "Solte comprovantes, extratos e faturas. A IA lê, organiza e propõe — você aprova.",
+    uploadTitle: "Enviar arquivo",
+    uploadHint: "Imagem, PDF ou texto. Um arquivo por vez.",
+    pasteLabel: "Ou cole o texto do extrato/fatura",
+    pastePlaceholder: "Ex: 12/04/2026 Mercado R$ 89,90",
+    interpret: "Interpretar",
+    confirm: "Confirmar",
+    recognized: (n: number) => `Reconheci ${n} ${n === 1 ? "transação" : "transações"}.`,
+    errorGeneric: "Não consegui interpretar. Tente outro arquivo.",
+    errorConfirm: "Não foi possível confirmar o lote.",
+    queueTitle: "Fila operacional recente",
+    queueEmpty: "Nenhum evento recente.",
+  },
+  processing: {
+    title: "Atividade · Processamentos",
+    subtitle: "Tudo que o sistema fez e quando. Evidência, timeline e controle.",
+    signedArtifacts: "Evidências assinadas",
+    signedEmpty: "Nenhum artefato assinado ainda.",
+    quotas: "Quotas",
+    quotasEmpty: "Sem políticas de quota configuradas.",
+    automations: "Saúde das automações",
+    automationsEmpty: "Nenhuma execução registrada.",
+    quality: "Qualidade e fricção",
+    qualityEmpty: "Sem snapshots de qualidade ainda.",
+    policies: "Políticas ativas e rollback",
+    policiesEmpty: "Sem políticas ativas.",
+    rollback: "Rollback seguro",
+    calibrations: "Calibrações recentes",
+    experiments: "Experimentos / Kill switch",
+    disableExperiment: "Desligar experimento",
+    backToInbox: "Voltar para Inbox",
+  },
+  composer: {
+    placeholder: "Registre, pergunte ou decida — o Composer cuida do resto.",
+    emptyAssistant: "O Adviser está online. Pergunte algo — ou espere o próximo sinal.",
+  },
   empty: {
     transactions: "Silêncio no fluxo. Registre o primeiro movimento ou conecte uma conta.",
     inbox: "Inbox em silêncio. Solte um comprovante — a IA faz o resto.",
@@ -37,3 +102,9 @@ export const COPY = {
     permission: "Sem permissão para esta ação. Fale com o administrador.",
   },
 } as const;
+
+export function greetingForHour(hour: number): string {
+  if (hour < 12) return COPY.home.greetingMorning;
+  if (hour < 18) return COPY.home.greetingAfternoon;
+  return COPY.home.greetingEvening;
+}
