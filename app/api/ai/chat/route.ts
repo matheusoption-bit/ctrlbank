@@ -3,6 +3,7 @@ import { validateRequest } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { formatCurrency } from "@/lib/format";
+import { enforceHouseholdQuota, QuotaExceededError } from "@/lib/quotas/service";
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const MODEL        = process.env.GROQ_MODEL ?? "gemma2-9b-it";
@@ -35,6 +36,18 @@ export async function POST(req: NextRequest) {
   });
 
   const context = await buildFinancialContext(dbUser?.householdId ?? null);
+  try {
+    await enforceHouseholdQuota({
+      householdId: dbUser?.householdId ?? null,
+      capability: "ai_chat",
+      provider: "groq",
+    });
+  } catch (error) {
+    if (error instanceof QuotaExceededError) {
+      return Response.json({ error: error.message, code: error.code, details: error.details }, { status: 429 });
+    }
+    throw error;
+  }
 
   const systemPrompt = `Você é um assistente de saúde financeira familiar chamado CtrlBot, integrado ao CtrlBank.
 Responda sempre em português do Brasil, de forma objetiva e útil.

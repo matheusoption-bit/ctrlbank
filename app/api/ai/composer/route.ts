@@ -5,6 +5,7 @@ import { z } from "zod";
 import { processAiIngest } from "@/lib/ai/ingest";
 import { AIComposerMode, AIComposerResponse } from "@/lib/ai/contracts";
 import { runFinanceIntelligence, buildFinanceContextReply } from "@/lib/finance/intelligence";
+import { enforceHouseholdQuota, QuotaExceededError } from "@/lib/quotas/service";
 
 const BodySchema = z.object({
   mode: z.enum(["Registrar", "Revisar", "Perguntar", "Planejar", "Sugerir"]).default("Registrar"),
@@ -33,6 +34,12 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    await enforceHouseholdQuota({
+      householdId: dbUser?.householdId ?? null,
+      capability: "ai_composer",
+      provider: "gemini",
+    });
+
     const { getOrCreateConversation, saveAiMessage, createFinancialPlan, createProductFeedback } = await import("@/lib/ai/composer");
 
     const conversationId = await getOrCreateConversation(user.id, dbUser?.householdId ?? null, body.conversationId);
@@ -159,6 +166,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(response);
 
   } catch (error: any) {
+    if (error instanceof QuotaExceededError) {
+      return NextResponse.json({ error: error.message, code: error.code, details: error.details }, { status: 429 });
+    }
     const message = error?.message || "Falha ao extrair dados";
     console.error("[ai/composer] Error:", message);
     return NextResponse.json({ error: message }, { status: 500 });

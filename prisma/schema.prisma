@@ -134,6 +134,30 @@ enum TaintLevel {
   HIGH
 }
 
+enum SigningKeyStatus {
+  ACTIVE
+  RETIRED
+  REVOKED
+}
+
+enum SignedArtifactType {
+  MONTHLY_DOSSIER
+  EXPORT_PDF
+  EXPORT_CSV
+  FINANCIAL_PLAN_SNAPSHOT
+  RECOMMENDATION_EVIDENCE
+  PROCESSING_EVIDENCE
+}
+
+enum QuotaPeriodType {
+  MONTHLY
+}
+
+enum AutomationJobStatus {
+  SUCCESS
+  FAILED
+}
+
 // ─────────────────────────────────────────────
 // Core Models
 // ─────────────────────────────────────────────
@@ -180,6 +204,9 @@ model Household {
   aiRecommendations AiRecommendation[]
   householdInvites  HouseholdInvite[]
   monthlyCheckViews MonthlyCheckView[]
+  signedArtifacts   SignedArtifact[]
+  householdQuotas   HouseholdQuota[]
+  automationJobRuns AutomationJobRun[]
 }
 
 /// Convite com token único e validade de 48h
@@ -258,6 +285,8 @@ model User {
   invitesUsed           HouseholdInvite[]      @relation("InviteUsedBy")
   monthlyCheckViews     MonthlyCheckView[]
   authChallenges        AuthChallenge[]
+  signedArtifacts       SignedArtifact[]
+  createdArtifacts      SignedArtifact[] @relation("SignedArtifactCreatedByUser")
 
   @@index([householdId])
   @@index([phone])
@@ -678,8 +707,84 @@ model CounterSession {
   createdAt   DateTime @default(now())
 
   household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  signedArtifacts SignedArtifact[]
 
   @@index([householdId])
+}
+
+model SignedArtifact {
+  id                     String            @id @default(cuid())
+  artifactType           SignedArtifactType
+  scopeType              String
+  scopeId                String
+  householdId            String?
+  userId                 String?
+  counterSessionId       String?
+  sourceEntityType       String?
+  sourceEntityId         String?
+  payloadHash            String
+  payloadDigestAlgorithm String            @default("sha256")
+  signature              String
+  signatureAlgorithm     String            @default("hmac-sha256")
+  signatureKeyId         String
+  verificationToken      String            @unique
+  fileName               String?
+  mimeType               String?
+  sizeBytes              Int?
+  metadata               Json?
+  createdByUserId        String?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+
+  household      Household?     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user           User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  counterSession CounterSession? @relation(fields: [counterSessionId], references: [id], onDelete: SetNull)
+  createdByUser  User?          @relation("SignedArtifactCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([artifactType, createdAt])
+  @@index([scopeType, scopeId, createdAt])
+  @@index([householdId, createdAt])
+  @@index([sourceEntityType, sourceEntityId])
+}
+
+model HouseholdQuota {
+  id                  String          @id @default(cuid())
+  householdId         String
+  capability          String
+  provider            String?
+  periodType          QuotaPeriodType @default(MONTHLY)
+  maxRequests         Int?
+  maxInputTokens      Int?
+  maxOutputTokens     Int?
+  hardBlock           Boolean         @default(true)
+  warningThresholdPct Int?            @default(80)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, capability, provider, periodType])
+  @@index([householdId, periodType])
+}
+
+model AutomationJobRun {
+  id           String              @id @default(cuid())
+  jobName      String
+  scopeType    String?
+  scopeId      String?
+  householdId  String?
+  status       AutomationJobStatus
+  itemCount    Int                 @default(0)
+  errorSummary String?
+  metadata     Json?
+  startedAt    DateTime            @default(now())
+  finishedAt   DateTime
+  createdAt    DateTime            @default(now())
+
+  household Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@index([jobName, createdAt])
+  @@index([householdId, createdAt])
 }
 
 // ─────────────────────────────────────────────

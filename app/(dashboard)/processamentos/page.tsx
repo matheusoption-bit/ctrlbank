@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { validateRequest } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { scopeWhere } from "@/lib/security/scope";
+import { getQuotaUsage } from "@/lib/quotas/service";
 
 export default async function ProcessamentosPage() {
   const { user } = await validateRequest();
@@ -37,6 +38,29 @@ export default async function ProcessamentosPage() {
       },
     },
   });
+
+  const [artifacts, quotas, jobs] = await Promise.all([
+    prisma.signedArtifact.findMany({
+      where: { householdId: dbUser?.householdId ?? undefined },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+    prisma.householdQuota.findMany({
+      where: { householdId: dbUser?.householdId ?? undefined },
+    }),
+    prisma.automationJobRun.findMany({
+      where: { OR: [{ householdId: dbUser?.householdId ?? undefined }, { householdId: null }] },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+    }),
+  ]);
+
+  const quotaUsage = await Promise.all(
+    quotas.map(async (quota) => ({
+      quota,
+      usage: (await getQuotaUsage(quota.householdId, quota.capability, quota.provider)).usage,
+    }))
+  );
 
   return (
     <div className="space-y-6">
@@ -105,6 +129,53 @@ export default async function ProcessamentosPage() {
           </tbody>
         </table>
       </div>
+
+      <section className="grid lg:grid-cols-3 gap-4">
+        <div className="rounded-2xl border border-border bg-surface p-4 space-y-3 lg:col-span-2">
+          <h2 className="font-semibold">Evidências assinadas</h2>
+          <div className="space-y-2 text-sm">
+            {artifacts.map((artifact) => (
+              <div key={artifact.id} className="border border-border rounded-xl p-3">
+                <p className="font-medium">{artifact.artifactType}</p>
+                <p className="text-xs text-secondary">{artifact.createdAt.toLocaleString("pt-BR")} · key {artifact.signatureKeyId}</p>
+                <a className="text-xs text-primary hover:underline" href={`/verify/${artifact.verificationToken}`} target="_blank" rel="noreferrer">
+                  Verificar autenticidade
+                </a>
+              </div>
+            ))}
+            {artifacts.length === 0 ? <p className="text-secondary">Nenhum artefato assinado ainda.</p> : null}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-surface p-4 space-y-3">
+          <h2 className="font-semibold">Quotas</h2>
+          <div className="space-y-2 text-xs">
+            {quotaUsage.map((row) => (
+              <div key={row.quota.id} className="rounded-lg border border-border p-2">
+                <p className="font-medium">{row.quota.capability} {row.quota.provider ? `· ${row.quota.provider}` : ""}</p>
+                <p>requests: {row.usage.requests}/{row.quota.maxRequests ?? "∞"}</p>
+                <p>tokens in/out: {row.usage.tokensIn}/{row.usage.tokensOut}</p>
+                <p>uso: {row.usage.usagePct.toFixed(1)}%</p>
+              </div>
+            ))}
+            {quotaUsage.length === 0 ? <p className="text-secondary">Sem políticas de quota configuradas.</p> : null}
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-surface p-4 space-y-2">
+        <h2 className="font-semibold">Saúde das automações</h2>
+        <div className="grid md:grid-cols-2 gap-2 text-xs">
+          {jobs.map((job) => (
+            <div key={job.id} className="rounded-lg border border-border p-2">
+              <p className="font-medium">{job.jobName}</p>
+              <p>{job.status} · itens {job.itemCount}</p>
+              <p className="text-secondary">{job.createdAt.toLocaleString("pt-BR")}</p>
+            </div>
+          ))}
+          {jobs.length === 0 ? <p className="text-secondary">Nenhuma execução registrada.</p> : null}
+        </div>
+      </section>
 
       <Link href="/inbox" className="inline-flex text-sm font-semibold text-primary hover:underline">
         Voltar para Inbox
