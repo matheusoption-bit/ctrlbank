@@ -33,6 +33,8 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,11 +57,46 @@ function LoginForm() {
         return;
       }
 
+      if (data.requiresTwoFactor) {
+        setRequiresTwoFactor(true);
+        setSuccess("Senha validada. Informe o código de 2 fatores.");
+        setLoading(false);
+        return;
+      }
+
       setSuccess("Login realizado com sucesso! Redirecionando...");
       setTimeout(() => {
         router.push(redirectUrl);
         router.refresh();
       }, 1500);
+    } catch {
+      setError("Erro ao conectar ao servidor");
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyTwoFactor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setLoading(true);
+    try {
+      const response = await fetch("/api/auth/verify-2fa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: twoFactorCode }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.message || "Falha ao validar 2FA");
+        setLoading(false);
+        return;
+      }
+      setSuccess("Login realizado com sucesso! Redirecionando...");
+      setTimeout(() => {
+        router.push(redirectUrl);
+        router.refresh();
+      }, 1200);
     } catch {
       setError("Erro ao conectar ao servidor");
       setLoading(false);
@@ -126,7 +163,7 @@ function LoginForm() {
           </AnimatePresence>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={requiresTwoFactor ? handleVerifyTwoFactor : handleSubmit} className="space-y-5">
             {/* Email */}
             <motion.div className="space-y-2" variants={itemVariants}>
               <label className="section-label">Email</label>
@@ -139,7 +176,7 @@ function LoginForm() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="input-c6 pl-12"
                   required
-                  disabled={loading}
+                  disabled={loading || requiresTwoFactor}
                   autoComplete="email"
                 />
               </div>
@@ -157,11 +194,28 @@ function LoginForm() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="input-c6 pl-12"
                   required
-                  disabled={loading}
+                  disabled={loading || requiresTwoFactor}
                   autoComplete="current-password"
                 />
               </div>
             </motion.div>
+
+            {requiresTwoFactor && (
+              <motion.div className="space-y-2" variants={itemVariants}>
+                <label className="section-label">Código 2FA</label>
+                <input
+                  type="text"
+                  placeholder="123456"
+                  value={twoFactorCode}
+                  onChange={(e) => setTwoFactorCode(e.target.value.replace(/\\D/g, "").slice(0, 6))}
+                  className="input-c6"
+                  required
+                  maxLength={6}
+                  disabled={loading}
+                  autoComplete="one-time-code"
+                />
+              </motion.div>
+            )}
 
             {/* Login Button */}
             <motion.button
@@ -174,12 +228,12 @@ function LoginForm() {
               {loading ? (
                 <>
                   <Loader className="w-4.5 h-4.5 animate-spin" />
-                  Conectando...
+                  {requiresTwoFactor ? "Validando 2FA..." : "Conectando..."}
                 </>
               ) : (
                 <>
                   <LogIn className="w-4.5 h-4.5" />
-                  Fazer Login
+                  {requiresTwoFactor ? "Validar e Entrar" : "Fazer Login"}
                 </>
               )}
             </motion.button>

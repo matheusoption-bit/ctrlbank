@@ -3,11 +3,12 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { validateRequest } from "@/lib/auth";
 import { TransactionType, TransactionStatus } from "@prisma/client";
 import { resolveTransactionCategoryId } from "@/lib/finance/categorize";
 import { saveUserLearningRule } from "@/lib/finance/learning";
 import { runFinanceIntelligence } from "@/lib/finance/intelligence";
+import { requireWriteContext, ServiceUnavailableError } from "@/lib/security/auth-context";
+import { scopeWhere } from "@/lib/security/scope";
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
@@ -44,16 +45,7 @@ const ListTransactionsSchema = z.object({
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function getAuthContext() {
-  const { user } = await validateRequest();
-  if (!user) throw new Error("Não autenticado");
-
-  const fullUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { id: true, householdId: true, role: true },
-  });
-  if (!fullUser) throw new Error("Usuário não encontrado");
-
-  return fullUser;
+  return requireWriteContext();
 }
 
 function requireWriteRole(role: string) {
@@ -65,7 +57,7 @@ function buildWhereClause(
   filters: z.infer<typeof ListTransactionsSchema>
 ) {
   return {
-    householdId: ctx.householdId ?? undefined,
+    ...scopeWhere({ userId: ctx.id, householdId: ctx.householdId }),
     ...(filters.type && { type: filters.type }),
     ...(filters.categoryId && { categoryId: filters.categoryId }),
     ...(filters.bankAccountId && { bankAccountId: filters.bankAccountId }),
@@ -145,7 +137,7 @@ export async function createManagedTransaction(params: ManagedTransactionParams)
   const account = await prisma.bankAccount.findFirst({
     where: {
       id: params.bankAccountId,
-      OR: [{ userId: params.userId }, { householdId: params.householdId ?? "" }],
+      ...scopeWhere({ userId: params.userId, householdId: params.householdId }),
     },
   });
 
@@ -205,7 +197,7 @@ export async function createManagedTransaction(params: ManagedTransactionParams)
     await prisma.aiCaptureEvent.updateMany({
       where: { 
         id: params.aiEventId,
-        OR: [{ userId: params.userId }, { householdId: params.householdId ?? "" }],
+        ...scopeWhere({ userId: params.userId, householdId: params.householdId }),
       },
       data: { createdTransactionId: transaction.id },
     }).catch(console.error);
@@ -245,6 +237,9 @@ export async function createTransaction(formData: unknown) {
     revalidatePath("/caixa");
     return { success: true, data: transaction };
   } catch (err: any) {
+    if (err instanceof ServiceUnavailableError) {
+      return { error: "Serviço temporariamente indisponível", status: 503 };
+    }
     console.error("createTransaction error:", err);
     return { error: err.message || "Erro ao registrar transação." };
   }
@@ -268,7 +263,7 @@ export async function createTransactionBatch(items: CreateTransactionBatchInput[
 
   const accounts = await prisma.bankAccount.findMany({
     where: {
-      OR: [{ userId: ctx.id }, { householdId: ctx.householdId ?? "" }],
+      ...scopeWhere({ userId: ctx.id, householdId: ctx.householdId }),
     },
     select: { id: true, isDefault: true },
     orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
@@ -332,7 +327,7 @@ export async function updateTransaction(formData: unknown) {
   const existing = await prisma.transaction.findFirst({
     where: {
       id,
-      OR: [{ userId: ctx.id }, { householdId: ctx.householdId ?? "" }],
+      ...scopeWhere({ userId: ctx.id, householdId: ctx.householdId }),
     },
   });
 
@@ -431,7 +426,7 @@ export async function deleteTransaction(id: string) {
   const existing = await prisma.transaction.findFirst({
     where: {
       id,
-      OR: [{ userId: ctx.id }, { householdId: ctx.householdId ?? "" }],
+      ...scopeWhere({ userId: ctx.id, householdId: ctx.householdId }),
     },
   });
 
@@ -478,7 +473,7 @@ export async function getDashboardSummary() {
   const endOfMonth   = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
   const where = {
-    householdId: ctx.householdId ?? undefined,
+    ...scopeWhere({ userId: ctx.id, householdId: ctx.householdId }),
     status: "COMPLETED" as const,
     ignoreInTotals: false,
     date: { gte: startOfMonth, lte: endOfMonth },
@@ -496,12 +491,12 @@ export async function getDashboardSummary() {
       }),
       prisma.bankAccount.findMany({
         where: {
-          OR: [{ userId: ctx.id }, { householdId: ctx.householdId ?? "" }],
+          ...scopeWhere({ userId: ctx.id, householdId: ctx.householdId }),
         },
         orderBy: { balance: "desc" },
       }),
       prisma.transaction.findMany({
-        where: { householdId: ctx.householdId ?? undefined },
+        where: { ...scopeWhere({ userId: ctx.id, householdId: ctx.householdId }) },
         take: 5,
         orderBy: { date: "desc" },
         include: {
@@ -577,7 +572,7 @@ export async function getMonthlyEvolution() {
     const [inc, exp] = await prisma.$transaction([
       prisma.transaction.aggregate({
         where: {
-          householdId: ctx.householdId ?? undefined,
+          ...scopeWhere({ userId: ctx.id, householdId: ctx.householdId }),
           type: "INCOME",
           status: "COMPLETED",
           ignoreInTotals: false,
@@ -587,7 +582,7 @@ export async function getMonthlyEvolution() {
       }),
       prisma.transaction.aggregate({
         where: {
-          householdId: ctx.householdId ?? undefined,
+          ...scopeWhere({ userId: ctx.id, householdId: ctx.householdId }),
           type: "EXPENSE",
           status: "COMPLETED",
           ignoreInTotals: false,
@@ -625,7 +620,7 @@ export async function getMonthForecast() {
 
   // 1. Current total balance
   const accounts = await prisma.bankAccount.findMany({
-    where: { OR: [{ userId: ctx.id }, { householdId: ctx.householdId ?? "" }] },
+    where: { ...scopeWhere({ userId: ctx.id, householdId: ctx.householdId }) },
     select: { balance: true }
   });
   const currentTotal = accounts.reduce((acc, a) => acc + Number(a.balance), 0);
@@ -636,7 +631,7 @@ export async function getMonthForecast() {
 
   const transactions = await prisma.transaction.findMany({
     where: {
-      householdId: ctx.householdId ?? undefined,
+      ...scopeWhere({ userId: ctx.id, householdId: ctx.householdId }),
       ignoreInTotals: false,
       date: { gte: startOfMonth, lte: endOfMonth }
     },
@@ -688,7 +683,7 @@ export async function undoTransaction(id: string) {
   const existing = await prisma.transaction.findFirst({
     where: {
       id,
-      OR: [{ userId: ctx.id }, { householdId: ctx.householdId ?? "" }],
+      ...scopeWhere({ userId: ctx.id, householdId: ctx.householdId }),
     },
   });
 

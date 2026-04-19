@@ -4,6 +4,7 @@ import { createSession } from "@/lib/auth";
 import { getRuntimeDatabaseDebugInfo } from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import { Prisma } from "@prisma/client";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 export const runtime = "nodejs";
 export const preferredRegion = "gru1";
@@ -11,6 +12,19 @@ export const preferredRegion = "gru1";
 export async function POST(request: NextRequest) {
   try {
     const { email, password, name } = await request.json();
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+    const rate = await enforceRateLimit({
+      key: `auth:register:${ip}:${normalizedEmail || "unknown"}`,
+      limit: 5,
+      windowSeconds: 60 * 30,
+    });
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { message: "Muitas tentativas. Aguarde antes de cadastrar." },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } }
+      );
+    }
 
     // Validation
     if (!email || !password) {
@@ -36,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     });
 
     if (existingUser) {
@@ -52,7 +66,7 @@ export async function POST(request: NextRequest) {
     // Create user
     const user = await prisma.user.create({
       data: {
-        email,
+        email: normalizedEmail,
         password_hash: passwordHash,
         name: name && typeof name === "string" ? name : null,
       },

@@ -150,6 +150,8 @@ model User {
   role          UserRole @default(ADMIN) // Fase 6: admin ou viewer (contador)
   // Fase 10: 2FA TOTP
   totpSecret    String?
+  totpSecretEnc String?
+  totpSecretKeyVersion String?
   totpEnabled   Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -172,10 +174,44 @@ model User {
   invitesCreated    HouseholdInvite[]  @relation("InviteCreatedBy")
   invitesUsed       HouseholdInvite[]  @relation("InviteUsedBy")
   monthlyCheckViews MonthlyCheckView[]
+  authChallenges AuthChallenge[]
 
   @@index([householdId])
   @@index([phone])
   @@index([whatsappLinkToken])
+}
+
+model AuthChallenge {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique
+  purpose    String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  attempts   Int      @default(0)
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@index([expiresAt])
+}
+
+model RateLimitBucket {
+  id          String   @id @default(cuid())
+  bucketKey   String   @unique
+  scopeKey    String
+  windowStart DateTime
+  count       Int      @default(0)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([scopeKey, windowStart])
+  @@index([expiresAt])
 }
 
 

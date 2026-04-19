@@ -4,6 +4,8 @@ import { createSession } from "@/lib/auth";
 import { getRuntimeDatabaseDebugInfo } from "@/lib/prisma";
 import { compare } from "bcryptjs";
 import { Prisma } from "@prisma/client";
+import { createLogin2FAChallenge } from "@/lib/security/auth-challenge";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 export const runtime = "nodejs";
 export const preferredRegion = "gru1";
@@ -11,6 +13,20 @@ export const preferredRegion = "gru1";
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
+    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+
+    const rate = await enforceRateLimit({
+      key: `auth:login:${ip}:${normalizedEmail || "unknown"}`,
+      limit: 8,
+      windowSeconds: 60 * 10,
+    });
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { message: "Muitas tentativas. Tente novamente mais tarde." },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } }
+      );
+    }
 
     // Validation
     if (!email || !password) {
@@ -36,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     // Find user
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     });
 
     if (!user) {
@@ -56,7 +72,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create session (sets the session cookie internally)
+    if (user.totpEnabled) {
+      await createLogin2FAChallenge(
+        user.id,
+        ip,
+        request.headers.get("user-agent")
+      );
+
+      return NextResponse.json(
+        { message: "Segundo fator obrigatório", requiresTwoFactor: true },
+        { status: 200 }
+      );
+    }
+
     await createSession(user.id);
 
     return NextResponse.json(

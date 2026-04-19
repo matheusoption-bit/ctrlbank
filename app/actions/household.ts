@@ -2,23 +2,16 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { randomBytes, createHash } from "crypto";
+import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
-import { validateRequest } from "@/lib/auth";
 import { UserRole } from "@prisma/client";
+import { requireWriteContext } from "@/lib/security/auth-context";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function getAuthContext() {
-  const { user } = await validateRequest();
-  if (!user) throw new Error("Não autenticado");
-
-  const fullUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { id: true, householdId: true, role: true, name: true, email: true },
-  });
-  if (!fullUser) throw new Error("Usuário não encontrado");
-  return fullUser;
+  return requireWriteContext();
 }
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
@@ -76,6 +69,12 @@ export async function generateInviteCode() {
  */
 export async function generateInviteLink() {
   const ctx = await getAuthContext();
+  const limit = await enforceRateLimit({
+    key: `invite:create:${ctx.id}`,
+    limit: 12,
+    windowSeconds: 60 * 60,
+  });
+  if (!limit.allowed) return { error: "Muitas tentativas. Aguarde para gerar novo convite.", status: 429 };
 
   if (ctx.role !== UserRole.ADMIN) {
     return { error: "Apenas administradores podem gerar convites" };
@@ -156,6 +155,12 @@ export async function joinHousehold(code: string) {
  */
 export async function joinHouseholdByToken(token: string) {
   const ctx = await getAuthContext();
+  const limit = await enforceRateLimit({
+    key: `invite:accept:${ctx.id}:${token.slice(0, 8)}`,
+    limit: 15,
+    windowSeconds: 60 * 60,
+  });
+  if (!limit.allowed) return { error: "Muitas tentativas de convite. Aguarde e tente novamente.", status: 429 };
 
   if (!token || token.trim().length < 8) {
     return { error: "Token inválido" };
