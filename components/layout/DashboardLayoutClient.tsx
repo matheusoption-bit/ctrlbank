@@ -1,11 +1,17 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { handleLogout } from "@/lib/actions/auth.actions";
 import {
+  Menu,
+  Search,
+  Clock3,
+  User,
+  X,
+  Home,
   LayoutDashboard,
   Wallet,
   Target,
@@ -19,6 +25,7 @@ import {
 } from "lucide-react";
 
 const SIDEBAR_ITEMS = [
+  { href: "/",             icon: Home,            label: "Início"        },
   { href: "/saude",         icon: LayoutDashboard, label: "Saúde"         },
   { href: "/caixa",         icon: Wallet,          label: "Caixa"         },
   { href: "/inbox",         icon: Inbox,           label: "Inbox"         },
@@ -37,6 +44,32 @@ const MOBILE_NAV_ITEMS = [
   { href: "/metas",     icon: Target,          label: "Metas"    },
 ];
 
+const MOBILE_DRAWER_SECTIONS = [
+  {
+    title: "Operação",
+    items: [
+      { href: "/", label: "Início", icon: Home },
+      { href: "/saude", label: "Saúde", icon: LayoutDashboard },
+      { href: "/caixa", label: "Caixa", icon: Wallet },
+      { href: "/inbox", label: "Inbox", icon: Inbox },
+      { href: "/processamentos", label: "Processamentos", icon: History },
+      { href: "/metas", label: "Metas", icon: Target },
+    ],
+  },
+  {
+    title: "Gestão",
+    items: [
+      { href: "/relatorios", label: "Relatórios", icon: BookOpen },
+      { href: "/familia", label: "Família", icon: Users },
+      { href: "/contas", label: "Contas", icon: Wallet },
+    ],
+  },
+  {
+    title: "Sistema",
+    items: [{ href: "/configuracoes", label: "Configurações", icon: Settings }],
+  },
+];
+
 interface DashboardLayoutClientProps {
   children: React.ReactNode;
   userName: string | null;
@@ -49,9 +82,10 @@ export default function DashboardLayoutClient({
   familyBadge = false,
 }: DashboardLayoutClientProps) {
   const pathname = usePathname();
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(`${href}/`);
+    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
   const initials = userName
     ? userName
@@ -137,11 +171,51 @@ export default function DashboardLayoutClient({
         </div>
       </aside>
 
+      <header className="fixed top-0 left-0 right-0 md:left-[260px] z-50 border-b border-white/[0.06] bg-[#080808]/90 backdrop-blur-xl">
+        <div
+          className="max-w-[1120px] mx-auto px-4 md:px-8 lg:px-10 h-[64px] flex items-center justify-between"
+          style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+        >
+          <button
+            type="button"
+            onClick={() => setIsDrawerOpen(true)}
+            className="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-white/[0.08] text-[#b8b8b8] hover:text-white hover:bg-white/[0.04] transition-colors md:hidden"
+            aria-label="Abrir menu"
+          >
+            <Menu size={19} />
+          </button>
+          <div className="hidden md:block" />
+          <div className="flex items-center gap-2">
+            <Link
+              href="/buscar"
+              className="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-white/[0.08] text-[#b8b8b8] hover:text-white hover:bg-white/[0.04] transition-colors"
+              aria-label="Buscar"
+            >
+              <Search size={18} />
+            </Link>
+            <Link
+              href="/processamentos"
+              className="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-white/[0.08] text-[#b8b8b8] hover:text-white hover:bg-white/[0.04] transition-colors"
+              aria-label="Atividade"
+            >
+              <Clock3 size={18} />
+            </Link>
+            <Link
+              href="/configuracoes"
+              className="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-white/[0.08] text-[#b8b8b8] hover:text-white hover:bg-white/[0.04] transition-colors"
+              aria-label="Perfil e configurações"
+            >
+              <User size={18} />
+            </Link>
+          </div>
+        </div>
+      </header>
+
       {/* ── Main Content ─────────────────────────────────────── */}
       <main className="md:pl-[260px] w-full min-h-dvh">
         <div
           className="max-w-[1120px] mx-auto px-5 pb-safe-nav md:py-10 md:px-8 lg:px-10"
-          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1rem)" }}
+          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 5.25rem)" }}
         >
           {children}
         </div>
@@ -196,6 +270,85 @@ export default function DashboardLayoutClient({
           </div>
         </div>
       </nav>
+
+      <AnimatePresence>
+        {isDrawerOpen && (
+          <>
+            <motion.button
+              type="button"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsDrawerOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] md:hidden"
+              aria-label="Fechar menu"
+            />
+            <motion.aside
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", stiffness: 320, damping: 34 }}
+              className="fixed left-0 top-0 bottom-0 z-[61] w-[88vw] max-w-[360px] bg-[#090909] border-r border-white/[0.08] md:hidden flex flex-col"
+              style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+            >
+              <div className="h-[64px] px-4 flex items-center justify-between border-b border-white/[0.06]">
+                <p className="text-base font-bold">Menu</p>
+                <button
+                  type="button"
+                  onClick={() => setIsDrawerOpen(false)}
+                  className="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-white/[0.08] text-[#b8b8b8]"
+                  aria-label="Fechar menu"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+                {MOBILE_DRAWER_SECTIONS.map((section) => (
+                  <section key={section.title} className="space-y-1.5">
+                    <h2 className="px-2 text-[11px] uppercase tracking-[0.12em] text-[#727272] font-semibold">
+                      {section.title}
+                    </h2>
+                    {section.items.map(({ href, label, icon: Icon }) => {
+                      const active = isActive(href);
+                      return (
+                        <Link
+                          key={href}
+                          href={href}
+                          onClick={() => setIsDrawerOpen(false)}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors ${
+                            active
+                              ? "bg-primary/10 text-primary"
+                              : "text-[#c4c4c4] hover:bg-white/[0.04] hover:text-white"
+                          }`}
+                        >
+                          <Icon size={17} />
+                          {label}
+                        </Link>
+                      );
+                    })}
+                  </section>
+                ))}
+              </div>
+
+              <div
+                className="px-3 pt-3 pb-4 border-t border-white/[0.06]"
+                style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
+              >
+                <form action={handleLogout}>
+                  <button
+                    type="submit"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-[#c4c4c4] hover:bg-white/[0.04] hover:text-white transition-colors"
+                  >
+                    <LogOut size={17} />
+                    Sair
+                  </button>
+                </form>
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

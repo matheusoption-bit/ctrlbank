@@ -1,4 +1,5 @@
 import CopyButton from "@/components/ui/CopyButton";
+import Link from "next/link";
 import {
   generateWhatsappToken,
   getInboxCaptureSettings,
@@ -9,14 +10,34 @@ import {
 export default async function ConfiguracoesPage() {
   const settings = await getInboxCaptureSettings();
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <header>
         <h1 className="text-3xl font-black tracking-tight">Configurações</h1>
-        <p className="text-secondary mt-1">Categorias, integrações e preferências do sistema.</p>
+        <p className="text-secondary mt-1">Central pessoal de perfil, contas, integrações de captura e preferências do sistema.</p>
       </header>
 
       <section className="rounded-2xl border border-border bg-surface p-5 space-y-4">
-        <h2 className="text-xl font-extrabold">E-mail de captura</h2>
+        <h2 className="text-xl font-extrabold">Perfil</h2>
+        <p className="text-sm text-secondary">
+          Gerencie sua área pessoal e os pontos-chave da sua conta no CtrlBank.
+        </p>
+        <div className="rounded-xl bg-surface-2 px-4 py-3 border border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="font-semibold">Contas financeiras</p>
+            <p className="text-sm text-secondary">Acesse todas as suas contas bancárias e cartões em um único lugar.</p>
+          </div>
+          <Link
+            href="/contas"
+            className="inline-flex items-center justify-center rounded-xl border border-border px-3 py-2 text-sm font-semibold hover:bg-white/5"
+          >
+            Gerenciar contas
+          </Link>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-surface p-5 space-y-4">
+        <h2 className="text-xl font-extrabold">Integrações de captura</h2>
+        <h3 className="text-sm font-semibold text-secondary uppercase tracking-wide">E-mail de captura</h3>
         <p className="text-sm text-secondary">
           Encaminhe comprovantes para este endereço e eles aparecem automaticamente na sua Inbox.
         </p>
@@ -27,7 +48,7 @@ export default async function ConfiguracoesPage() {
       </section>
 
       <section className="rounded-2xl border border-border bg-surface p-5 space-y-4">
-        <h2 className="text-xl font-extrabold">WhatsApp</h2>
+        <h3 className="text-sm font-semibold text-secondary uppercase tracking-wide">WhatsApp</h3>
 
         {settings.whatsappNumber ? (
           <div className="space-y-3">
@@ -73,6 +94,18 @@ export default async function ConfiguracoesPage() {
               Gerar código de vinculação
             </button>
           </form>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-surface p-5 space-y-4">
+        <h2 className="text-xl font-extrabold">Preferências e sistema</h2>
+        <p className="text-sm text-secondary">
+          Em breve você poderá configurar notificações, visualização padrão e automações operacionais da sua conta.
+        </p>
+        <div className="rounded-xl border border-dashed border-border bg-surface-2 px-4 py-3">
+          <p className="text-sm text-secondary">
+            Placeholder de preferências pronto para expansão sem alterar a arquitetura atual.
+          </p>
         </div>
       </section>
     </div>
