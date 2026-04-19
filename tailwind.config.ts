@@ -11,66 +11,40 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // ── Core (Editorial Dark) ──────────────────────────────
-        background:   "#050505",
-        foreground:   "#f5f5f0",
-        surface:      "#0b0b0b",
-        "surface-2":  "#141414",
-        "surface-3":  "#1e1e1e",
-        secondary:    "#8a8a8a",
-        border:       "rgba(255,255,255,0.10)",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        surface: "hsl(var(--bg-elevated))",
+        "surface-2": "hsl(var(--bg-elevated-2))",
+        "surface-3": "hsl(var(--bg-elevated-3))",
+        secondary: "hsl(var(--fg-muted))",
+        border: "hsl(var(--border))",
+        "border-strong": "hsl(var(--border-strong))",
 
-        // ── Design System Tokens Enterprise (6.1) ─────────────────────────────
-        "surface-primary":   "#050505",
-        "surface-secondary": "#0b0b0b",
-        "surface-card":      "#141414",
-        "border-subtle":     "rgba(255,255,255,0.10)",
-        "text-primary":      "#f5f5f0",
-        "text-muted":        "#8a8a8a",
+        "accent-primary": "hsl(var(--accent))",
+        "accent-warning": "hsl(var(--warning))",
+        "accent-danger": "hsl(var(--negative))",
 
-        // ── Accent Semântico ───────────────────────────────────────────────────
-        "accent-primary": "#19FF63",
-        "accent-warning": "#f59e0b",
-        "accent-danger":  "#ef4444",
-
-        // ── Primary Brand (Neon Green) ─────────────────────────────────
         primary: {
-          DEFAULT:    "#19FF63",
-          50:         "#E6FFE6",
-          100:        "#CCFFCC",
-          200:        "#99FF99",
-          300:        "#66FF66",
-          400:        "#33FF33",
-          500:        "#19FF63",
-          600:        "#00E64D",
-          700:        "#00B33C",
-          800:        "#00802B",
-          900:        "#004D1A",
-          foreground: "#050505",
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
         },
         accent: {
-          DEFAULT:    "#19FF63",
-          foreground: "#050505",
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
         },
+        positive: "hsl(var(--positive))",
+        negative: "hsl(var(--negative))",
+        warning: "hsl(var(--warning))",
+        info: "hsl(var(--info))",
+        success: "hsl(var(--positive))",
+        danger: "hsl(var(--negative))",
 
-        // ── Aliases e Brand Secundários ────────────────
-        brand: {
-          primary: "#19FF63",
-        },
-        positive:  "#19FF63",
-        negative:  "#ef4444",
-        warning:   "#f59e0b",
-        info:      "#00E5FF",
-        success:   "#19FF63",
-        danger:    "#ef4444",
-
-        // ── shadcn/ui base tokens ──────────────────────────────────────────────
-        card:        { DEFAULT: "#0b0b0b", foreground: "#f5f5f0" },
-        popover:     { DEFAULT: "#141414", foreground: "#f5f5f0" },
-        muted:       { DEFAULT: "#1e1e1e", foreground: "#8a8a8a" },
-        destructive: { DEFAULT: "#ef4444", foreground: "#f5f5f0" },
-        input:       "#141414",
-        ring:        "#19FF63",
+        card: { DEFAULT: "hsl(var(--bg-elevated))", foreground: "hsl(var(--foreground))" },
+        popover: { DEFAULT: "hsl(var(--bg-elevated-2))", foreground: "hsl(var(--foreground))" },
+        muted: { DEFAULT: "hsl(var(--bg-elevated-3))", foreground: "hsl(var(--fg-muted))" },
+        destructive: { DEFAULT: "hsl(var(--negative))", foreground: "hsl(var(--foreground))" },
+        input: "hsl(var(--bg-elevated-2))",
+        ring: "hsl(var(--accent))",
       },
       borderRadius: {
         "3xl":   "24px",

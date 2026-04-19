@@ -22,6 +22,8 @@ import {
   Inbox,
   Users,
   History,
+  GitBranch,
+  Tags,
 } from "lucide-react";
 
 const MOBILE_NAV_ITEMS = [
@@ -67,9 +69,10 @@ export default function DashboardLayoutClient({
   const sidebarItems = [
     { href: "/", icon: Home, label: "Início" },
     { href: "/saude", icon: LayoutDashboard, label: "Saúde" },
+    { href: "/fluxo", icon: GitBranch, label: "Fluxo" },
     { href: "/caixa", icon: Wallet, label: "Caixa" },
     { href: "/inbox", icon: Inbox, label: "Inbox" },
-    { href: "/processamentos", icon: History, label: "Histórico" },
+    { href: "/processamentos", icon: History, label: "Processamentos" },
     { href: "/metas", icon: Target, label: "Metas" },
     { href: "/relatorios", icon: BookOpen, label: "Relatórios" },
     hasHouseholdTeam
@@ -89,13 +92,14 @@ export default function DashboardLayoutClient({
         { href: "/processamentos", label: "Processamentos", icon: History },
         { href: "/metas", label: "Metas", icon: Target },
         { href: "/relatorios", label: "Relatórios", icon: BookOpen },
+        { href: "/fluxo", label: "Fluxo", icon: GitBranch },
       ],
     },
     {
       title: "Configuração",
       items: [
         { href: "/contas", label: "Contas", icon: Wallet },
-        { href: "/categorias", label: "Categorias", icon: Target },
+        { href: "/categorias", label: "Categorias", icon: Tags },
         { href: "/configuracoes", label: "Configurações", icon: Settings },
       ],
     },
@@ -112,11 +116,11 @@ export default function DashboardLayoutClient({
   return (
     <div className="min-h-dvh bg-background">
       {/* ── Sidebar (desktop) ─────────────────────────────────── */}
-      <aside className="hidden md:flex flex-col w-[260px] min-h-dvh bg-[#030303] border-r border-white/[0.06] fixed top-0 left-0 z-40">
+      <aside className="hidden md:flex flex-col w-[260px] min-h-dvh bg-surface border-r border-border fixed top-0 left-0 z-40">
         {/* Brand */}
         <div className="px-7 pt-8 pb-6">
           <Link href="/" aria-label="CtrlBank Início" className="inline-flex items-baseline gap-0.5">
-            <span className="text-lg font-black tracking-[-0.04em] text-primary">Ctrl</span>
+            <span className="text-lg font-black tracking-[-0.04em] text-accent-primary">Ctrl</span>
             <span className="text-lg font-black tracking-[-0.04em] text-foreground">Bank</span>
           </Link>
         </div>
@@ -254,7 +258,7 @@ export default function DashboardLayoutClient({
                     onClick={() => {
                       window.dispatchEvent(new Event("toggle-composer"));
                     }}
-                    className="relative -top-5 w-[52px] h-[52px] rounded-full bg-primary shadow-[0_0_24px_rgba(25,255,99,0.35)] flex items-center justify-center text-black transition-transform active:scale-90 hover:shadow-[0_0_32px_rgba(25,255,99,0.5)]"
+                    className="relative -top-5 w-[52px] h-[52px] rounded-full bg-primary shadow-[var(--shadow-glow)] flex items-center justify-center text-black transition-transform active:scale-90 hover:shadow-[var(--shadow-glow)]"
                     aria-label="Assistente IA"
                   >
                     <Icon size={22} fill="currentColor" />

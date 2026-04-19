@@ -51,7 +51,7 @@ export default async function InboxPage() {
     <div className="space-y-6">
       <header>
         <h1 className="text-3xl font-black tracking-tight">Inbox</h1>
-        <p className="text-secondary mt-1">Central de captura inteligente de evidências financeiras.</p>
+        <p className="text-secondary mt-1">Solte comprovantes, extratos e faturas. A IA lê, organiza e propõe — você aprova.</p>
       </header>
 
       <InboxPageClient

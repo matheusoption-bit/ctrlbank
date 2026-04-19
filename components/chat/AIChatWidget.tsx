@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useTransition } from "react";
+import React, { useState, useRef, useEffect, useTransition, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, X, Send, Loader2, Camera, BarChart3, Search, Paperclip, CheckSquare, Copy, MessageSquare, Mic, Square, Trash2, ChevronUp, Lightbulb
@@ -55,7 +55,7 @@ export default function AIChatWidget() {
   const audioChunksRef = useRef<Blob[]>([]);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -104,7 +104,7 @@ export default function AIChatWidget() {
     return () => window.removeEventListener("resize", syncViewport);
   }, []);
 
-  const fetchHistory = async (cursor?: string) => {
+  const fetchHistory = useCallback(async (cursor?: string) => {
     setIsLoadingHistory(true);
     try {
       const res = await getConversationHistory(20, cursor);
@@ -119,24 +119,22 @@ export default function AIChatWidget() {
           content: m.content,
           mode: m.mode,
           timestamp: formatTimestamp(new Date(m.createdAt)),
-          metadata: m.metadata
+          metadata: m.metadata,
         }));
-        
-        if (cursor) {
-           setMessages(prev => [...formatted, ...prev]);
-        } else {
-           setMessages(formatted);
-           setTimeout(() => {
-             messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-           }, 100);
+
+        if (cursor) setMessages((prev) => [...formatted, ...prev]);
+        else {
+          setMessages(formatted);
+          setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
         }
       }
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(error);
     } finally {
       setIsLoadingHistory(false);
     }
-  };
+  }, []);
+
 
   useEffect(() => {
     if (open && accounts.length === 0) {
@@ -147,7 +145,7 @@ export default function AIChatWidget() {
         await fetchHistory(); // Fetch initial history
       });
     }
-  }, [open]);
+  }, [open, accounts.length, fetchHistory]);
 
   useEffect(() => {
     if (!open) return;
@@ -192,7 +190,7 @@ export default function AIChatWidget() {
       params.delete("captureGroupId");
       window.history.replaceState({}, "", `${window.location.pathname}${params.toString() ? "?" + params.toString() : ""}`);
     });
-  }, [open]);
+  }, [open, accounts.length, fetchHistory]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -519,11 +517,11 @@ export default function AIChatWidget() {
                    {mode === "Sugerir" && <Lightbulb size={32} className="text-secondary" />}
                   <p className="text-sm font-medium">O que vamos fazer?</p>
                   <p className="text-xs text-secondary/70 px-4">
-                    {mode === "Registrar" && "Digite, fale, cole um print, anexe PDF ou CSV."}
-                    {mode === "Revisar" && "Visualize drafts e lotes aguardando aprovação."}
-                    {mode === "Perguntar" && "Tire dúvidas sobre a saúde financeira da sua família."}
-                    {mode === "Planejar" && "Descubra como você está indo em relação às metas e orçamentos."}
-                    {mode === "Sugerir" && "Sugira melhorias, reporte bugs ou novas funcionalidades."}
+                    {mode === "Registrar" && "Diga, digite, cole um print ou anexe um PDF."}
+                    {mode === "Revisar" && "Rascunhos e lotes aguardando sua aprovação."}
+                    {mode === "Perguntar" && "Pergunte sobre seus dados. Respondo com evidência."}
+                    {mode === "Planejar" && "Vamos traçar uma rota para a meta."}
+                    {mode === "Sugerir" && "Relate um bug ou proponha uma melhoria do produto."}
                   </p>
                 </div>
               )}

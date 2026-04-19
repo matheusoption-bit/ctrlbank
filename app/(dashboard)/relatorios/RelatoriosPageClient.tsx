@@ -218,9 +218,8 @@ async function exportPDF(transactions: Transaction[], month: number, year: numbe
     const c = tx.category?.name ?? "Sem categoria";
     const v = formatCurrency(tx.amount);
 
-    tx.type === "INCOME"
-      ? doc.setTextColor(34, 197, 94)
-      : doc.setTextColor(239, 68, 68);
+    if (tx.type === "INCOME") doc.setTextColor(34, 197, 94);
+    else doc.setTextColor(239, 68, 68);
 
     doc.text(d, 20, y);
     doc.setTextColor(0, 0, 0);
@@ -233,7 +232,7 @@ async function exportPDF(transactions: Transaction[], month: number, year: numbe
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function RelatoriosPageClient({ evolution, transactions, categories, accounts, members, currentMonth, currentYear }: Props) {
+export default function RelatoriosPageClient({ evolution, transactions, accounts, members, currentMonth, currentYear }: Props) {
   const router   = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
