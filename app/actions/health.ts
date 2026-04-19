@@ -4,6 +4,7 @@ import { validateRequest } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth, subDays, subMonths } from "date-fns";
 import { calculateHealthScore, calculateProjection } from "@/lib/finance/health";
+import { captureDecisionFeedback } from "@/lib/quality/feedback";
 
 export async function getHealthScore() {
   const { user } = await validateRequest();
@@ -187,5 +188,15 @@ export async function dismissRecommendation(id: string) {
   if (result.count === 0) {
     throw new Error("Recommendation not found or unauthorized");
   }
+
+  await captureDecisionFeedback({
+    householdId: dbUser?.householdId ?? null,
+    userId: user.id,
+    feedbackType: "suggestion_rejected",
+    subjectType: "recommendation",
+    subjectId: id,
+    recommendationId: id,
+    isInferred: false,
+  });
   return { success: true };
 }

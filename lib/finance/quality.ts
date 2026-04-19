@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { AIComposerTransactionDraft } from "@/lib/ai/contracts";
 import { detectDuplicateTransaction } from "@/lib/finance/deduplication";
+import { getPolicyConfig } from "@/lib/policy/engine";
 
 type Severity = "LOW" | "MEDIUM" | "HIGH";
 
@@ -34,6 +35,10 @@ export async function evaluateTransactionQuality(params: {
   draft: AIComposerTransactionDraft;
 }): Promise<QualityEvaluation> {
   const { userId, householdId, draft } = params;
+  const [outlierPolicy, reviewPolicy] = await Promise.all([
+    getPolicyConfig<{ zScoreMedium?: number; zScoreHigh?: number }>("outlier_sensitivity", householdId),
+    getPolicyConfig<{ riskScoreThreshold?: number; highSeverityRequiresReview?: boolean }>("review_thresholds", householdId),
+  ]);
   const signals: QualitySignal[] = [];
   const weights: number[] = [];
 
@@ -60,13 +65,15 @@ export async function evaluateTransactionQuality(params: {
     const sigma = std(values);
     if (sigma > 0) {
       const z = Math.abs((Math.abs(draft.amount) - avg) / sigma);
-      if (z >= 3) {
+      const zMedium = Number(outlierPolicy.zScoreMedium ?? 3);
+      const zHigh = Number(outlierPolicy.zScoreHigh ?? 4);
+      if (z >= zMedium) {
         signals.push({
           code: "OUTLIER_AMOUNT",
-          severity: z >= 4 ? "HIGH" : "MEDIUM",
+          severity: z >= zHigh ? "HIGH" : "MEDIUM",
           reason: `Valor com z-score ${z.toFixed(2)} para o histórico local`,
         });
-        weights.push(z >= 4 ? 0.55 : 0.35);
+        weights.push(z >= zHigh ? 0.55 : 0.35);
       }
     }
   }
@@ -119,7 +126,8 @@ export async function evaluateTransactionQuality(params: {
   }
 
   const riskScore = Math.min(1, weights.reduce((acc, w) => acc + w, 0));
-  const requiresReview = riskScore >= 0.45 || signals.some((s) => s.severity === "HIGH");
+  const threshold = Number(reviewPolicy.riskScoreThreshold ?? 0.45);
+  const requiresReview = riskScore >= threshold || (reviewPolicy.highSeverityRequiresReview ?? true) && signals.some((s) => s.severity === "HIGH");
 
   return {
     riskScore,

@@ -8,6 +8,8 @@ import { appendIngestionLog, createQualityFlag, sanitizeErrorMessage } from "@/l
 import { verifySealedCapturePayload } from "@/lib/security/checksum";
 import { scopeWhere } from "@/lib/security/scope";
 import { isIdempotentCommitAlreadyDone } from "@/lib/inbox/processing-state";
+import { captureDecisionFeedback } from "@/lib/quality/feedback";
+import { recordDecisionEvaluation } from "@/lib/quality/evaluation";
 
 export const runtime = "nodejs";
 
@@ -155,6 +157,17 @@ export async function POST(req: NextRequest) {
           sourceDocumentId: event.sourceDocumentId,
           metadata: { existingId: dedup.existingId, description: item.description },
         });
+        await captureDecisionFeedback({
+          householdId,
+          userId: user.id,
+          feedbackType: "duplicate_confirmed",
+          subjectType: "deduplication",
+          subjectId: dedup.existingId,
+          aiCaptureEventId: event.id,
+          isInferred: true,
+          signalStrength: 0.9,
+          metadata: { duplicateOf: dedup.existingId },
+        });
         continue;
       }
 
@@ -182,6 +195,17 @@ export async function POST(req: NextRequest) {
         actorType: "user",
         actorId: user.id,
       });
+
+      await captureDecisionFeedback({
+        householdId,
+        userId: user.id,
+        feedbackType: "suggestion_accepted",
+        subjectType: "processing_commit",
+        subjectId: tx.id,
+        aiCaptureEventId: event.id,
+        isInferred: true,
+        signalStrength: 0.8,
+      });
     }
 
     await prisma.aiCaptureEvent.update({
@@ -204,6 +228,23 @@ export async function POST(req: NextRequest) {
         metadata: { reason: "all_items_duplicate_or_invalid" },
       });
     }
+
+    await recordDecisionEvaluation({
+      scopeType: "household",
+      scopeId: householdId ?? undefined,
+      householdId,
+      userId: user.id,
+      subjectType: "processing",
+      subjectId: event.id,
+      sourceEventId: event.id,
+      provider: event.provider,
+      model: event.model,
+      evaluationType: "commit_outcome",
+      observedOutcome: createdTransactionIds.length > 0 ? "committed" : "review_required",
+      result: createdTransactionIds.length > 0 ? "CORRECT" : "OVERRIDDEN",
+      score: createdTransactionIds.length > 0 ? 1 : 0.3,
+      metadata: { createdTransactionIds },
+    });
 
     return NextResponse.json({
       ok: true,

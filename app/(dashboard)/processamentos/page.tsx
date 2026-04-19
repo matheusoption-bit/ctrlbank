@@ -4,6 +4,7 @@ import { validateRequest } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { scopeWhere } from "@/lib/security/scope";
 import { getQuotaUsage } from "@/lib/quotas/service";
+import { disableExperiment, rollbackActivePolicy } from "@/app/actions/governance";
 
 export default async function ProcessamentosPage() {
   const { user } = await validateRequest();
@@ -39,7 +40,7 @@ export default async function ProcessamentosPage() {
     },
   });
 
-  const [artifacts, quotas, jobs] = await Promise.all([
+  const [artifacts, quotas, jobs, activePolicies, calibrations, experiments, qualityMetrics] = await Promise.all([
     prisma.signedArtifact.findMany({
       where: { householdId: dbUser?.householdId ?? undefined },
       orderBy: { createdAt: "desc" },
@@ -52,6 +53,26 @@ export default async function ProcessamentosPage() {
       where: { OR: [{ householdId: dbUser?.householdId ?? undefined }, { householdId: null }] },
       orderBy: { createdAt: "desc" },
       take: 8,
+    }),
+    prisma.policyVersion.findMany({
+      where: { householdId: dbUser?.householdId ?? undefined, status: "ACTIVE" },
+      orderBy: { activatedAt: "desc" },
+      take: 10,
+    }),
+    prisma.calibrationRun.findMany({
+      where: { householdId: dbUser?.householdId ?? undefined },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+    prisma.experiment.findMany({
+      where: { householdId: dbUser?.householdId ?? undefined },
+      orderBy: { updatedAt: "desc" },
+      take: 10,
+    }),
+    prisma.productQualityMetricSnapshot.findMany({
+      where: { householdId: dbUser?.householdId ?? undefined },
+      orderBy: { computedAt: "desc" },
+      take: 20,
     }),
   ]);
 
@@ -174,6 +195,68 @@ export default async function ProcessamentosPage() {
             </div>
           ))}
           {jobs.length === 0 ? <p className="text-secondary">Nenhuma execução registrada.</p> : null}
+        </div>
+      </section>
+
+      <section className="grid lg:grid-cols-2 gap-4">
+        <div className="rounded-2xl border border-border bg-surface p-4 space-y-2">
+          <h2 className="font-semibold">Qualidade e fricção (Wave 5)</h2>
+          <div className="space-y-2 text-xs">
+            {qualityMetrics.map((metric) => (
+              <div key={metric.id} className="rounded-lg border border-border p-2">
+                <p className="font-medium">{metric.metricCode}</p>
+                <p>{(metric.metricValue * 100).toFixed(1)}%</p>
+                <p className="text-secondary">{metric.computedAt.toLocaleString("pt-BR")}</p>
+              </div>
+            ))}
+            {qualityMetrics.length === 0 ? <p className="text-secondary">Sem snapshots de qualidade ainda.</p> : null}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-surface p-4 space-y-3">
+          <h2 className="font-semibold">Políticas ativas e rollback</h2>
+          {activePolicies.map((policy) => (
+            <div key={policy.id} className="rounded-lg border border-border p-3 text-xs space-y-2">
+              <p className="font-medium">{policy.policyType} v{policy.version}</p>
+              <p className="text-secondary">Ativada em {policy.activatedAt?.toLocaleString("pt-BR") ?? "-"}</p>
+              <form action={async () => {
+                "use server";
+                await rollbackActivePolicy(policy.policyType);
+              }}>
+                <button className="rounded-lg border border-border px-2 py-1 hover:bg-white/5">Rollback seguro</button>
+              </form>
+            </div>
+          ))}
+          {activePolicies.length === 0 ? <p className="text-secondary text-xs">Sem políticas ativas.</p> : null}
+        </div>
+      </section>
+
+      <section className="grid lg:grid-cols-2 gap-4">
+        <div className="rounded-2xl border border-border bg-surface p-4 space-y-2">
+          <h2 className="font-semibold">Calibrações recentes</h2>
+          {calibrations.map((run) => (
+            <div key={run.id} className="rounded-lg border border-border p-2 text-xs">
+              <p className="font-medium">{run.policyType} · {run.mode}</p>
+              <p>{run.applied ? "aplicada" : "recomendação"} · {run.reason ?? "-"}</p>
+            </div>
+          ))}
+        </div>
+        <div className="rounded-2xl border border-border bg-surface p-4 space-y-2">
+          <h2 className="font-semibold">Experimentos / Kill switch</h2>
+          {experiments.map((experiment) => (
+            <div key={experiment.id} className="rounded-lg border border-border p-2 text-xs space-y-2">
+              <p className="font-medium">{experiment.key}</p>
+              <p>{experiment.status} · {experiment.targetScope}</p>
+              {experiment.status === "RUNNING" ? (
+                <form action={async () => {
+                  "use server";
+                  await disableExperiment(experiment.id);
+                }}>
+                  <button className="rounded-lg border border-border px-2 py-1 hover:bg-white/5">Desligar experimento</button>
+                </form>
+              ) : null}
+            </div>
+          ))}
         </div>
       </section>
 

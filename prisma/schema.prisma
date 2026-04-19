@@ -158,6 +158,42 @@ enum AutomationJobStatus {
   FAILED
 }
 
+enum PolicyStatus {
+  DRAFT
+  ACTIVE
+  RETIRED
+  ROLLED_BACK
+  EXPERIMENTAL
+}
+
+enum CalibrationMode {
+  RECOMMEND_ONLY
+  APPLY_WITH_GUARDRAILS
+}
+
+enum EvaluationResult {
+  CORRECT
+  INCORRECT
+  ACCEPTED
+  REJECTED
+  OVERRIDDEN
+  NO_SIGNAL
+}
+
+enum MetricPeriodType {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum ExperimentStatus {
+  DRAFT
+  RUNNING
+  PAUSED
+  COMPLETED
+  KILLED
+}
+
 // ─────────────────────────────────────────────
 // Core Models
 // ─────────────────────────────────────────────
@@ -207,6 +243,12 @@ model Household {
   signedArtifacts   SignedArtifact[]
   householdQuotas   HouseholdQuota[]
   automationJobRuns AutomationJobRun[]
+  policyVersions    PolicyVersion[]
+  decisionEvaluations DecisionEvaluation[]
+  qualitySnapshots  ProductQualityMetricSnapshot[]
+  decisionFeedbacks DecisionFeedback[]
+  calibrationRuns   CalibrationRun[]
+  experiments       Experiment[]
 }
 
 /// Convite com token único e validade de 48h
@@ -287,6 +329,9 @@ model User {
   authChallenges        AuthChallenge[]
   signedArtifacts       SignedArtifact[]
   createdArtifacts      SignedArtifact[] @relation("SignedArtifactCreatedByUser")
+  policyVersionsCreated PolicyVersion[]  @relation("PolicyVersionCreatedByUser")
+  decisionEvaluations   DecisionEvaluation[] @relation("DecisionEvaluationUser")
+  decisionFeedbacks     DecisionFeedback[]   @relation("DecisionFeedbackUser")
 
   @@index([householdId])
   @@index([phone])
@@ -526,6 +571,7 @@ model AiCaptureEvent {
   ingestionLogs  IngestionLog[]
   qualityFlags   TransactionQualityFlag[]
   transaction    Transaction?
+  feedbacks      DecisionFeedback[]
 
   @@index([captureGroupId])
   @@index([correlationId])
@@ -616,6 +662,7 @@ model TransactionQualityFlag {
   sourceDocument SourceDocument? @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
   household      Household?      @relation(fields: [householdId], references: [id], onDelete: Cascade)
   resolvedByUser User?           @relation("TransactionQualityFlagResolvedBy", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+  feedbacks      DecisionFeedback[]
 
   @@index([transactionId])
   @@index([aiCaptureEventId])
@@ -787,6 +834,169 @@ model AutomationJobRun {
   @@index([householdId, createdAt])
 }
 
+model PolicyVersion {
+  id                    String       @id @default(cuid())
+  householdId           String?
+  policyType            String
+  version               Int
+  status                PolicyStatus @default(DRAFT)
+  config                Json
+  description           String?
+  createdByUserId       String?
+  activatedAt           DateTime?
+  retiredAt             DateTime?
+  parentPolicyVersionId String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  household             Household?        @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdByUser         User?             @relation("PolicyVersionCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  parentPolicyVersion   PolicyVersion?    @relation("PolicyVersionLineage", fields: [parentPolicyVersionId], references: [id], onDelete: SetNull)
+  childPolicyVersions   PolicyVersion[]   @relation("PolicyVersionLineage")
+  decisionEvaluations   DecisionEvaluation[]
+  calibrationRuns       CalibrationRun[]
+  experiments           Experiment[]
+  decisionFeedbacks     DecisionFeedback[]
+
+  @@unique([householdId, policyType, version])
+  @@index([policyType, status, householdId])
+}
+
+model DecisionEvaluation {
+  id              String            @id @default(cuid())
+  scopeType       String
+  scopeId         String?
+  householdId     String?
+  userId          String?
+  subjectType     String
+  subjectId       String?
+  sourceEventId   String?
+  policyVersionId String?
+  provider        String?
+  model           String?
+  evaluationType  String
+  expectedOutcome String?
+  observedOutcome String?
+  result          EvaluationResult
+  score           Float?
+  metadata        Json?
+  evaluatedAt     DateTime
+  createdAt       DateTime          @default(now())
+
+  household     Household?    @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user          User?         @relation("DecisionEvaluationUser", fields: [userId], references: [id], onDelete: SetNull)
+  policyVersion PolicyVersion? @relation(fields: [policyVersionId], references: [id], onDelete: SetNull)
+
+  @@index([householdId, evaluatedAt])
+  @@index([policyVersionId, evaluatedAt])
+  @@index([subjectType, result, evaluatedAt])
+}
+
+model ProductQualityMetricSnapshot {
+  id         String           @id @default(cuid())
+  periodType MetricPeriodType
+  periodStart DateTime
+  periodEnd  DateTime
+  scopeType  String
+  scopeId    String?
+  householdId String?
+  metricCode String
+  metricValue Float
+  dimensions Json?
+  computedAt DateTime
+  createdAt  DateTime         @default(now())
+
+  household Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@index([householdId, metricCode, periodStart])
+  @@index([scopeType, scopeId, periodStart])
+}
+
+model DecisionFeedback {
+  id               String   @id @default(cuid())
+  householdId      String?
+  userId           String?
+  feedbackType     String
+  subjectType      String
+  subjectId        String?
+  aiCaptureEventId String?
+  qualityFlagId    String?
+  recommendationId String?
+  policyVersionId  String?
+  provider         String?
+  model            String?
+  isInferred       Boolean  @default(false)
+  signalStrength   Float?
+  metadata         Json?
+  createdAt        DateTime @default(now())
+
+  household     Household?        @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user          User?             @relation("DecisionFeedbackUser", fields: [userId], references: [id], onDelete: SetNull)
+  aiCaptureEvent AiCaptureEvent?   @relation(fields: [aiCaptureEventId], references: [id], onDelete: SetNull)
+  qualityFlag   TransactionQualityFlag? @relation(fields: [qualityFlagId], references: [id], onDelete: SetNull)
+  recommendation AiRecommendation? @relation(fields: [recommendationId], references: [id], onDelete: SetNull)
+  policyVersion PolicyVersion?    @relation(fields: [policyVersionId], references: [id], onDelete: SetNull)
+
+  @@index([householdId, feedbackType, createdAt])
+  @@index([subjectType, subjectId, createdAt])
+}
+
+model CalibrationRun {
+  id              String          @id @default(cuid())
+  householdId     String?
+  policyType      String
+  mode            CalibrationMode
+  baselineMetrics Json?
+  candidateConfig Json?
+  applied         Boolean         @default(false)
+  reason          String?
+  guardrailStatus String?
+  policyVersionId String?
+  createdAt       DateTime        @default(now())
+
+  household     Household?    @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  policyVersion PolicyVersion? @relation(fields: [policyVersionId], references: [id], onDelete: SetNull)
+  changes       CalibrationChange[]
+
+  @@index([householdId, policyType, createdAt])
+}
+
+model CalibrationChange {
+  id               String   @id @default(cuid())
+  calibrationRunId String
+  metricCode       String
+  baselineValue    Float
+  candidateValue   Float
+  observedValue    Float?
+  createdAt        DateTime @default(now())
+
+  run CalibrationRun @relation(fields: [calibrationRunId], references: [id], onDelete: Cascade)
+
+  @@index([calibrationRunId])
+}
+
+model Experiment {
+  id              String           @id @default(cuid())
+  householdId     String?
+  key             String
+  type            String
+  status          ExperimentStatus @default(DRAFT)
+  allocationStrategy String
+  targetScope     String
+  config          Json
+  policyVersionId String?
+  startAt         DateTime?
+  endAt           DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  household     Household?    @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  policyVersion PolicyVersion? @relation(fields: [policyVersionId], references: [id], onDelete: SetNull)
+
+  @@unique([householdId, key])
+  @@index([status, startAt, endAt])
+}
+
 // ─────────────────────────────────────────────
 // Fase 9: Metas & Integrações
 // ─────────────────────────────────────────────
@@ -948,6 +1158,7 @@ model AiRecommendation {
 
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   household Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  feedbacks DecisionFeedback[]
 
   @@index([userId])
   @@index([householdId])
