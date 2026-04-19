@@ -58,6 +58,82 @@ enum VisibilityScope {
   HOUSEHOLD
 }
 
+enum SourceChannel {
+  MANUAL
+  EMAIL
+  WHATSAPP
+  IMPORT
+  COMPOSER
+  API
+}
+
+enum SourceType {
+  TEXT
+  IMAGE
+  PDF
+  CSV
+  OFX
+  AUDIO
+  RAW_TEXT
+}
+
+enum IngestionStage {
+  RECEIVED
+  EXTRACTING
+  EXTRACTED
+  PARSING
+  PARSED
+  NORMALIZING
+  NORMALIZED
+  REVIEW_REQUIRED
+  COMMITTING
+  COMMITTED
+  FAILED
+  DUPLICATE_SKIPPED
+}
+
+enum IngestionStatus {
+  STARTED
+  SUCCESS
+  ERROR
+  SKIPPED
+}
+
+enum QualityFlagCode {
+  DUPLICATE_SUSPECTED
+  DUPLICATE_CONFIRMED
+  OUTLIER_AMOUNT
+  CATEGORY_CONFLICT
+  ACCOUNT_MISSING
+  OCR_LOW_CONFIDENCE
+  REVIEW_REQUIRED
+}
+
+enum QualityFlagSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum QualityFlagStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+enum ReviewState {
+  NOT_REQUIRED
+  REQUIRED
+  APPROVED
+  REJECTED
+}
+
+enum TaintLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 // ─────────────────────────────────────────────
 // Core Models
 // ─────────────────────────────────────────────
@@ -82,37 +158,40 @@ model Household {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  users                 User[]
-  bankAccounts          BankAccount[]
-  categories            Category[]
-  transactions          Transaction[]
-  budgets               Budget[]
-  tags                  Tag[]
-  goals                 Goal[]
-  recurringTransactions RecurringTransaction[]
-  bankConnections       BankConnection[]
-  counterSessions       CounterSession[]
-  AiCaptureEvent        AiCaptureEvent[]
-  merchantMemories      MerchantMemory[]
-  categoryLearningRules CategoryLearningRule[]
+  users                   User[]
+  bankAccounts            BankAccount[]
+  categories              Category[]
+  transactions            Transaction[]
+  budgets                 Budget[]
+  tags                    Tag[]
+  goals                   Goal[]
+  recurringTransactions   RecurringTransaction[]
+  bankConnections         BankConnection[]
+  counterSessions         CounterSession[]
+  AiCaptureEvent          AiCaptureEvent[]
+  merchantMemories        MerchantMemory[]
+  categoryLearningRules   CategoryLearningRule[]
+  sourceDocuments         SourceDocument[]
+  ingestionLogs           IngestionLog[]
+  transactionQualityFlags TransactionQualityFlag[]
 
-  aiConversations       AiConversation[]
-  financialPlans        FinancialPlan[]
-  aiRecommendations     AiRecommendation[]
-  householdInvites      HouseholdInvite[]
-  monthlyCheckViews     MonthlyCheckView[]
+  aiConversations   AiConversation[]
+  financialPlans    FinancialPlan[]
+  aiRecommendations AiRecommendation[]
+  householdInvites  HouseholdInvite[]
+  monthlyCheckViews MonthlyCheckView[]
 }
 
 /// Convite com token único e validade de 48h
 model HouseholdInvite {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   householdId String
-  token       String   @unique
+  token       String    @unique
   createdById String
   expiresAt   DateTime
   usedAt      DateTime?
   usedById    String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
 
   household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   createdBy User      @relation("InviteCreatedBy", fields: [createdById], references: [id])
@@ -126,7 +205,7 @@ model HouseholdInvite {
 model MonthlyCheckView {
   id          String   @id @default(cuid())
   householdId String
-  month       String   // formato YYYY-MM
+  month       String // formato YYYY-MM
   userId      String
   viewedAt    DateTime @default(now())
 
@@ -138,43 +217,47 @@ model MonthlyCheckView {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  password_hash String
-  name          String?
-  phone         String?
-  whatsappNumber String? @unique
-  whatsappLinkToken String?
+  id                         String    @id @default(cuid())
+  email                      String    @unique
+  password_hash              String
+  name                       String?
+  phone                      String?
+  whatsappNumber             String?   @unique
+  whatsappLinkToken          String?
   whatsappLinkTokenExpiresAt DateTime?
-  householdId   String?
-  role          UserRole @default(ADMIN) // Fase 6: admin ou viewer (contador)
+  householdId                String?
+  role                       UserRole  @default(ADMIN) // Fase 6: admin ou viewer (contador)
   // Fase 10: 2FA TOTP
-  totpSecret    String?
-  totpSecretEnc String?
-  totpSecretKeyVersion String?
-  totpEnabled   Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  totpSecret                 String?
+  totpSecretEnc              String?
+  totpSecretKeyVersion       String?
+  totpEnabled                Boolean   @default(false)
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
 
-  household      Household?       @relation(fields: [householdId], references: [id], onDelete: SetNull)
-  sessions       Session[]
-  bankAccounts   BankAccount[]
-  transactions   Transaction[]
-  categories     Category[]
-  notifications  Notification[]
-  AiCaptureEvent AiCaptureEvent[]
-  merchantMemories MerchantMemory[]
-  productFeedbacks ProductFeedback[]
+  household                       Household?               @relation(fields: [householdId], references: [id], onDelete: SetNull)
+  sessions                        Session[]
+  bankAccounts                    BankAccount[]
+  transactions                    Transaction[]
+  categories                      Category[]
+  notifications                   Notification[]
+  AiCaptureEvent                  AiCaptureEvent[]
+  merchantMemories                MerchantMemory[]
+  productFeedbacks                ProductFeedback[]
+  sourceDocuments                 SourceDocument[]
+  ingestionLogs                   IngestionLog[]           @relation("IngestionLogUser")
+  actedIngestionLogs              IngestionLog[]           @relation("IngestionLogActor")
+  transactionQualityFlagsResolved TransactionQualityFlag[] @relation("TransactionQualityFlagResolvedBy")
 
-  aiConversations   AiConversation[]
-  aiMessages        AiMessage[]
-  financialPlans    FinancialPlan[]
-  aiRecommendations AiRecommendation[]
+  aiConversations       AiConversation[]
+  aiMessages            AiMessage[]
+  financialPlans        FinancialPlan[]
+  aiRecommendations     AiRecommendation[]
   categoryLearningRules CategoryLearningRule[]
-  invitesCreated    HouseholdInvite[]  @relation("InviteCreatedBy")
-  invitesUsed       HouseholdInvite[]  @relation("InviteUsedBy")
-  monthlyCheckViews MonthlyCheckView[]
-  authChallenges AuthChallenge[]
+  invitesCreated        HouseholdInvite[]      @relation("InviteCreatedBy")
+  invitesUsed           HouseholdInvite[]      @relation("InviteUsedBy")
+  monthlyCheckViews     MonthlyCheckView[]
+  authChallenges        AuthChallenge[]
 
   @@index([householdId])
   @@index([phone])
@@ -182,17 +265,17 @@ model User {
 }
 
 model AuthChallenge {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   userId     String
-  tokenHash  String   @unique
+  tokenHash  String    @unique
   purpose    String
   expiresAt  DateTime
   consumedAt DateTime?
-  attempts   Int      @default(0)
+  attempts   Int       @default(0)
   ip         String?
   userAgent  String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -214,7 +297,6 @@ model RateLimitBucket {
   @@index([expiresAt])
 }
 
-
 model CategoryLearningRule {
   id                 String   @id @default(cuid())
   userId             String
@@ -228,44 +310,44 @@ model CategoryLearningRule {
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   household Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, descriptionPattern, categoryName])
   @@index([userId])
   @@index([householdId])
-  @@unique([userId, descriptionPattern, categoryName])
 }
 
 model ProductFeedback {
-  id String @id @default(cuid())
-  userId String
-  householdId String?
-  source String @default("composer")
-  rawInput String @db.Text
-  normalizedTitle String
-  summary String @db.Text
-  type String
-  area String
-  impact String
-  priorityScore Float @default(0)
-  reproductionSteps Json?
-  suggestedSolution String? @db.Text
+  id                 String             @id @default(cuid())
+  userId             String
+  householdId        String?
+  source             String             @default("composer")
+  rawInput           String             @db.Text
+  normalizedTitle    String
+  summary            String             @db.Text
+  type               String
+  area               String
+  impact             String
+  priorityScore      Float              @default(0)
+  reproductionSteps  Json?
+  suggestedSolution  String?            @db.Text
   acceptanceCriteria Json?
-  status String @default("new")
-  relatedToId String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user User @relation(fields: [userId], references: [id])
-  artifacts FeedbackArtifact[]
-  relatedTo ProductFeedback? @relation("FeedbackRelation", fields: [relatedToId], references: [id])
-  relatedFeedbacks ProductFeedback[] @relation("FeedbackRelation")
+  status             String             @default("new")
+  relatedToId        String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  user               User               @relation(fields: [userId], references: [id])
+  artifacts          FeedbackArtifact[]
+  relatedTo          ProductFeedback?   @relation("FeedbackRelation", fields: [relatedToId], references: [id])
+  relatedFeedbacks   ProductFeedback[]  @relation("FeedbackRelation")
 }
 
 model FeedbackArtifact {
-  id String @id @default(cuid())
+  id         String          @id @default(cuid())
   feedbackId String
-  kind String
-  url String?
-  content Json?
-  createdAt DateTime @default(now())
-  feedback ProductFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  kind       String
+  url        String?
+  content    Json?
+  createdAt  DateTime        @default(now())
+  feedback   ProductFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
 }
 
 model Session {
@@ -334,18 +416,18 @@ model Category {
 }
 
 model Transaction {
-  id            String            @id @default(cuid())
-  householdId   String?
-  userId        String
-  bankAccountId String
-  categoryId    String?
-  type          TransactionType
-  status        TransactionStatus @default(COMPLETED)
-  amount        Decimal           @db.Decimal(15, 2)
-  description   String?
-  date          DateTime          @default(now())
-  notes         String? // Fase 7: notas adicionais
-  aiCaptureEventId String?        @unique
+  id               String            @id @default(cuid())
+  householdId      String?
+  userId           String
+  bankAccountId    String
+  categoryId       String?
+  type             TransactionType
+  status           TransactionStatus @default(COMPLETED)
+  amount           Decimal           @db.Decimal(15, 2)
+  description      String?
+  date             DateTime          @default(now())
+  notes            String? // Fase 7: notas adicionais
+  aiCaptureEventId String?           @unique
 
   // Parcelamento
   installmentNumber Int?
@@ -357,12 +439,14 @@ model Transaction {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  household   Household?       @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bankAccount BankAccount      @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
-  category    Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  aiCaptureEvent AiCaptureEvent? @relation(fields: [aiCaptureEventId], references: [id], onDelete: SetNull)
-  tags        TransactionTag[]
+  household      Household?               @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankAccount    BankAccount              @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  category       Category?                @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  aiCaptureEvent AiCaptureEvent?          @relation(fields: [aiCaptureEventId], references: [id], onDelete: SetNull)
+  qualityFlags   TransactionQualityFlag[]
+  ingestionLogs  IngestionLog[]
+  tags           TransactionTag[]
 
   @@index([userId])
   @@index([householdId])
@@ -376,9 +460,11 @@ model Transaction {
 // ─────────────────────────────────────────────
 
 model AiCaptureEvent {
-  id                   String   @id @default(cuid())
+  id                   String          @id @default(cuid())
   userId               String
   householdId          String?
+  sourceDocumentId     String?
+  correlationId        String?
   captureGroupId       String?
   source               String // "text", "image", "text+image"
   inputType            String
@@ -386,15 +472,126 @@ model AiCaptureEvent {
   normalizedDraft      Json?
   confidenceOverall    Float
   decision             String
+  processingStage      IngestionStage?
+  reviewState          ReviewState?    @default(NOT_REQUIRED)
+  decisionReason       String?
+  provider             String?
+  model                String?
+  tokensIn             Int?
+  tokensOut            Int?
+  latencyMs            Int?
+  taintLevel           TaintLevel?
+  sealedPayload        String?         @db.Text
+  signature            String?
+  signatureKeyId       String?
+  prevHash             String?
+  parserVersion        String?
+  normalizerVersion    String?
   createdTransactionId String?
-  wasUndone            Boolean  @default(false)
-  createdAt            DateTime @default(now())
+  wasUndone            Boolean         @default(false)
+  createdAt            DateTime        @default(now())
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  household Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  transaction Transaction?
+  user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household      Household?               @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  sourceDocument SourceDocument?          @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  ingestionLogs  IngestionLog[]
+  qualityFlags   TransactionQualityFlag[]
+  transaction    Transaction?
 
   @@index([captureGroupId])
+  @@index([correlationId])
+}
+
+model SourceDocument {
+  id               String        @id @default(cuid())
+  userId           String?
+  householdId      String?
+  correlationId    String?
+  sourceChannel    SourceChannel
+  sourceType       SourceType
+  mimeType         String?
+  originalName     String?
+  sizeBytes        Int?
+  sha256           String
+  contentHash      String?
+  storageRef       String?
+  extractionMethod String?
+  parserVersion    String?
+  taintLevel       TaintLevel?
+  firstSeenAt      DateTime      @default(now())
+  lastSeenAt       DateTime      @default(now())
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  user            User?                    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  household       Household?               @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  aiCaptureEvents AiCaptureEvent[]
+  ingestionLogs   IngestionLog[]
+  qualityFlags    TransactionQualityFlag[]
+
+  @@index([householdId, sha256])
+  @@index([userId, sha256])
+  @@index([correlationId])
+}
+
+model IngestionLog {
+  id               String          @id @default(cuid())
+  correlationId    String
+  sourceDocumentId String?
+  aiCaptureEventId String?
+  transactionId    String?
+  householdId      String?
+  userId           String?
+  stage            IngestionStage
+  status           IngestionStatus
+  channel          String?
+  actorType        String?
+  actorId          String?
+  errorCode        String?
+  errorMessage     String?
+  metadata         Json?
+  retryCount       Int             @default(0)
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  createdAt        DateTime        @default(now())
+
+  sourceDocument SourceDocument? @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  aiCaptureEvent AiCaptureEvent? @relation(fields: [aiCaptureEventId], references: [id], onDelete: SetNull)
+  transaction    Transaction?    @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  household      Household?      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user           User?           @relation("IngestionLogUser", fields: [userId], references: [id], onDelete: Cascade)
+  actor          User?           @relation("IngestionLogActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([correlationId, createdAt])
+  @@index([sourceDocumentId])
+  @@index([aiCaptureEventId])
+}
+
+model TransactionQualityFlag {
+  id               String              @id @default(cuid())
+  transactionId    String?
+  aiCaptureEventId String?
+  sourceDocumentId String?
+  householdId      String?
+  code             QualityFlagCode
+  severity         QualityFlagSeverity
+  status           QualityFlagStatus   @default(OPEN)
+  metadata         Json?
+  resolvedAt       DateTime?
+  resolvedByUserId String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  transaction    Transaction?    @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  aiCaptureEvent AiCaptureEvent? @relation(fields: [aiCaptureEventId], references: [id], onDelete: SetNull)
+  sourceDocument SourceDocument? @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  household      Household?      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  resolvedByUser User?           @relation("TransactionQualityFlagResolvedBy", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([transactionId])
+  @@index([aiCaptureEventId])
+  @@index([sourceDocumentId])
+  @@index([householdId, status])
 }
 
 // ─────────────────────────────────────────────
@@ -402,19 +599,19 @@ model AiCaptureEvent {
 // ─────────────────────────────────────────────
 
 model MerchantMemory {
-  id              String   @id @default(cuid())
-  householdId     String?
-  userId          String
-  merchantName    String
-  categoryId      String?
-  bankAccountId   String?
-  correctedCount  Int      @default(0)
-  lastUsedAt      DateTime @default(now())
+  id             String   @id @default(cuid())
+  householdId    String?
+  userId         String
+  merchantName   String
+  categoryId     String?
+  bankAccountId  String?
+  correctedCount Int      @default(0)
+  lastUsedAt     DateTime @default(now())
 
-  household     Household?   @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category      Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  household   Household?   @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  bankAccount BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
 
   @@index([householdId])
   @@index([userId])
@@ -562,8 +759,8 @@ model AiConversation {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  household Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household Household?  @relation(fields: [householdId], references: [id], onDelete: Cascade)
   messages  AiMessage[]
 
   @@index([userId])
@@ -571,45 +768,45 @@ model AiConversation {
 }
 
 model AiMessage {
-  id             String   @id @default(cuid())
+  id             String @id @default(cuid())
   conversationId String
   userId         String
-  role           String   // 'user', 'assistant', 'system'
-  mode           String   // 'Registrar', 'Revisar', 'Perguntar', 'Planejar'
-  inputType      String   @default("text") // text, image, audio, etc.
+  role           String // 'user', 'assistant', 'system'
+  mode           String // 'Registrar', 'Revisar', 'Perguntar', 'Planejar'
+  inputType      String @default("text") // text, image, audio, etc.
   content        String
-  
-  audioDurationMs Int?
-  
-  metadata       Json?    // To store generic payloads like drafts, saved_plan reference, operational_result
-  createdAt      DateTime @default(now())
 
-  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  audioDurationMs Int?
+
+  metadata  Json? // To store generic payloads like drafts, saved_plan reference, operational_result
+  createdAt DateTime @default(now())
+
+  conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([conversationId])
 }
 
 model FinancialPlan {
-  id                    String   @id @default(cuid())
+  id                    String          @id @default(cuid())
   userId                String
   householdId           String?
   visibility            VisibilityScope @default(PERSONAL)
   title                 String
-  objectiveType         String   
-  targetAmount          Decimal? @db.Decimal(15,2)
+  objectiveType         String
+  targetAmount          Decimal?        @db.Decimal(15, 2)
   targetDate            DateTime?
   targetMonths          Int?
-  monthlyRequiredAmount Decimal? @db.Decimal(15,2)
+  monthlyRequiredAmount Decimal?        @db.Decimal(15, 2)
   summary               String
   recommendedCuts       Json?
-  scenarioData          Json?    
-  isActive              Boolean  @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  scenarioData          Json?
+  isActive              Boolean         @default(true)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
 
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  household  Household?  @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household  Household?             @relation(fields: [householdId], references: [id], onDelete: Cascade)
   progresses PlanProgressSnapshot[]
 
   @@index([userId])
@@ -617,35 +814,35 @@ model FinancialPlan {
 }
 
 model PlanProgressSnapshot {
-  id                  String   @id @default(cuid())
+  id                  String    @id @default(cuid())
   planId              String
-  currentAmount       Decimal  @db.Decimal(15,2)
+  currentAmount       Decimal   @db.Decimal(15, 2)
   progressPercentage  Float
   projectedCompletion DateTime?
   isOnTrack           Boolean
-  createdAt           DateTime @default(now())
+  createdAt           DateTime  @default(now())
 
-  plan  FinancialPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  plan FinancialPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
 
   @@index([planId])
 }
 
 model AiRecommendation {
-  id            String   @id @default(cuid())
+  id            String          @id @default(cuid())
   userId        String
   householdId   String?
   visibility    VisibilityScope @default(PERSONAL)
   relatedPlanId String?
-  type          String   // 'budget_warning', 'plan_progress', 'general_saving'
+  type          String // 'budget_warning', 'plan_progress', 'general_saving'
   message       String
-  actionLabel   String?  
-  actionTarget  String?  // Ex: '/orcamentos'
-  score         Float    @default(0) // order by priority
-  isDismissed   Boolean  @default(false)
-  createdAt     DateTime @default(now())
+  actionLabel   String?
+  actionTarget  String? // Ex: '/orcamentos'
+  score         Float           @default(0) // order by priority
+  isDismissed   Boolean         @default(false)
+  createdAt     DateTime        @default(now())
 
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  household Household?     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([householdId])
