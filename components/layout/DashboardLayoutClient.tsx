@@ -24,6 +24,7 @@ import {
   History,
   GitBranch,
   Tags,
+  Repeat2,
 } from "lucide-react";
 
 const MOBILE_NAV_ITEMS = [
@@ -71,6 +72,7 @@ export default function DashboardLayoutClient({
     { href: "/saude", icon: LayoutDashboard, label: "Saúde" },
     { href: "/fluxo", icon: GitBranch, label: "Fluxo" },
     { href: "/caixa", icon: Wallet, label: "Caixa" },
+    { href: "/assinaturas", icon: Repeat2, label: "Assinaturas" },
     { href: "/inbox", icon: Inbox, label: "Inbox" },
     { href: "/processamentos", icon: History, label: "Processamentos" },
     { href: "/metas", icon: Target, label: "Metas" },
@@ -88,6 +90,7 @@ export default function DashboardLayoutClient({
         { href: "/", label: "Início", icon: Home },
         { href: "/saude", label: "Saúde", icon: LayoutDashboard },
         { href: "/caixa", label: "Caixa", icon: Wallet },
+        { href: "/assinaturas", label: "Assinaturas", icon: Repeat2 },
         { href: "/inbox", label: "Inbox", icon: Inbox },
         { href: "/processamentos", label: "Processamentos", icon: History },
         { href: "/metas", label: "Metas", icon: Target },
