@@ -1,12 +1,17 @@
-import { ExperimentStatus } from "@prisma/client";
+import type { ExperimentStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+
+const EXPERIMENT_STATUS = {
+  RUNNING: "RUNNING",
+  KILLED: "KILLED",
+} as const satisfies Record<string, ExperimentStatus>;
 
 export async function isExperimentEnabled(input: { key: string; householdId?: string | null; userId?: string | null }) {
   const now = new Date();
   const experiment = await prisma.experiment.findFirst({
     where: {
       key: input.key,
-      status: ExperimentStatus.RUNNING,
+      status: EXPERIMENT_STATUS.RUNNING,
       OR: input.householdId ? [{ householdId: input.householdId }, { householdId: null }] : [{ householdId: null }],
       AND: [{ OR: [{ startAt: null }, { startAt: { lte: now } }] }, { OR: [{ endAt: null }, { endAt: { gte: now } }] }],
     },
@@ -15,7 +20,10 @@ export async function isExperimentEnabled(input: { key: string; householdId?: st
 
   if (!experiment) return { enabled: false, reason: "inactive" };
 
-  const config = (experiment.config as any) ?? {};
+  const config =
+    experiment.config && typeof experiment.config === "object"
+      ? (experiment.config as Record<string, unknown>)
+      : {};
   const allocation = Number(config.allocationPct ?? 100);
   if (allocation >= 100) return { enabled: true, experiment };
 
@@ -25,5 +33,5 @@ export async function isExperimentEnabled(input: { key: string; householdId?: st
 }
 
 export async function killExperiment(experimentId: string) {
-  return prisma.experiment.update({ where: { id: experimentId }, data: { status: ExperimentStatus.KILLED, endAt: new Date() } });
+  return prisma.experiment.update({ where: { id: experimentId }, data: { status: EXPERIMENT_STATUS.KILLED, endAt: new Date() } });
 }

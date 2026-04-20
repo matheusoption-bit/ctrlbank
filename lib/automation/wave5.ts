@@ -1,13 +1,27 @@
-import { AutomationJobStatus, CalibrationMode } from "@prisma/client";
+import type { AutomationJobStatus, CalibrationMode, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { persistQualityMetricSnapshots } from "@/lib/quality/metrics";
 import { runCalibration } from "@/lib/calibration/service";
 
-const mode = process.env.WAVE5_CALIBRATION_MODE === "APPLY_WITH_GUARDRAILS" ? CalibrationMode.APPLY_WITH_GUARDRAILS : CalibrationMode.RECOMMEND_ONLY;
+const AUTOMATION_JOB_STATUS = {
+  SUCCESS: "SUCCESS",
+  FAILED: "FAILED",
+} as const satisfies Record<string, AutomationJobStatus>;
+
+const CALIBRATION_MODE = {
+  APPLY_WITH_GUARDRAILS: "APPLY_WITH_GUARDRAILS",
+  RECOMMEND_ONLY: "RECOMMEND_ONLY",
+} as const satisfies Record<string, CalibrationMode>;
+
+const mode =
+  process.env.WAVE5_CALIBRATION_MODE === CALIBRATION_MODE.APPLY_WITH_GUARDRAILS
+    ? CALIBRATION_MODE.APPLY_WITH_GUARDRAILS
+    : CALIBRATION_MODE.RECOMMEND_ONLY;
 const minSampleSize = Number(process.env.WAVE5_CALIBRATION_MIN_SAMPLE_SIZE ?? 25);
 const maxStepPct = Number(process.env.WAVE5_CALIBRATION_MAX_STEP_PCT ?? 0.2);
 
 async function recordJobRun(input: { jobName: string; status: AutomationJobStatus; itemCount: number; startedAt: Date; metadata?: Record<string, unknown>; errorSummary?: string; }) {
+  const metadata = input.metadata as Prisma.InputJsonValue | undefined;
   return prisma.automationJobRun.create({
     data: {
       jobName: input.jobName,
@@ -15,7 +29,7 @@ async function recordJobRun(input: { jobName: string; status: AutomationJobStatu
       itemCount: input.itemCount,
       startedAt: input.startedAt,
       finishedAt: new Date(),
-      metadata: (input.metadata ?? undefined) as any,
+      metadata,
       errorSummary: input.errorSummary,
     },
   });
@@ -72,20 +86,21 @@ export async function runWave5Optimizations() {
 
     await recordJobRun({
       jobName: "wave5-continuous-optimization",
-      status: AutomationJobStatus.SUCCESS,
+      status: AUTOMATION_JOB_STATUS.SUCCESS,
       itemCount: metricsCount + calibrations,
       startedAt,
       metadata: { metricsCount, calibrations, regressions },
     });
 
     return { metricsCount, calibrations, regressions };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorSummary = error instanceof Error ? error.message : "unknown";
     await recordJobRun({
       jobName: "wave5-continuous-optimization",
-      status: AutomationJobStatus.FAILED,
+      status: AUTOMATION_JOB_STATUS.FAILED,
       itemCount: metricsCount + calibrations,
       startedAt,
-      errorSummary: error?.message ?? "unknown",
+      errorSummary,
     });
     throw error;
   }
