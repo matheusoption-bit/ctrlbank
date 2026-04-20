@@ -1,27 +1,19 @@
 import { COPY } from "@/lib/copy/ctrlbank";
+import { searchGlobal } from "@/app/actions/search";
+import BuscarPageClient from "@/app/(dashboard)/buscar/BuscarPageClient";
 
 export const metadata = { title: COPY.search.title };
 
-export default function BuscarPage() {
-  return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-black tracking-tight">{COPY.search.title}</h1>
-        <p className="text-secondary mt-1">{COPY.search.subtitle}</p>
-      </header>
+export default async function BuscarPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const params = await searchParams;
+  const initialQuery = params.q?.trim() ?? "";
+  const initialResults = initialQuery
+    ? await searchGlobal(initialQuery)
+    : { query: "", groups: [], totalResults: 0 };
 
-      <section className="rounded-2xl border border-border bg-surface p-5 space-y-4">
-        <label htmlFor="global-search" className="text-sm font-semibold text-foreground">
-          Busca global
-        </label>
-        <input
-          id="global-search"
-          type="search"
-          placeholder={COPY.search.placeholder}
-          className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2.5 text-sm outline-none focus:border-primary"
-        />
-        <p className="text-sm text-secondary">{COPY.search.hint}</p>
-      </section>
-    </div>
-  );
+  return <BuscarPageClient initialQuery={initialQuery} initialResults={initialResults} />;
 }

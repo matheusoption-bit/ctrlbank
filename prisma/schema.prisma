@@ -53,6 +53,15 @@ enum RecurringFrequency {
   YEARLY
 }
 
+enum DetectedSubscriptionStatus {
+  ACTIVE
+  POSSIBLE
+  PRICE_CHANGED
+  DUPLICATE_SUSPECTED
+  INACTIVE
+  HIDDEN
+}
+
 enum VisibilityScope {
   PERSONAL
   HOUSEHOLD
@@ -226,6 +235,8 @@ model Household {
   tags                    Tag[]
   goals                   Goal[]
   recurringTransactions   RecurringTransaction[]
+  detectedSubscriptions   DetectedSubscription[]
+  subscriptionCharges     SubscriptionCharge[]
   bankConnections         BankConnection[]
   counterSessions         CounterSession[]
   AiCaptureEvent          AiCaptureEvent[]
@@ -312,6 +323,8 @@ model User {
   notifications                   Notification[]
   AiCaptureEvent                  AiCaptureEvent[]
   merchantMemories                MerchantMemory[]
+  detectedSubscriptions           DetectedSubscription[]
+  subscriptionCharges             SubscriptionCharge[]
   productFeedbacks                ProductFeedback[]
   sourceDocuments                 SourceDocument[]
   ingestionLogs                   IngestionLog[]           @relation("IngestionLogUser")
@@ -460,6 +473,7 @@ model BankAccount {
   user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions          Transaction[]
   recurringTransactions RecurringTransaction[]
+  detectedSubscriptions DetectedSubscription[]
   merchantMemories      MerchantMemory[]
 
   @@index([userId])
@@ -517,10 +531,11 @@ model Transaction {
   user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   bankAccount    BankAccount              @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
   category       Category?                @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  aiCaptureEvent AiCaptureEvent?          @relation(fields: [aiCaptureEventId], references: [id], onDelete: SetNull)
-  qualityFlags   TransactionQualityFlag[]
-  ingestionLogs  IngestionLog[]
-  tags           TransactionTag[]
+  aiCaptureEvent      AiCaptureEvent?          @relation(fields: [aiCaptureEventId], references: [id], onDelete: SetNull)
+  qualityFlags        TransactionQualityFlag[]
+  ingestionLogs       IngestionLog[]
+  tags                TransactionTag[]
+  subscriptionCharges SubscriptionCharge[]
 
   @@index([userId])
   @@index([householdId])
@@ -691,6 +706,68 @@ model MerchantMemory {
 
   @@index([householdId])
   @@index([userId])
+}
+
+model DetectedSubscription {
+  id                     String                     @id @default(cuid())
+  userId                 String?
+  householdId            String?
+  brandKey               String?
+  displayName            String
+  normalizedMerchant     String
+  sourceMerchantRaw      String?
+  logoSlug               String?
+  status                 DetectedSubscriptionStatus @default(POSSIBLE)
+  billingFrequency       RecurringFrequency
+  confidence             Float                      @default(0)
+  isUserConfirmed        Boolean                    @default(false)
+  isHidden               Boolean                    @default(false)
+  estimatedNextChargeAt  DateTime?
+  lastChargeAt           DateTime?
+  lastAmount             Decimal?                   @db.Decimal(15, 2)
+  averageAmount          Decimal?                   @db.Decimal(15, 2)
+  currency               String?
+  bankAccountId          String?
+  recurringTransactionId String?
+  whyDetected            String?
+  matchedSignals         Json?
+  metadata               Json?
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
+
+  user                 User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household            Household?            @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  bankAccount          BankAccount?          @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  recurringTransaction RecurringTransaction? @relation(fields: [recurringTransactionId], references: [id], onDelete: SetNull)
+  charges              SubscriptionCharge[]
+
+  @@index([householdId, status])
+  @@index([userId, status])
+  @@index([normalizedMerchant])
+  @@index([bankAccountId])
+  @@index([estimatedNextChargeAt])
+  @@unique([householdId, normalizedMerchant, bankAccountId], map: "DetectedSubscription_scope_key")
+  @@unique([userId, normalizedMerchant, bankAccountId], map: "DetectedSubscription_user_scope_key")
+}
+
+model SubscriptionCharge {
+  id             String               @id @default(cuid())
+  subscriptionId String
+  transactionId  String
+  householdId    String?
+  userId         String?
+  matchedBy      String
+  confidence     Float                @default(0)
+  createdAt      DateTime             @default(now())
+
+  subscription DetectedSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  transaction  Transaction          @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  household    Household?           @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user         User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, transactionId])
+  @@index([householdId, createdAt])
+  @@index([userId, createdAt])
 }
 
 // ─────────────────────────────────────────────
@@ -1022,23 +1099,24 @@ model Goal {
 
 /// Transação recorrente (assinatura, salário, etc.)
 model RecurringTransaction {
-  id            String             @id @default(cuid())
-  householdId   String
-  bankAccountId String
-  categoryId    String?
-  type          TransactionType
-  amount        Decimal            @db.Decimal(15, 2)
-  description   String?
-  frequency     RecurringFrequency
-  nextDate      DateTime
-  endDate       DateTime? // null = sem fim
-  active        Boolean            @default(true)
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  id                    String                 @id @default(cuid())
+  householdId           String
+  bankAccountId         String
+  categoryId            String?
+  type                  TransactionType
+  amount                Decimal                @db.Decimal(15, 2)
+  description           String?
+  frequency             RecurringFrequency
+  nextDate              DateTime
+  endDate               DateTime? // null = sem fim
+  active                Boolean                @default(true)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
 
-  household   Household   @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  bankAccount BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
-  category    Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  household             Household              @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  bankAccount           BankAccount            @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  category              Category?              @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  detectedSubscriptions DetectedSubscription[]
 
   @@index([householdId])
   @@index([nextDate])
